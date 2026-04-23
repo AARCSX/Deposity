@@ -11,8 +11,12 @@ export default function Home() {
         {/* Page Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-on-surface tracking-[-0.02em] mb-1">Jumbo Road Carrier</h1>
-            <p className="text-on-surface-variant text-sm">Business Operations Overview</p>
+            <h1 className="text-3xl font-bold text-on-surface tracking-[-0.02em] mb-1">OnWay</h1>
+            <p className="text-on-surface-variant text-sm flex items-center gap-2">
+              Business Operations Overview 
+              <span className="w-1.5 h-1.5 rounded-full bg-outline-variant/30"></span>
+              <span className="font-bold text-primary">Deposity Platform</span>
+            </p>
           </div>
           <div className="flex flex-wrap gap-3">
             <button className="bg-surface-container-highest text-on-surface px-4 py-2 rounded-xl text-sm font-semibold border border-outline-variant/15 hover:bg-surface-container-high transition-colors active:scale-[0.98]">

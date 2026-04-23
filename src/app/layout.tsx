@@ -8,8 +8,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "OnWay - Jumbo Road Carrier Logistics Dashboard",
-  description: "Modern logistics management dashboard for carrier operations and trip tracking.",
+  title: "OnWay - Deposity Logistics Dashboard",
+  description: "Modern logistics management platform for carrier operations and trip tracking, powered by Deposity.",
 };
 
 export default function RootLayout({
