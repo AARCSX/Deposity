@@ -15,7 +15,7 @@ export default function Home() {
             <p className="text-on-surface-variant text-sm flex items-center gap-2">
               Business Operations Overview 
               <span className="w-1.5 h-1.5 rounded-full bg-outline-variant/30"></span>
-              <span className="font-bold text-primary">Deposity Platform</span>
+              <span className="font-bold text-primary">AARCSX Deposity Platform</span>
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
