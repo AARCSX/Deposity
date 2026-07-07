@@ -11,6 +11,7 @@ const navItems = [
   { label: "Companies", icon: "business", href: "/companies" },
   { label: "Trips", icon: "route", href: "/trips" },
   { label: "Expenses", icon: "payments", href: "/expenses" },
+  { label: "Maintenance", icon: "build", href: "/maintenance" },
   { label: "Reports", icon: "assessment", href: "/reports" },
   { label: "Settings", icon: "settings", href: "/settings" },
 ];
