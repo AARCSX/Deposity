@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import LayoutWrapper from "@/components/layout/LayoutWrapper";
 import MetricCard from "@/components/dashboard/MetricCard";
+import DynamicChassis, { AxleConfig } from "./DynamicChassis";
+import TyreHistoryCard from "./TyreHistoryCard";
 
 interface MaintenanceRecord {
   id: string;
@@ -165,6 +167,13 @@ export default function MaintenanceDashboard() {
   const [isEditing, setIsEditing] = useState(false);
   const [submitState, setSubmitState] = useState<{ loading: boolean; error: string | null }>({ loading: false, error: null });
   const [refreshKey, setRefreshKey] = useState(0);
+  const [selectedTyre, setSelectedTyre] = useState<string | null>(null);
+
+  const defaultAxleConfig: AxleConfig[] = [
+    { left: 1, right: 1 },
+    { left: 2, right: 2 },
+    { left: 2, right: 2 }
+  ];
 
   const apiBase = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 
@@ -469,6 +478,36 @@ export default function MaintenanceDashboard() {
             </div>
           </section>
         </div>
+
+        {/* Tyre & Chassis Tracker */}
+        <section className="rounded-3xl border border-outline-variant/15 bg-surface-container-lowest p-6 shadow-[0px_20px_40px_rgba(23,28,31,0.06)]">
+          <div className="mb-6 flex items-center justify-between">
+            <div>
+              <h3 className="text-xl font-black tracking-tight text-on-surface">Tyre & Chassis Tracker</h3>
+              <p className="text-sm text-on-surface-variant">Interactive view of tyre wear and history for the selected vehicle.</p>
+            </div>
+          </div>
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-[1fr_1.2fr]">
+             <div className="bg-surface-container-low/30 rounded-2xl border border-outline-variant/10 flex items-center justify-center min-h-[300px]">
+                <DynamicChassis 
+                  axles={defaultAxleConfig} 
+                  selectedTyre={selectedTyre} 
+                  onTyreClick={setSelectedTyre} 
+                />
+             </div>
+             <div>
+                {selectedTyre ? (
+                  <TyreHistoryCard tyreId={selectedTyre} onClose={() => setSelectedTyre(null)} />
+                ) : (
+                  <div className="h-full min-h-[300px] flex flex-col items-center justify-center text-center p-8 rounded-2xl border border-dashed border-outline-variant/20 bg-surface-container-lowest">
+                     <span className="material-symbols-outlined text-4xl text-outline mb-2">touch_app</span>
+                     <p className="text-sm font-semibold text-on-surface">Select a tyre to view history</p>
+                     <p className="text-xs text-on-surface-variant mt-1 max-w-xs">Click on any tyre on the chassis diagram to see its specific maintenance logs, punctures, and replacement history.</p>
+                  </div>
+                )}
+             </div>
+          </div>
+        </section>
 
         <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
           <section className="rounded-3xl border border-outline-variant/15 bg-surface-container-lowest p-6 shadow-[0px_20px_40px_rgba(23,28,31,0.06)]">
