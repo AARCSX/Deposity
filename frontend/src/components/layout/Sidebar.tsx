@@ -41,7 +41,7 @@ export default function Sidebar({ isOpen, onClose }: { isOpen?: boolean; onClose
       >
         <div className="px-6 pb-6">
           <h1 className="text-2xl font-black tracking-tighter text-white">OnWay</h1>
-          <p className="text-slate-400 text-xs">Deposity</p>
+          <p className="text-slate-400 text-xs">AARCSX Deposity</p>
         </div>
 
         <div className="px-4 mb-4">

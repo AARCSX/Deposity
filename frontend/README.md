@@ -1,4 +1,4 @@
-# Jumbo Road Carrier (OnWay Platform)
+ # AARCSX Deposity
 
 [![Build Status](https://img.shields.io/badge/status-active-success.svg)]()
 [![Next.js](https://img.shields.io/badge/Next.js-16.2.4-black?logo=next.js)](https://nextjs.org/)
