@@ -1,61 +1,115 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import LayoutWrapper from "@/components/layout/LayoutWrapper";
 import VehicleCard from "@/components/dashboard/VehicleCard";
+import CreateVehicleWizard from "@/components/vehicles/CreateVehicleWizard";
+import { VehicleRecord } from "@/types/vehicle";
 
-const vehiclesData = [
+const fallbackData: VehicleRecord[] = [
   {
-    plateNumber: "MH12AB1234",
-    vehicleType: "Truck",
-    status: "all-good" as const,
-    driver: {
-      name: "Rajesh Kumar",
-      phone: "+91 98765 43210",
-      avatar: "https://lh3.googleusercontent.com/aida-public/AB6AXuAM6UaUvN7X6syLgqiZ63hpuzb5UrKkYWEhKSRzCkx4cFSiGSdWp-BQC0xH3xe9IJZ3QYqmf7MhacYWYDYy0r9T_g9hqQX2HhK9S9e3SyWNc8JHWuWw8C0zPAfwUFJKdfPtZ6JHguHHm_zEnMi1CBuUSNlG5L1AMHvOc8C4Bd1ujCgpsuDLes5E1HzLs0Uvwk_P8bcCpBrJtNVGHcJAeQvPTtQ9bLJMazChiYm11WGZQxvkFN97GUU7wDJiqQUZ4yVSNYpMSzlbuDgG",
+    core: {
+      registrationNumber: "MH12AB1234",
+      make: "Tata",
+      model: "Signa 4923",
+      year: 2023,
+      bodyType: "Truck",
+      axleConfig: "10 Wheeler",
+      tonnageCapacity: 25,
+      fuelCapacity: 350,
+      averageMileage: 4.5
     },
-    docs: {
-      fit: "valid" as const,
-      perm: "valid" as const,
-      ins: "valid" as const,
-      puc: "valid" as const,
+    compliance: {
+      rcExpiry: "2028-10-12",
+      insuranceExpiry: "2027-05-10",
+      pucExpiry: "2026-12-01",
+      fitnessExpiry: "2027-10-12",
+      permitDetails: "National"
     },
-    gpsActive: true,
-  },
-  {
-    plateNumber: "DL04CD5678",
-    vehicleType: "Van",
-    status: "expiring-soon" as const,
-    driver: {
-      name: "Amit Singh",
-      phone: "+91 98765 43211",
-      avatar: "https://lh3.googleusercontent.com/aida-public/AB6AXuCS5TmY1GQ9jgOPhMxCALVhtdaXQytXAFjHR4xRq2-c8_Ng2yVCyc5AVNdNZKUhtDIzW0wYsWEy2SPS5jtSUhUBoeKG7-XSWGg7FtXpOW-yK74QvdvekYcTxtqBC8bSrI8l1shV4MEI63adetcTqo_TRr6yMV7zVSTKPc4-ffXCEk2NZJfGyWUMYo3Z2foeSgbqPzidOaCIzLyVa9jw3v21N3Y0Eaz1Udm0-8tlwOqpA3t9zPR2dbRIcsYT2P-2E6Z1MIZB4U1CCepK",
+    ownership: {
+      ownershipType: "Own",
+      driverId: "D-101",
+      homeBranch: "Pune",
+      gpsDeviceId: "GPS-9988"
     },
-    docs: {
-      fit: "valid" as const,
-      perm: "expiring" as const,
-      ins: "valid" as const,
-      puc: "valid" as const,
+    maintenance: {
+      currentOdometer: 145000,
+      lastServicedDate: "2026-05-10"
     },
-    gpsActive: false,
-    emiDate: "15 Oct",
-  },
-  {
-    plateNumber: "HR26EF9012",
-    vehicleType: "Truck",
-    status: "expired-docs" as const,
-    driver: null,
-    docs: {
-      fit: "valid" as const,
-      perm: "invalid" as const,
-      ins: "valid" as const,
-      puc: "invalid" as const,
-    },
-    gpsActive: false,
-    locationState: "offline" as const,
-  },
+    status: "all-good"
+  }
 ];
 
 export default function VehiclesPage() {
+  const [vehicles, setVehicles] = useState<VehicleRecord[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+
+  const apiBase = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
+
+  const loadVehicles = async () => {
+    setIsLoading(true);
+    try {
+      const response = await fetch(`${apiBase}/vehicles`);
+      if (!response.ok) throw new Error("API unreachable");
+      const data = await response.json();
+      setVehicles(Array.isArray(data) && data.length > 0 ? data : fallbackData);
+    } catch {
+      // Fallback to mock data if API is unreachable for testing
+      setVehicles(fallbackData);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadVehicles();
+  }, [apiBase]);
+
+  const handleCreateSubmit = async (data: VehicleRecord) => {
+    try {
+      const response = await fetch(`${apiBase}/vehicles`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+      });
+      if (response.ok) {
+        loadVehicles(); // Refetch
+      } else {
+        // Optimistic UI update for testing without backend
+        setVehicles(prev => [data, ...prev]);
+      }
+    } catch {
+      // Optimistic UI update for testing without backend
+      setVehicles(prev => [data, ...prev]);
+    }
+    setIsCreateModalOpen(false);
+  };
+
+  // Helper to map robust data to the simpler VehicleCard props
+  const mapToCardProps = (v: VehicleRecord) => {
+    // Simple mock driver data since we only have driverId
+    const driverMock = v.ownership.driverId ? {
+      name: `Driver ${v.ownership.driverId}`,
+      phone: "+91 99999 99999",
+      avatar: "https://lh3.googleusercontent.com/aida-public/AB6AXuAM6UaUvN7X6syLgqiZ63hpuzb5UrKkYWEhKSRzCkx4cFSiGSdWp-BQC0xH3xe9IJZ3QYqmf7MhacYWYDYy0r9T_g9hqQX2HhK9S9e3SyWNc8JHWuWw8C0zPAfwUFJKdfPtZ6JHguHHm_zEnMi1CBuUSNlG5L1AMHvOc8C4Bd1ujCgpsuDLes5E1HzLs0Uvwk_P8bcCpBrJtNVGHcJAeQvPTtQ9bLJMazChiYm11WGZQxvkFN97GUU7wDJiqQUZ4yVSNYpMSzlbuDgG"
+    } : null;
+
+    return {
+      plateNumber: v.core.registrationNumber || "UNKNOWN",
+      vehicleType: v.core.bodyType || "Truck",
+      status: v.status === "maintenance" ? "all-good" : v.status, 
+      driver: driverMock,
+      docs: {
+        fit: "valid" as const,
+        perm: "valid" as const,
+        ins: "valid" as const,
+        puc: "valid" as const
+      },
+      gpsActive: !!v.ownership.gpsDeviceId
+    };
+  };
+
   return (
     <LayoutWrapper>
       <div className="space-y-8">
@@ -64,11 +118,14 @@ export default function VehiclesPage() {
           <div>
             <h1 className="text-[2.75rem] leading-none font-bold text-on-background tracking-[-0.02em] mb-2">Vehicles</h1>
             <p className="text-on-surface-variant font-medium">
-              Manage your fleet of <span className="text-primary font-bold">25 Vehicles</span>
+              Manage your fleet of <span className="text-primary font-bold">{vehicles.length} Vehicles</span>
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <button className="flex items-center gap-2 bg-gradient-to-br from-primary to-primary-container text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-primary/20 hover:shadow-xl transition-all active:scale-[0.98]">
+            <button 
+              onClick={() => setIsCreateModalOpen(true)}
+              className="flex items-center gap-2 bg-gradient-to-br from-primary to-primary-container text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-primary/20 hover:shadow-xl transition-all active:scale-[0.98]"
+            >
               <span className="material-symbols-outlined text-[1.25rem]">add</span>
               Add Vehicle
             </button>
@@ -105,12 +162,23 @@ export default function VehiclesPage() {
 
         {/* Vehicle Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-          {vehiclesData.map((vehicle) => (
-            <VehicleCard key={vehicle.plateNumber} {...vehicle} />
+          {isLoading ? (
+            <div className="col-span-full py-12 flex justify-center text-on-surface-variant font-medium">
+              Loading vehicles...
+            </div>
+          ) : vehicles.map((vehicle, index) => (
+            <VehicleCard key={vehicle.id || vehicle.core.registrationNumber || index} {...mapToCardProps(vehicle)} />
           ))}
         </div>
         
         <div className="h-12"></div>
+        
+        {/* Modals */}
+        <CreateVehicleWizard 
+          isOpen={isCreateModalOpen} 
+          onClose={() => setIsCreateModalOpen(false)} 
+          onSubmit={handleCreateSubmit} 
+        />
       </div>
     </LayoutWrapper>
   );
