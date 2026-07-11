@@ -189,7 +189,15 @@ export default function CreateVehicleWizard({ isOpen, onClose, onSubmit }: Creat
 }
 
 // Helpers
-function Input({ label, value, onChange, placeholder, type = "text" }: any) {
+interface InputProps {
+  label: string;
+  value: string;
+  onChange: (val: string) => void;
+  placeholder?: string;
+  type?: string;
+}
+
+function Input({ label, value, onChange, placeholder, type = "text" }: InputProps) {
   return (
     <div className="space-y-1.5">
       <label className="text-xs font-bold text-outline">{label}</label>
@@ -204,7 +212,14 @@ function Input({ label, value, onChange, placeholder, type = "text" }: any) {
   );
 }
 
-function Select({ label, value, onChange, options }: any) {
+interface SelectProps {
+  label: string;
+  value: string;
+  onChange: (val: string) => void;
+  options: string[];
+}
+
+function Select({ label, value, onChange, options }: SelectProps) {
   return (
     <div className="space-y-1.5">
       <label className="text-xs font-bold text-outline">{label}</label>

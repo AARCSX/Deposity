@@ -2,22 +2,35 @@
 
 import React from "react";
 
+export interface TyreActivity {
+  id: string;
+  date: string;
+  type: string; // e.g. "Puncture Repair", "Tyre Replacement", "Rotation"
+  description: string;
+  cost: number;
+  serviceCenter: string;
+  mechanic: string;
+}
+
 interface TyreHistoryCardProps {
   tyreId: string;
   onClose: () => void;
+  activities: TyreActivity[];
 }
 
-export default function TyreHistoryCard({ tyreId, onClose }: TyreHistoryCardProps) {
-  // Generate mock data based on the tyreId for now
-  const isFront = tyreId.includes("axle-0");
-  const side = tyreId.includes("left") ? "Left" : "Right";
-  const position = isFront ? "Front" : "Rear";
-  const innerOuter = tyreId.includes("inner") ? " (Inner)" : tyreId.includes("outer") ? " (Outer)" : "";
+export default function TyreHistoryCard({ tyreId, onClose, activities }: TyreHistoryCardProps) {
+  // Parse display name from the tyreId
+  const parts = tyreId.split("-");
+  const axleIndex = parseInt(parts[1]);
+  const side = parts[2] === "left" ? "Left" : "Right";
+  const innerOuter = parts[3] ? ` (${parts[3].charAt(0).toUpperCase() + parts[3].slice(1)})` : "";
   
+  const position = axleIndex === 0 ? "Front" : `Axle ${axleIndex + 1}`;
   const displayName = `${position} ${side}${innerOuter}`;
-  
-  const changes = isFront ? 1 : 2;
-  const punctures = isFront ? 0 : 3;
+
+  // Calculate stats from dynamic activities
+  const changes = activities.filter(a => a.type.toLowerCase().includes("replace") || a.type.toLowerCase().includes("new")).length;
+  const punctures = activities.filter(a => a.type.toLowerCase().includes("puncture") || a.type.toLowerCase().includes("repair")).length;
 
   return (
     <div className="bg-surface-container-lowest rounded-2xl border border-outline-variant/20 shadow-lg overflow-hidden flex flex-col h-full animate-in fade-in slide-in-from-bottom-4 duration-300">
@@ -34,7 +47,7 @@ export default function TyreHistoryCard({ tyreId, onClose }: TyreHistoryCardProp
         </button>
       </div>
       
-      <div className="p-4 space-y-4 flex-1">
+      <div className="p-4 space-y-4 flex-1 overflow-y-auto max-h-[350px] custom-scrollbar">
         <div className="grid grid-cols-2 gap-3">
           <div className="bg-surface-container-high/50 rounded-xl p-3 text-center">
             <span className="block text-2xl font-black text-on-surface">{changes}</span>
@@ -48,44 +61,47 @@ export default function TyreHistoryCard({ tyreId, onClose }: TyreHistoryCardProp
 
         <div>
           <h5 className="text-xs uppercase font-bold tracking-wider text-outline mb-3">Recent Activity</h5>
-          <div className="space-y-3 relative before:absolute before:inset-0 before:ml-[9px] before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-outline-variant/20 before:to-transparent">
-            {/* Mock Timeline Items */}
-            <div className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
-              <div className="flex items-center justify-center w-5 h-5 rounded-full border-2 border-primary bg-surface-container-lowest text-primary shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 z-10">
-                <div className="w-1.5 h-1.5 bg-primary rounded-full"></div>
-              </div>
-              <div className="w-[calc(100%-2.5rem)] md:w-[calc(50%-1.5rem)] p-3 rounded-xl border border-outline-variant/15 bg-surface-container-lowest shadow-sm">
-                <div className="flex justify-between mb-1">
-                  <span className="font-bold text-on-surface text-xs">Puncture Repair</span>
-                  <span className="font-semibold text-primary text-[10px]">12 Oct 2025</span>
-                </div>
-                <div className="text-on-surface-variant text-[11px] leading-relaxed">
-                  Nail puncture repaired at Metro Service.
-                </div>
-              </div>
+          {activities.length > 0 ? (
+            <div className="space-y-4 relative before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-outline-variant/30">
+              {activities.map((act) => {
+                const isPuncture = act.type.toLowerCase().includes("puncture") || act.type.toLowerCase().includes("repair");
+                return (
+                  <div key={act.id} className="relative pl-6 flex flex-col gap-1">
+                    {/* Timeline Node */}
+                    <div className={`absolute left-0 top-1.5 w-4.5 h-4.5 rounded-full border-2 bg-surface-container-lowest flex items-center justify-center z-10 ${
+                      isPuncture ? "border-amber-500" : "border-primary"
+                    }`}>
+                      <div className={`w-1.5 h-1.5 rounded-full ${isPuncture ? "bg-amber-500" : "bg-primary"}`}></div>
+                    </div>
+                    
+                    {/* Content */}
+                    <div className="p-3 rounded-xl border border-outline-variant/15 bg-surface-container-low shadow-xs">
+                      <div className="flex justify-between items-start mb-1">
+                        <span className="font-bold text-on-surface text-xs">{act.type}</span>
+                        <span className="font-semibold text-primary text-[10px] whitespace-nowrap">{act.date}</span>
+                      </div>
+                      <p className="text-on-surface-variant text-[11px] leading-relaxed mb-2">
+                        {act.description}
+                      </p>
+                      <div className="flex justify-between items-center text-[10px] font-semibold text-outline">
+                        <span>{act.serviceCenter} • {act.mechanic}</span>
+                        <span className="text-on-surface">₹{act.cost.toLocaleString()}</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-            
-            <div className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group">
-              <div className="flex items-center justify-center w-5 h-5 rounded-full border-2 border-outline-variant bg-surface-container-lowest text-outline shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 z-10">
-              </div>
-              <div className="w-[calc(100%-2.5rem)] md:w-[calc(50%-1.5rem)] p-3 rounded-xl border border-outline-variant/15 bg-surface-container-lowest shadow-sm opacity-70">
-                <div className="flex justify-between mb-1">
-                  <span className="font-bold text-on-surface text-xs">Tyre Replaced</span>
-                  <span className="font-semibold text-on-surface-variant text-[10px]">05 Mar 2024</span>
-                </div>
-                <div className="text-on-surface-variant text-[11px] leading-relaxed">
-                  New MRF tyre installed due to tread wear.
-                </div>
-              </div>
+          ) : (
+            <div className="py-8 text-center rounded-xl border border-dashed border-outline-variant/20 bg-surface-container-low/50">
+              <p className="text-xs text-on-surface-variant">No maintenance history recorded for this tyre position.</p>
             </div>
-          </div>
+          )}
         </div>
       </div>
       
-      <div className="p-3 border-t border-outline-variant/10 bg-surface-container-low text-center">
-        <button className="text-xs font-bold text-primary hover:text-primary-container transition-colors">
-          View Full Log
-        </button>
+      <div className="p-3 border-t border-outline-variant/10 bg-surface-container-low text-center text-xs text-outline font-semibold uppercase tracking-wider">
+        Linked to active maintenance logs
       </div>
     </div>
   );
