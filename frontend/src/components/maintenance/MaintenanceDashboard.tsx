@@ -4,44 +4,9 @@ import { useEffect, useMemo, useState } from "react";
 import LayoutWrapper from "@/components/layout/LayoutWrapper";
 import MetricCard from "@/components/dashboard/MetricCard";
 import DynamicChassis, { AxleConfig } from "./DynamicChassis";
-import TyreHistoryCard from "./TyreHistoryCard";
-
-interface MaintenanceRecord {
-  id: string;
-  vehicleId: string;
-  vehicleNumber: string;
-  maintenanceType: string;
-  maintenanceDate: string;
-  odometerReading: number;
-  serviceCenter: string;
-  mechanic: string;
-  cost: number;
-  description: string;
-  partsReplaced: string;
-  nextServiceDate: string;
-  nextServiceOdometer: number;
-  status: string;
-  notes: string;
-  createdAt?: string;
-  updatedAt?: string;
-}
-
-interface MaintenanceFormState {
-  vehicleId: string;
-  vehicleNumber: string;
-  maintenanceType: string;
-  maintenanceDate: string;
-  odometerReading: string;
-  serviceCenter: string;
-  mechanic: string;
-  cost: string;
-  description: string;
-  partsReplaced: string;
-  nextServiceDate: string;
-  nextServiceOdometer: string;
-  status: string;
-  notes: string;
-}
+import TyreHistoryCard, { TyreActivity } from "./TyreHistoryCard";
+import CreateMaintenanceWizard, { MaintenanceRecord } from "./CreateMaintenanceWizard";
+import { VehicleRecord } from "@/types/vehicle";
 
 const fallbackRecords: MaintenanceRecord[] = [
   {
@@ -72,7 +37,7 @@ const fallbackRecords: MaintenanceRecord[] = [
     mechanic: "Aman Verma",
     cost: 24000,
     description: "Replaced all four tyres after uneven wear.",
-    partsReplaced: "4 tyres",
+    partsReplaced: "4 tyres, front axle-0-left, axle-0-right",
     nextServiceDate: "2026-09-18",
     nextServiceOdometer: 11860,
     status: "Scheduled",
@@ -97,60 +62,119 @@ const fallbackRecords: MaintenanceRecord[] = [
   },
 ];
 
-const baseFormState: MaintenanceFormState = {
-  vehicleId: "V-101",
-  vehicleNumber: "MH12AB1234",
-  maintenanceType: "Service",
-  maintenanceDate: "2026-06-30",
-  odometerReading: "12540",
-  serviceCenter: "Metro Truck Service",
-  mechanic: "Rahul Sharma",
-  cost: "8600",
-  description: "",
-  partsReplaced: "",
-  nextServiceDate: "2026-08-30",
-  nextServiceOdometer: "14540",
-  status: "Scheduled",
-  notes: "",
-};
+const fallbackVehicles: VehicleRecord[] = [
+  {
+    id: "V-101",
+    core: {
+      registrationNumber: "MH12AB1234",
+      make: "Tata",
+      model: "Signa 4923",
+      year: 2022,
+      bodyType: "Container",
+      axleConfig: "1 1, 2 2, 2 2", // 10 Wheeler
+      tonnageCapacity: 25,
+      fuelCapacity: 300,
+      averageMileage: 4.5
+    },
+    compliance: { rcExpiry: "", insuranceExpiry: "", pucExpiry: "", fitnessExpiry: "", permitDetails: "" },
+    ownership: { ownershipType: "Own", driverId: "", homeBranch: "", gpsDeviceId: "" },
+    maintenance: { currentOdometer: 12540, lastServicedDate: "2026-05-12" },
+    status: "all-good"
+  },
+  {
+    id: "V-102",
+    core: {
+      registrationNumber: "DL04CD5678",
+      make: "Ashok Leyland",
+      model: "U-Truck",
+      year: 2021,
+      bodyType: "Flatbed",
+      axleConfig: "1 1, 2 2", // 6 Wheeler
+      tonnageCapacity: 16,
+      fuelCapacity: 200,
+      averageMileage: 5.2
+    },
+    compliance: { rcExpiry: "", insuranceExpiry: "", pucExpiry: "", fitnessExpiry: "", permitDetails: "" },
+    ownership: { ownershipType: "Own", driverId: "", homeBranch: "", gpsDeviceId: "" },
+    maintenance: { currentOdometer: 9860, lastServicedDate: "2026-06-18" },
+    status: "all-good"
+  },
+  {
+    id: "V-103",
+    core: {
+      registrationNumber: "HR26EF9012",
+      make: "BharatBenz",
+      model: "PowerTruck",
+      year: 2023,
+      bodyType: "Reefer",
+      axleConfig: "1 1, 1 1, 2 2, 2 2", // 12 Wheeler
+      tonnageCapacity: 31,
+      fuelCapacity: 350,
+      averageMileage: 4.0
+    },
+    compliance: { rcExpiry: "", insuranceExpiry: "", pucExpiry: "", fitnessExpiry: "", permitDetails: "" },
+    ownership: { ownershipType: "Own", driverId: "", homeBranch: "", gpsDeviceId: "" },
+    maintenance: { currentOdometer: 14220, lastServicedDate: "2026-06-25" },
+    status: "all-good"
+  }
+];
 
-function toFormState(record: MaintenanceRecord): MaintenanceFormState {
-  return {
-    vehicleId: record.vehicleId,
-    vehicleNumber: record.vehicleNumber,
-    maintenanceType: record.maintenanceType,
-    maintenanceDate: record.maintenanceDate,
-    odometerReading: String(record.odometerReading),
-    serviceCenter: record.serviceCenter,
-    mechanic: record.mechanic,
-    cost: String(record.cost),
-    description: record.description,
-    partsReplaced: record.partsReplaced,
-    nextServiceDate: record.nextServiceDate,
-    nextServiceOdometer: String(record.nextServiceOdometer),
-    status: record.status,
-    notes: record.notes,
-  };
+export function parseAxleConfig(configStr: string): AxleConfig[] {
+  if (!configStr) return [{ left: 1, right: 1 }, { left: 2, right: 2 }, { left: 2, right: 2 }];
+  
+  const segments = configStr.split(/[;,/]/);
+  const parsed: AxleConfig[] = [];
+  
+  for (let seg of segments) {
+    seg = seg.trim();
+    if (!seg) continue;
+    const numbers = seg.match(/\d+/g);
+    if (numbers && numbers.length >= 2) {
+      parsed.push({ left: parseInt(numbers[0]), right: parseInt(numbers[1]) });
+    } else if (numbers && numbers.length === 1) {
+      const val = parseInt(numbers[0]);
+      parsed.push({ left: val, right: val });
+    }
+  }
+  
+  if (parsed.length > 0) return parsed;
+  
+  const lower = configStr.toLowerCase();
+  if (lower.includes("4x2") || lower.includes("6 wheeler")) {
+    return [{ left: 1, right: 1 }, { left: 2, right: 2 }];
+  }
+  if (lower.includes("6x4") || lower.includes("6x2") || lower.includes("10 wheeler")) {
+    return [{ left: 1, right: 1 }, { left: 2, right: 2 }, { left: 2, right: 2 }];
+  }
+  if (lower.includes("8x2") || lower.includes("8x4") || lower.includes("12 wheeler")) {
+    return [{ left: 1, right: 1 }, { left: 1, right: 1 }, { left: 2, right: 2 }, { left: 2, right: 2 }];
+  }
+  
+  return [{ left: 1, right: 1 }, { left: 2, right: 2 }, { left: 2, right: 2 }];
 }
 
-function toRecordPayload(form: MaintenanceFormState, existingId?: string): MaintenanceRecord {
-  return {
-    id: existingId ?? "",
-    vehicleId: form.vehicleId,
-    vehicleNumber: form.vehicleNumber,
-    maintenanceType: form.maintenanceType,
-    maintenanceDate: form.maintenanceDate,
-    odometerReading: Number(form.odometerReading),
-    serviceCenter: form.serviceCenter,
-    mechanic: form.mechanic,
-    cost: Number(form.cost),
-    description: form.description,
-    partsReplaced: form.partsReplaced,
-    nextServiceDate: form.nextServiceDate,
-    nextServiceOdometer: Number(form.nextServiceOdometer),
-    status: form.status,
-    notes: form.notes,
-  };
+function isTyreMatch(record: MaintenanceRecord, tyreId: string): boolean {
+  const text = `${record.maintenanceType} ${record.description} ${record.partsReplaced} ${record.notes}`.toLowerCase();
+  if (text.includes(tyreId.toLowerCase())) return true;
+  
+  const parts = tyreId.split("-");
+  const axleNum = parseInt(parts[1]) + 1; // 1-based index
+  const side = parts[2]; // left or right
+  const position = parts[3]; // inner or outer
+  
+  const hasAxle = text.includes(`axle ${axleNum}`) || text.includes(`axle-${axleNum}`) || (axleNum === 1 && text.includes("front")) || (axleNum > 1 && text.includes("rear"));
+  const hasSide = text.includes(side);
+  const hasPosition = !position || text.includes(position);
+  
+  if (hasAxle && hasSide && hasPosition) {
+    return true;
+  }
+  
+  if (record.maintenanceType.toLowerCase() === "tyre replacement" && !text.includes("axle")) {
+    return true;
+  }
+  
+  return false;
 }
 
 function parseDate(value: string) {
@@ -161,13 +185,14 @@ function parseDate(value: string) {
 
 export default function MaintenanceDashboard() {
   const [records, setRecords] = useState<MaintenanceRecord[]>(fallbackRecords);
+  const [vehicles, setVehicles] = useState<VehicleRecord[]>(fallbackVehicles);
   const [selectedRecord, setSelectedRecord] = useState<MaintenanceRecord | null>(fallbackRecords[0]);
   const [filters, setFilters] = useState({ vehicle: "", type: "", status: "", from: "", to: "" });
-  const [formState, setFormState] = useState<MaintenanceFormState>(baseFormState);
-  const [isEditing, setIsEditing] = useState(false);
-  const [submitState, setSubmitState] = useState<{ loading: boolean; error: string | null }>({ loading: false, error: null });
+  const [isWizardOpen, setIsWizardOpen] = useState(false);
+  const [recordToEdit, setRecordToEdit] = useState<MaintenanceRecord | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [selectedTyre, setSelectedTyre] = useState<string | null>(null);
+  const [chassisVehicleNumber, setChassisVehicleNumber] = useState<string>("");
 
   const defaultAxleConfig: AxleConfig[] = [
     { left: 1, right: 1 },
@@ -178,23 +203,81 @@ export default function MaintenanceDashboard() {
   const apiBase = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 
   useEffect(() => {
-    const loadRecords = async () => {
+    const loadData = async () => {
+      // Load records
       try {
         const response = await fetch(`${apiBase}/maintenance`);
-        if (!response.ok) throw new Error("Unable to load maintenance records");
-        const data = await response.json();
-        setRecords(Array.isArray(data) ? data : fallbackRecords);
-        if (Array.isArray(data) && data.length > 0) {
-          setSelectedRecord(data[0]);
+        if (response.ok) {
+          const data = await response.json();
+          const recList = Array.isArray(data) ? data : fallbackRecords;
+          setRecords(recList);
+          if (recList.length > 0) {
+            setSelectedRecord(recList[0]);
+          } else {
+            setSelectedRecord(null);
+          }
+        } else {
+          setRecords(fallbackRecords);
+          setSelectedRecord(fallbackRecords[0]);
         }
       } catch {
         setRecords(fallbackRecords);
         setSelectedRecord(fallbackRecords[0]);
       }
+
+      // Load vehicles
+      try {
+        const response = await fetch(`${apiBase}/vehicles`);
+        if (response.ok) {
+          const data = await response.json();
+          setVehicles(Array.isArray(data) ? data : fallbackVehicles);
+        } else {
+          setVehicles(fallbackVehicles);
+        }
+      } catch {
+        setVehicles(fallbackVehicles);
+      }
     };
 
-    loadRecords();
+    loadData();
   }, [apiBase, refreshKey]);
+
+  // Sync Chassis active vehicle with selected record
+  useEffect(() => {
+    if (selectedRecord) {
+      setChassisVehicleNumber(selectedRecord.vehicleNumber);
+    } else if (vehicles.length > 0 && !chassisVehicleNumber) {
+      setChassisVehicleNumber(vehicles[0].core.registrationNumber);
+    }
+  }, [selectedRecord, vehicles]);
+
+  // Calculate dynamic axle configuration for active chassis vehicle
+  const currentAxleConfig = useMemo(() => {
+    const targetVehicle = vehicles.find(
+      (v) => v.core.registrationNumber.toLowerCase() === chassisVehicleNumber.toLowerCase()
+    );
+    if (targetVehicle && targetVehicle.core.axleConfig) {
+      return parseAxleConfig(targetVehicle.core.axleConfig);
+    }
+    return defaultAxleConfig;
+  }, [chassisVehicleNumber, vehicles]);
+
+  // Dynamic tyre activity filtering based on selected vehicle + tyre
+  const tyreActivities = useMemo<TyreActivity[]>(() => {
+    if (!chassisVehicleNumber || !selectedTyre) return [];
+    return records
+      .filter((r) => r.vehicleNumber.toLowerCase() === chassisVehicleNumber.toLowerCase())
+      .filter((r) => isTyreMatch(r, selectedTyre))
+      .map((r) => ({
+        id: r.id || "",
+        date: r.maintenanceDate,
+        type: r.maintenanceType,
+        description: r.description || r.notes || "Routine maintenance",
+        cost: r.cost,
+        serviceCenter: r.serviceCenter,
+        mechanic: r.mechanic,
+      }));
+  }, [records, chassisVehicleNumber, selectedTyre]);
 
   const filteredRecords = useMemo(() => {
     const items = records.filter((record) => {
@@ -222,11 +305,11 @@ export default function MaintenanceDashboard() {
     const totalCost = records.reduce((sum, item) => sum + item.cost, 0);
 
     return [
-      { label: "Total Maintenance Records", value: String(records.length), icon: "receipt_long", theme: "primary" as const },
-      { label: "Scheduled Maintenance", value: String(scheduled), icon: "event_available", theme: "secondary" as const },
-      { label: "Completed Maintenance", value: String(completed), icon: "check_circle", theme: "tertiary" as const },
-      { label: "Overdue Maintenance", value: String(overdue), icon: "warning", theme: "error" as const },
-      { label: "Total Maintenance Cost", value: `₹${totalCost.toLocaleString()}`, icon: "payments", theme: "warning" as const },
+      { label: "Total Maintenance", value: String(records.length), icon: "receipt_long", theme: "primary" as const },
+      { label: "Scheduled", value: String(scheduled), icon: "event_available", theme: "secondary" as const },
+      { label: "Completed", value: String(completed), icon: "check_circle", theme: "tertiary" as const },
+      { label: "Overdue", value: String(overdue), icon: "warning", theme: "error" as const },
+      { label: "Total Expense", value: `₹${totalCost.toLocaleString()}`, icon: "payments", theme: "warning" as const },
     ];
   }, [records]);
 
@@ -236,7 +319,7 @@ export default function MaintenanceDashboard() {
     windowEnd.setDate(today.getDate() + 30);
 
     return records
-      .filter((record) => record.nextServiceDate)
+      .filter((record) => record.nextServiceDate && record.status !== "Completed")
       .filter((record) => {
         const nextDate = parseDate(record.nextServiceDate);
         return nextDate >= today && nextDate <= windowEnd;
@@ -252,53 +335,38 @@ export default function MaintenanceDashboard() {
       .sort((a, b) => parseDate(b.maintenanceDate).getTime() - parseDate(a.maintenanceDate).getTime());
   }, [records, selectedRecord]);
 
-  const handleSubmit = async (event: React.FormEvent) => {
-    event.preventDefault();
-    setSubmitState({ loading: true, error: null });
+  const handleWizardSubmit = async (payload: MaintenanceRecord) => {
+    const recordId = payload.id || `MNT-${Math.floor(100 + Math.random() * 900)}`;
+    const completeRecord: MaintenanceRecord = {
+      ...payload,
+      id: recordId,
+    };
 
-    const validationErrors = [] as string[];
-    if (!formState.vehicleNumber.trim()) validationErrors.push("Vehicle number is required");
-    if (!formState.maintenanceType.trim()) validationErrors.push("Maintenance type is required");
-    if (!formState.maintenanceDate) validationErrors.push("Maintenance date is required");
-    if (!formState.serviceCenter.trim()) validationErrors.push("Service center is required");
-    if (!formState.mechanic.trim()) validationErrors.push("Mechanic name is required");
-    if (!formState.cost || Number(formState.cost) <= 0) validationErrors.push("Cost must be greater than zero");
-
-    if (validationErrors.length > 0) {
-      setSubmitState({ loading: false, error: validationErrors.join(" • ") });
-      return;
+    // Optimistic UI updates
+    if (payload.id) {
+      setRecords((prev) => prev.map((r) => (r.id === payload.id ? completeRecord : r)));
+      setSelectedRecord(completeRecord);
+    } else {
+      setRecords((prev) => [completeRecord, ...prev]);
+      setSelectedRecord(completeRecord);
     }
 
-    const payload = toRecordPayload(formState, isEditing && selectedRecord ? selectedRecord.id : undefined);
     try {
-      const method = isEditing ? "PATCH" : "POST";
-      const response = await fetch(`${apiBase}/maintenance${isEditing && selectedRecord ? `/${selectedRecord.id}` : ""}`, {
+      const isEdit = !!payload.id;
+      const method = isEdit ? "PATCH" : "POST";
+      const response = await fetch(`${apiBase}/maintenance${isEdit ? `/${payload.id}` : ""}`, {
         method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(completeRecord),
       });
 
       if (!response.ok) throw new Error("Unable to save maintenance record");
       const saved = await response.json();
-      setSubmitState({ loading: false, error: null });
-      setFormState(baseFormState);
-      setIsEditing(false);
       setSelectedRecord(saved);
       setRefreshKey((value) => value + 1);
     } catch (error) {
-      setSubmitState({ loading: false, error: error instanceof Error ? error.message : "Save failed" });
+      console.warn("API save missed, running on local/mock state:", error);
     }
-  };
-
-  const startEditing = (record: MaintenanceRecord) => {
-    setSelectedRecord(record);
-    setFormState(toFormState(record));
-    setIsEditing(true);
-  };
-
-  const resetForm = () => {
-    setFormState(baseFormState);
-    setIsEditing(false);
   };
 
   return (
@@ -310,7 +378,10 @@ export default function MaintenanceDashboard() {
             <p className="text-on-surface-variant font-medium">Track service tasks, upcoming due maintenance, and full repair histories.</p>
           </div>
           <button
-            onClick={resetForm}
+            onClick={() => {
+              setRecordToEdit(null);
+              setIsWizardOpen(true);
+            }}
             className="inline-flex items-center justify-center gap-2 rounded-xl bg-linear-to-br from-primary to-primary-container px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-primary/20 transition-all hover:opacity-90 active:scale-[0.98]"
           >
             <span className="material-symbols-outlined text-[1.1rem]">add_circle</span>
@@ -374,37 +445,45 @@ export default function MaintenanceDashboard() {
               </label>
             </div>
 
-            <div className="overflow-hidden rounded-2xl border border-outline-variant/10">
-              <table className="min-w-full text-left text-sm">
-                <thead className="bg-surface-container-high">
-                  <tr>
-                    <th className="px-4 py-3 font-semibold text-on-surface-variant">Vehicle</th>
-                    <th className="px-4 py-3 font-semibold text-on-surface-variant">Type</th>
-                    <th className="px-4 py-3 font-semibold text-on-surface-variant">Date</th>
-                    <th className="px-4 py-3 font-semibold text-on-surface-variant">Status</th>
-                    <th className="px-4 py-3 font-semibold text-on-surface-variant">Cost</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredRecords.map((record) => (
-                    <tr key={record.id} className={`cursor-pointer border-t border-outline-variant/10 transition-colors hover:bg-primary/5 ${selectedRecord?.id === record.id ? "bg-primary/10" : "bg-white"}`} onClick={() => setSelectedRecord(record)}>
-                      <td className="px-4 py-3">
-                        <div className="font-semibold text-on-surface">{record.vehicleNumber}</div>
-                        <div className="text-xs text-on-surface-variant">{record.serviceCenter}</div>
-                      </td>
-                      <td className="px-4 py-3 text-on-surface-variant">{record.maintenanceType}</td>
-                      <td className="px-4 py-3 text-on-surface-variant">{record.maintenanceDate}</td>
-                      <td className="px-4 py-3">
-                        <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${statusClasses[record.status as keyof typeof statusClasses] || statusClasses.Scheduled}`}>
-                          {record.status}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 font-semibold text-on-surface">₹{record.cost.toLocaleString()}</td>
+            {filteredRecords.length === 0 ? (
+              <div className="py-16 text-center border border-dashed border-outline-variant/20 rounded-2xl bg-surface-container-low/30">
+                <span className="material-symbols-outlined text-5xl text-outline mb-2">search_off</span>
+                <p className="text-sm font-bold text-on-surface">No records found matching filters</p>
+                <p className="text-xs text-on-surface-variant mt-1">Try clearing filters or search parameters.</p>
+              </div>
+            ) : (
+              <div className="overflow-hidden rounded-2xl border border-outline-variant/10">
+                <table className="min-w-full text-left text-sm">
+                  <thead className="bg-surface-container-high">
+                    <tr>
+                      <th className="px-4 py-3 font-semibold text-on-surface-variant">Vehicle</th>
+                      <th className="px-4 py-3 font-semibold text-on-surface-variant">Type</th>
+                      <th className="px-4 py-3 font-semibold text-on-surface-variant">Date</th>
+                      <th className="px-4 py-3 font-semibold text-on-surface-variant">Status</th>
+                      <th className="px-4 py-3 font-semibold text-on-surface-variant">Cost</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {filteredRecords.map((record) => (
+                      <tr key={record.id} className={`cursor-pointer border-t border-outline-variant/10 transition-colors hover:bg-primary/5 ${selectedRecord?.id === record.id ? "bg-primary/10" : "bg-white"}`} onClick={() => setSelectedRecord(record)}>
+                        <td className="px-4 py-3">
+                          <div className="font-semibold text-on-surface">{record.vehicleNumber}</div>
+                          <div className="text-xs text-on-surface-variant">{record.serviceCenter}</div>
+                        </td>
+                        <td className="px-4 py-3 text-on-surface-variant">{record.maintenanceType}</td>
+                        <td className="px-4 py-3 text-on-surface-variant">{record.maintenanceDate}</td>
+                        <td className="px-4 py-3">
+                          <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${statusClasses[record.status as keyof typeof statusClasses] || statusClasses.Scheduled}`}>
+                            {record.status}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 font-semibold text-on-surface">₹{record.cost.toLocaleString()}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </section>
 
           <section className="space-y-6">
@@ -415,7 +494,13 @@ export default function MaintenanceDashboard() {
                   <p className="text-sm text-on-surface-variant">View the full maintenance record and edit it quickly.</p>
                 </div>
                 {selectedRecord && (
-                  <button className="rounded-xl border border-primary/20 px-3 py-2 text-sm font-semibold text-primary hover:bg-primary/5" onClick={() => startEditing(selectedRecord)}>
+                  <button 
+                    className="rounded-xl border border-primary/20 px-3 py-2 text-sm font-semibold text-primary hover:bg-primary/5" 
+                    onClick={() => {
+                      setRecordToEdit(selectedRecord);
+                      setIsWizardOpen(true);
+                    }}
+                  >
                     Edit
                   </button>
                 )}
@@ -440,8 +525,8 @@ export default function MaintenanceDashboard() {
                     <InfoItem label="Service Center" value={selectedRecord.serviceCenter} />
                     <InfoItem label="Mechanic" value={selectedRecord.mechanic} />
                     <InfoItem label="Cost" value={`₹${selectedRecord.cost.toLocaleString()}`} />
-                    <InfoItem label="Next Service" value={selectedRecord.nextServiceDate} />
-                    <InfoItem label="Next Odometer" value={`${selectedRecord.nextServiceOdometer.toLocaleString()} km`} />
+                    <InfoItem label="Next Service" value={selectedRecord.nextServiceDate || "—"} />
+                    <InfoItem label="Next Odometer" value={selectedRecord.nextServiceOdometer ? `${selectedRecord.nextServiceOdometer.toLocaleString()} km` : "—"} />
                   </div>
                   <div className="rounded-2xl bg-surface-container-low p-4">
                     <p className="mb-2 text-xs uppercase tracking-[0.3em] text-outline">Description</p>
@@ -481,23 +566,42 @@ export default function MaintenanceDashboard() {
 
         {/* Tyre & Chassis Tracker */}
         <section className="rounded-3xl border border-outline-variant/15 bg-surface-container-lowest p-6 shadow-[0px_20px_40px_rgba(23,28,31,0.06)]">
-          <div className="mb-6 flex items-center justify-between">
+          <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <h3 className="text-xl font-black tracking-tight text-on-surface">Tyre & Chassis Tracker</h3>
               <p className="text-sm text-on-surface-variant">Interactive view of tyre wear and history for the selected vehicle.</p>
             </div>
+            {vehicles.length > 0 && (
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-outline uppercase tracking-wider">Active Vehicle:</span>
+                <select
+                  className="rounded-xl border border-outline-variant/20 bg-surface px-3 py-2 text-sm outline-none focus:border-primary font-semibold text-on-surface min-w-[200px]"
+                  value={chassisVehicleNumber}
+                  onChange={(e) => {
+                    setChassisVehicleNumber(e.target.value);
+                    setSelectedTyre(null);
+                  }}
+                >
+                  {vehicles.map((v) => (
+                    <option key={v.core.registrationNumber} value={v.core.registrationNumber}>
+                      {v.core.registrationNumber} ({v.core.make} {v.core.model})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-[1fr_1.2fr]">
              <div className="bg-surface-container-low/30 rounded-2xl border border-outline-variant/10 flex items-center justify-center min-h-[300px]">
                 <DynamicChassis 
-                  axles={defaultAxleConfig} 
+                  axles={currentAxleConfig} 
                   selectedTyre={selectedTyre} 
                   onTyreClick={setSelectedTyre} 
                 />
              </div>
              <div>
                 {selectedTyre ? (
-                  <TyreHistoryCard tyreId={selectedTyre} onClose={() => setSelectedTyre(null)} />
+                  <TyreHistoryCard tyreId={selectedTyre} onClose={() => setSelectedTyre(null)} activities={tyreActivities} />
                 ) : (
                   <div className="h-full min-h-[300px] flex flex-col items-center justify-center text-center p-8 rounded-2xl border border-dashed border-outline-variant/20 bg-surface-container-lowest">
                      <span className="material-symbols-outlined text-4xl text-outline mb-2">touch_app</span>
@@ -509,63 +613,76 @@ export default function MaintenanceDashboard() {
           </div>
         </section>
 
-        <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
-          <section className="rounded-3xl border border-outline-variant/15 bg-surface-container-lowest p-6 shadow-[0px_20px_40px_rgba(23,28,31,0.06)]">
-            <div className="mb-4 flex items-center justify-between">
-              <div>
-                <h3 className="text-xl font-black tracking-tight text-on-surface">Vehicle Maintenance History</h3>
-                <p className="text-sm text-on-surface-variant">A complete timeline for the selected vehicle.</p>
-              </div>
-              {selectedRecord && <span className="rounded-full bg-primary/10 px-3 py-1 text-sm font-semibold text-primary">{vehicleHistory.length} records</span>}
+        {/* Full Width Maintenance History */}
+        <section className="rounded-3xl border border-outline-variant/15 bg-surface-container-lowest p-6 shadow-[0px_20px_40px_rgba(23,28,31,0.06)]">
+          <div className="mb-6 flex items-center justify-between">
+            <div>
+              <h3 className="text-xl font-black tracking-tight text-on-surface">Vehicle Maintenance History</h3>
+              <p className="text-sm text-on-surface-variant">A complete timeline for the selected vehicle.</p>
             </div>
-            {selectedRecord ? (
-              <div className="space-y-4">
-                <div className="grid gap-3 rounded-2xl bg-surface-container-low p-4 sm:grid-cols-3">
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.3em] text-outline">Total Cost</p>
-                    <p className="text-lg font-semibold text-on-surface">₹{vehicleHistory.reduce((sum, item) => sum + item.cost, 0).toLocaleString()}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.3em] text-outline">Last Service</p>
-                    <p className="text-lg font-semibold text-on-surface">{vehicleHistory[0]?.maintenanceDate || "—"}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.3em] text-outline">Upcoming Service</p>
-                    <p className="text-lg font-semibold text-on-surface">{vehicleHistory[0]?.nextServiceDate || "—"}</p>
-                  </div>
+            {selectedRecord && (
+              <span className="rounded-full bg-primary/10 px-3 py-1 text-sm font-semibold text-primary">
+                {vehicleHistory.length} records
+              </span>
+            )}
+          </div>
+          {selectedRecord ? (
+            <div className="space-y-6">
+              <div className="grid gap-4 rounded-2xl bg-surface-container-low p-4 sm:grid-cols-3">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.3em] text-outline font-bold">Total Cost</p>
+                  <p className="text-xl font-semibold text-on-surface mt-1">₹{vehicleHistory.reduce((sum, item) => sum + item.cost, 0).toLocaleString()}</p>
                 </div>
-                <div className="space-y-3">
-                  {vehicleHistory.map((item) => (
-                    <div key={item.id} className="rounded-2xl border border-outline-variant/10 p-4">
-                      <div className="flex items-center justify-between gap-3">
-                        <div>
-                          <p className="font-semibold text-on-surface">{item.maintenanceType}</p>
-                          <p className="text-sm text-on-surface-variant">{item.description}</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-sm font-semibold text-on-surface">{item.maintenanceDate}</p>
-                          <p className="text-xs text-on-surface-variant">₹{item.cost.toLocaleString()}</p>
-                        </div>
+                <div>
+                  <p className="text-xs uppercase tracking-[0.3em] text-outline font-bold">Last Service</p>
+                  <p className="text-xl font-semibold text-on-surface mt-1">{vehicleHistory[0]?.maintenanceDate || "—"}</p>
+                </div>
+                <div>
+                  <p className="text-xs uppercase tracking-[0.3em] text-outline font-bold">Upcoming Service</p>
+                  <p className="text-xl font-semibold text-on-surface mt-1">{vehicleHistory[0]?.nextServiceDate || "—"}</p>
+                </div>
+              </div>
+              <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                {vehicleHistory.map((item) => (
+                  <div key={item.id} className="rounded-2xl border border-outline-variant/10 p-4 bg-white shadow-xs hover:border-primary/20 transition-all duration-200">
+                    <div className="flex items-center justify-between gap-3 flex-wrap sm:flex-nowrap">
+                      <div>
+                        <p className="font-semibold text-on-surface text-base">{item.maintenanceType}</p>
+                        <p className="text-sm text-on-surface-variant mt-1">{item.description}</p>
+                        {item.partsReplaced && (
+                          <div className="inline-flex items-center gap-1 mt-2 px-2.5 py-1 bg-surface-container-low rounded-lg text-xs font-semibold text-outline">
+                            <span className="material-symbols-outlined text-[14px]">settings</span>
+                            <span>Parts: {item.partsReplaced}</span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="text-left sm:text-right shrink-0">
+                        <p className="text-sm font-semibold text-on-surface">{item.maintenanceDate}</p>
+                        <p className="text-base text-primary font-black mt-1">₹{item.cost.toLocaleString()}</p>
                       </div>
                     </div>
-                  ))}
-                </div>
-              </div>
-            ) : <div className="rounded-2xl border border-dashed border-outline-variant/20 p-6 text-sm text-on-surface-variant">Choose a maintenance record to view the vehicle timeline.</div>}
-          </section>
-
-          <section className="rounded-3xl border border-outline-variant/15 bg-surface-container-lowest p-6 shadow-[0px_20px_40px_rgba(23,28,31,0.06)]">
-            <div className="mb-4 flex items-center justify-between">
-              <div>
-                <h3 className="text-xl font-black tracking-tight text-on-surface">{isEditing ? "Edit Maintenance Record" : "Add Maintenance Record"}</h3>
-                <p className="text-sm text-on-surface-variant">Capture details that keep every vehicle compliant and service-ready.</p>
+                  </div>
+                ))}
               </div>
             </div>
-            {submitState.error && <div className="mb-4 rounded-2xl border border-error/20 bg-error/10 px-3 py-2 text-sm text-error">{submitState.error}</div>}
-            <MaintenanceForm formState={formState} isEditing={isEditing} onChange={setFormState} onSubmit={handleSubmit} loading={submitState.loading} />
-          </section>
-        </div>
+          ) : (
+            <div className="rounded-2xl border border-dashed border-outline-variant/20 p-6 text-sm text-on-surface-variant text-center">
+              Choose a maintenance record to view the vehicle timeline.
+            </div>
+          )}
+        </section>
       </div>
+
+      <CreateMaintenanceWizard
+        isOpen={isWizardOpen}
+        onClose={() => {
+          setIsWizardOpen(false);
+          setRecordToEdit(null);
+        }}
+        onSubmit={handleWizardSubmit}
+        vehicles={vehicles}
+        recordToEdit={recordToEdit}
+      />
     </LayoutWrapper>
   );
 }
@@ -573,7 +690,7 @@ export default function MaintenanceDashboard() {
 function InfoItem({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-2xl bg-surface-container-low p-3">
-      <p className="text-xs uppercase tracking-[0.3em] text-outline">{label}</p>
+      <p className="text-xs uppercase tracking-[0.3em] text-outline font-bold">{label}</p>
       <p className="mt-1 font-semibold text-on-surface">{value}</p>
     </div>
   );
@@ -585,90 +702,3 @@ const statusClasses = {
   Completed: "bg-tertiary/10 text-tertiary",
   Cancelled: "bg-error/10 text-error",
 };
-
-function MaintenanceForm({ formState, isEditing, onChange, onSubmit, loading }: { formState: MaintenanceFormState; isEditing: boolean; onChange: (value: MaintenanceFormState) => void; onSubmit: (event: React.FormEvent) => void; loading: boolean }) {
-  const updateField = (field: keyof MaintenanceFormState, value: string) => {
-    onChange({ ...formState, [field]: value });
-  };
-
-  return (
-    <form className="space-y-4" onSubmit={onSubmit}>
-      <div className="grid gap-4 md:grid-cols-2">
-        <label className="text-sm text-on-surface-variant">
-          Vehicle
-          <input className="mt-1 w-full rounded-xl border border-outline-variant/20 bg-surface px-3 py-2 text-sm outline-none focus:border-primary" value={formState.vehicleNumber} onChange={(event) => updateField("vehicleNumber", event.target.value)} required />
-        </label>
-        <label className="text-sm text-on-surface-variant">
-          Vehicle ID
-          <input className="mt-1 w-full rounded-xl border border-outline-variant/20 bg-surface px-3 py-2 text-sm outline-none focus:border-primary" value={formState.vehicleId} onChange={(event) => updateField("vehicleId", event.target.value)} required />
-        </label>
-        <label className="text-sm text-on-surface-variant">
-          Maintenance Type
-          <select className="mt-1 w-full rounded-xl border border-outline-variant/20 bg-surface px-3 py-2 text-sm outline-none focus:border-primary" value={formState.maintenanceType} onChange={(event) => updateField("maintenanceType", event.target.value)}>
-            <option value="Service">Service</option>
-            <option value="Inspection">Inspection</option>
-            <option value="Tyre Replacement">Tyre Replacement</option>
-            <option value="Repair">Repair</option>
-          </select>
-        </label>
-        <label className="text-sm text-on-surface-variant">
-          Maintenance Date
-          <input type="date" className="mt-1 w-full rounded-xl border border-outline-variant/20 bg-surface px-3 py-2 text-sm outline-none focus:border-primary" value={formState.maintenanceDate} onChange={(event) => updateField("maintenanceDate", event.target.value)} required />
-        </label>
-        <label className="text-sm text-on-surface-variant">
-          Odometer Reading
-          <input type="number" className="mt-1 w-full rounded-xl border border-outline-variant/20 bg-surface px-3 py-2 text-sm outline-none focus:border-primary" value={formState.odometerReading} onChange={(event) => updateField("odometerReading", event.target.value)} required />
-        </label>
-        <label className="text-sm text-on-surface-variant">
-          Service Center
-          <input className="mt-1 w-full rounded-xl border border-outline-variant/20 bg-surface px-3 py-2 text-sm outline-none focus:border-primary" value={formState.serviceCenter} onChange={(event) => updateField("serviceCenter", event.target.value)} required />
-        </label>
-        <label className="text-sm text-on-surface-variant">
-          Mechanic Name
-          <input className="mt-1 w-full rounded-xl border border-outline-variant/20 bg-surface px-3 py-2 text-sm outline-none focus:border-primary" value={formState.mechanic} onChange={(event) => updateField("mechanic", event.target.value)} required />
-        </label>
-        <label className="text-sm text-on-surface-variant">
-          Cost
-          <input type="number" className="mt-1 w-full rounded-xl border border-outline-variant/20 bg-surface px-3 py-2 text-sm outline-none focus:border-primary" value={formState.cost} onChange={(event) => updateField("cost", event.target.value)} required />
-        </label>
-        <label className="text-sm text-on-surface-variant md:col-span-2">
-          Description
-          <textarea className="mt-1 min-h-20 w-full rounded-xl border border-outline-variant/20 bg-surface px-3 py-2 text-sm outline-none focus:border-primary" value={formState.description} onChange={(event) => updateField("description", event.target.value)} />
-        </label>
-        <label className="text-sm text-on-surface-variant md:col-span-2">
-          Parts Replaced
-          <input className="mt-1 w-full rounded-xl border border-outline-variant/20 bg-surface px-3 py-2 text-sm outline-none focus:border-primary" value={formState.partsReplaced} onChange={(event) => updateField("partsReplaced", event.target.value)} />
-        </label>
-        <label className="text-sm text-on-surface-variant">
-          Next Service Date
-          <input type="date" className="mt-1 w-full rounded-xl border border-outline-variant/20 bg-surface px-3 py-2 text-sm outline-none focus:border-primary" value={formState.nextServiceDate} onChange={(event) => updateField("nextServiceDate", event.target.value)} />
-        </label>
-        <label className="text-sm text-on-surface-variant">
-          Next Service Odometer
-          <input type="number" className="mt-1 w-full rounded-xl border border-outline-variant/20 bg-surface px-3 py-2 text-sm outline-none focus:border-primary" value={formState.nextServiceOdometer} onChange={(event) => updateField("nextServiceOdometer", event.target.value)} />
-        </label>
-        <label className="text-sm text-on-surface-variant">
-          Status
-          <select className="mt-1 w-full rounded-xl border border-outline-variant/20 bg-surface px-3 py-2 text-sm outline-none focus:border-primary" value={formState.status} onChange={(event) => updateField("status", event.target.value)}>
-            <option value="Scheduled">Scheduled</option>
-            <option value="In Progress">In Progress</option>
-            <option value="Completed">Completed</option>
-            <option value="Cancelled">Cancelled</option>
-          </select>
-        </label>
-        <label className="text-sm text-on-surface-variant md:col-span-2">
-          Notes
-          <textarea className="mt-1 min-h-20 w-full rounded-xl border border-outline-variant/20 bg-surface px-3 py-2 text-sm outline-none focus:border-primary" value={formState.notes} onChange={(event) => updateField("notes", event.target.value)} />
-        </label>
-      </div>
-      <div className="flex gap-3">
-        <button type="submit" className="rounded-xl bg-linear-to-br from-primary to-primary-container px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-primary/20 transition-all hover:opacity-90 active:scale-[0.98]" disabled={loading}>
-          {loading ? "Saving..." : isEditing ? "Save Changes" : "Create Record"}
-        </button>
-        <button type="button" className="rounded-xl border border-outline-variant/20 px-4 py-2.5 text-sm font-semibold text-on-surface-variant" onClick={() => onChange(baseFormState)}>
-          Reset
-        </button>
-      </div>
-    </form>
-  );
-}
