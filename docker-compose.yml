@@ -1,0 +1,37 @@
+# ============================================================
+# Deposity — Local Development Environment
+# ============================================================
+# Usage: docker-compose up --build
+# Backend: http://localhost:8080
+# Frontend: http://localhost:3000
+
+services:
+  # ── Backend (Go + Air hot-reload) ──────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ./backend:/app
+    ports:
+      - "8080:8080"
+    env_file:
+      - ./backend/.env
+    working_dir: /app
+    command: ["air", "-c", ".air.toml"]
+
+  # ── Frontend (Next.js dev server) ──────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules # Anonymous volume to prevent host node_modules from overwriting
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8080
+    depends_on:
+      - backend
+    command: ["npm", "run", "dev"]
