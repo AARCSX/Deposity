@@ -39,13 +39,19 @@ export default function DriverCard({
         {/* Avatar Section */}
         <div className="relative flex-shrink-0">
           <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-surface shadow-inner">
-            <Image
-              src={avatar}
-              alt={name}
-              width={96}
-              height={96}
-              className={`w-full h-full object-cover ${status === "Inactive" ? "grayscale" : ""}`}
-            />
+            {avatar && typeof avatar === "string" && avatar.trim().length > 0 ? (
+              <Image
+                src={avatar}
+                alt={name}
+                width={96}
+                height={96}
+                className={`w-full h-full object-cover ${status === "Inactive" ? "grayscale" : ""}`}
+              />
+            ) : (
+              <div className={`w-full h-full flex items-center justify-center bg-surface-container-high text-primary ${status === "Inactive" ? "grayscale" : ""}`}>
+                <span className="material-symbols-outlined text-4xl">person</span>
+              </div>
+            )}
           </div>
           <div className={`absolute bottom-1 right-1 w-6 h-6 border-4 border-surface rounded-full shadow-sm ${status === "Active" ? "bg-tertiary-fixed" : "bg-outline-variant"}`}></div>
         </div>

@@ -121,6 +121,31 @@ const fallbackVehicles: VehicleRecord[] = [
 export function parseAxleConfig(configStr: string): AxleConfig[] {
   if (!configStr) return [{ left: 1, right: 1 }, { left: 2, right: 2 }, { left: 2, right: 2 }];
   
+  const lower = configStr.toLowerCase().trim();
+  
+  // 1. Check for total wheel count mappings first to handle inputs like "10", "12", "6", "10 wheeler" etc.
+  const wheelOnlyMatch = lower.replace(/\s*wheelers?|\s*wheel/g, "").trim();
+  const wheels = parseInt(wheelOnlyMatch);
+  if (!isNaN(wheels) && /^\d+$/.test(wheelOnlyMatch)) {
+    if (wheels === 4) return [{ left: 1, right: 1 }, { left: 1, right: 1 }];
+    if (wheels === 6) return [{ left: 1, right: 1 }, { left: 2, right: 2 }];
+    if (wheels === 10) return [{ left: 1, right: 1 }, { left: 2, right: 2 }, { left: 2, right: 2 }];
+    if (wheels === 12) return [{ left: 1, right: 1 }, { left: 1, right: 1 }, { left: 2, right: 2 }, { left: 2, right: 2 }];
+    if (wheels === 14) return [{ left: 1, right: 1 }, { left: 1, right: 1 }, { left: 1, right: 1 }, { left: 2, right: 2 }, { left: 2, right: 2 }];
+    if (wheels === 16) return [{ left: 1, right: 1 }, { left: 1, right: 1 }, { left: 2, right: 2 }, { left: 2, right: 2 }, { left: 2, right: 2 }];
+  }
+
+  if (lower.includes("4x2") || lower.includes("6 wheeler")) {
+    return [{ left: 1, right: 1 }, { left: 2, right: 2 }];
+  }
+  if (lower.includes("6x4") || lower.includes("6x2") || lower.includes("10 wheeler")) {
+    return [{ left: 1, right: 1 }, { left: 2, right: 2 }, { left: 2, right: 2 }];
+  }
+  if (lower.includes("8x2") || lower.includes("8x4") || lower.includes("12 wheeler")) {
+    return [{ left: 1, right: 1 }, { left: 1, right: 1 }, { left: 2, right: 2 }, { left: 2, right: 2 }];
+  }
+
+  // 2. Otherwise parse custom layouts like "1 1, 2 2, 2 2"
   const segments = configStr.split(/[;,/]/);
   const parsed: AxleConfig[] = [];
   
@@ -137,17 +162,6 @@ export function parseAxleConfig(configStr: string): AxleConfig[] {
   }
   
   if (parsed.length > 0) return parsed;
-  
-  const lower = configStr.toLowerCase();
-  if (lower.includes("4x2") || lower.includes("6 wheeler")) {
-    return [{ left: 1, right: 1 }, { left: 2, right: 2 }];
-  }
-  if (lower.includes("6x4") || lower.includes("6x2") || lower.includes("10 wheeler")) {
-    return [{ left: 1, right: 1 }, { left: 2, right: 2 }, { left: 2, right: 2 }];
-  }
-  if (lower.includes("8x2") || lower.includes("8x4") || lower.includes("12 wheeler")) {
-    return [{ left: 1, right: 1 }, { left: 1, right: 1 }, { left: 2, right: 2 }, { left: 2, right: 2 }];
-  }
   
   return [{ left: 1, right: 1 }, { left: 2, right: 2 }, { left: 2, right: 2 }];
 }

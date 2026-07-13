@@ -52,12 +52,11 @@ export default function VehiclesPage() {
       if (response.ok) {
         loadVehicles(); // Refetch
       } else {
-        // Optimistic UI update for testing without backend
-        setVehicles(prev => [data, ...prev]);
+        const errData = await response.json().catch(() => ({}));
+        alert(`Failed to save vehicle: ${errData.error || "Unknown server error"}`);
       }
-    } catch {
-      // Optimistic UI update for testing without backend
-      setVehicles(prev => [data, ...prev]);
+    } catch (err: any) {
+      alert(`Failed to save vehicle: ${err.message || "Network error"}`);
     }
     setIsCreateModalOpen(false);
   };

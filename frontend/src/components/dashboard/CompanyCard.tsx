@@ -35,13 +35,17 @@ export default function CompanyCard({
     <div className={`bg-surface-container-lowest rounded-xl p-6 shadow-sm hover:shadow-xl transition-all duration-300 border border-outline-variant/10 group ${isOverdue ? "hover:shadow-error/5 ring-1 ring-error/5" : "hover:shadow-primary/5"}`}>
       <div className="flex justify-between items-start mb-6">
         <div className="w-14 h-14 rounded-xl bg-surface-container overflow-hidden flex items-center justify-center p-2">
-          <Image
-            src={logo}
-            alt={name}
-            width={56}
-            height={56}
-            className="w-full h-full object-contain"
-          />
+          {logo && typeof logo === "string" && logo.trim().length > 0 ? (
+            <Image
+              src={logo}
+              alt={name}
+              width={56}
+              height={56}
+              className="w-full h-full object-contain"
+            />
+          ) : (
+            <span className="material-symbols-outlined text-3xl text-primary">domain</span>
+          )}
         </div>
         <div className="flex flex-col items-end">
           <span className={`text-[0.65rem] px-2 py-1 rounded font-bold uppercase tracking-tighter ${isOverdue ? "bg-error-container text-on-error-container" : status === "Premium Partner" ? "bg-tertiary-fixed text-on-tertiary-fixed" : "bg-surface-container-high text-on-surface-variant"}`}>

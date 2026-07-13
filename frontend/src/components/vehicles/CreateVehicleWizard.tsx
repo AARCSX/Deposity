@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { VehicleRecord } from "@/types/vehicle";
+import { authenticatedFetch } from "@/lib/api";
 
 interface CreateVehicleWizardProps {
   isOpen: boolean;
@@ -52,6 +53,19 @@ export default function CreateVehicleWizard({ isOpen, onClose, onSubmit }: Creat
   const [currentStep, setCurrentStep] = useState(0);
   const [formData, setFormData] = useState<VehicleRecord>(initialData);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [drivers, setDrivers] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (isOpen) {
+      authenticatedFetch("/drivers")
+        .then((res) => {
+          if (res.ok) return res.json();
+          return [];
+        })
+        .then((data) => setDrivers(Array.isArray(data) ? data : []))
+        .catch(() => setDrivers([]));
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -65,7 +79,27 @@ export default function CreateVehicleWizard({ isOpen, onClose, onSubmit }: Creat
 
   const handleSubmit = async () => {
     setIsSubmitting(true);
-    await onSubmit(formData);
+
+    const payload = {
+      ...formData,
+      compliance: {
+        ...formData.compliance,
+        rcExpiry: formData.compliance.rcExpiry ? new Date(formData.compliance.rcExpiry).toISOString() : new Date().toISOString(),
+        insuranceExpiry: formData.compliance.insuranceExpiry ? new Date(formData.compliance.insuranceExpiry).toISOString() : new Date().toISOString(),
+        pucExpiry: formData.compliance.pucExpiry ? new Date(formData.compliance.pucExpiry).toISOString() : new Date().toISOString(),
+        fitnessExpiry: formData.compliance.fitnessExpiry ? new Date(formData.compliance.fitnessExpiry).toISOString() : new Date().toISOString(),
+      },
+      ownership: {
+        ...formData.ownership,
+        driverId: formData.ownership.driverId.trim() || null,
+      },
+      maintenance: {
+        ...formData.maintenance,
+        lastServicedDate: formData.maintenance.lastServicedDate ? new Date(formData.maintenance.lastServicedDate).toISOString() : new Date().toISOString(),
+      }
+    };
+
+    await onSubmit(payload as any);
     setIsSubmitting(false);
     setCurrentStep(0);
     setFormData(initialData);
@@ -139,7 +173,21 @@ export default function CreateVehicleWizard({ isOpen, onClose, onSubmit }: Creat
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5 animate-in slide-in-from-right-4 duration-300">
               <div className="md:col-span-2 text-sm text-on-surface-variant mb-2">Essential for accounting, billing, and fleet-owner payouts.</div>
               <Select label="Ownership Type" value={formData.ownership.ownershipType} onChange={(v) => setFormData(f => ({...f, ownership: {...f.ownership, ownershipType: v as any}}))} options={["Own", "Market"]} />
-              <Input label="Assigned Driver ID" placeholder="Leave blank if unassigned" value={formData.ownership.driverId} onChange={(v) => setFormData(f => ({...f, ownership: {...f.ownership, driverId: v}}))} />
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-outline">Assigned Driver</label>
+                <select 
+                  value={formData.ownership.driverId || ""}
+                  onChange={(e) => setFormData(f => ({...f, ownership: {...f.ownership, driverId: e.target.value}}))}
+                  className="w-full bg-surface-container-highest border border-outline-variant/20 rounded-xl px-4 py-2.5 text-sm text-on-surface outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all font-medium"
+                >
+                  <option value="">Unassigned</option>
+                  {drivers.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.name} ({d.phone})
+                    </option>
+                  ))}
+                </select>
+              </div>
               <Input label="Home Branch / Location" placeholder="e.g. Pune Depot" value={formData.ownership.homeBranch} onChange={(v) => setFormData(f => ({...f, ownership: {...f.ownership, homeBranch: v}}))} />
               <Input label="GPS Device ID" placeholder="IoT Telematics ID" value={formData.ownership.gpsDeviceId} onChange={(v) => setFormData(f => ({...f, ownership: {...f.ownership, gpsDeviceId: v}}))} />
             </div>

@@ -61,17 +61,14 @@ function TripsContent() {
       });
       if (response.ok) {
         loadTrips(); // Refetch
+        setIsCreateModalOpen(false);
       } else {
-        // Optimistic UI update for testing
-        const newTrip = { ...data, id: `TRP-${Math.floor(1000 + Math.random() * 9000)}` };
-        setTrips(prev => [newTrip, ...prev]);
+        const err = await response.json().catch(() => ({}));
+        alert(`Failed to create trip: ${err.error || response.statusText}`);
       }
-    } catch {
-      // Optimistic UI update for testing
-      const newTrip = { ...data, id: `TRP-${Math.floor(1000 + Math.random() * 9000)}` };
-      setTrips(prev => [newTrip, ...prev]);
+    } catch (e: any) {
+      alert(`Network error creating trip: ${e.message}`);
     }
-    setIsCreateModalOpen(false);
   };
 
   // Helper to map robust data to the simpler TripCard props

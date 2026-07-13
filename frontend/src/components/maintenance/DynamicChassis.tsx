@@ -53,7 +53,7 @@ export default function DynamicChassis({ axles, selectedTyre, onTyreClick }: Dyn
       const isInner = side === "left" ? i === count - 1 : i === 0;
       const isOuter = !isInner;
       
-      const tyreId = `axle-${axleIndex}-${side}${count > 1 ? (isInner ? '-inner' : '-outer') : ''}`;
+      const tyreId = `axle-${axleIndex}-${side}${count > 1 ? (isInner ? '-inner' : '-outer') : ''}${count > 2 ? `-${i}` : ''}`;
       const isSelected = selectedTyre === tyreId;
       
       // Calculate X position
@@ -69,7 +69,7 @@ export default function DynamicChassis({ axles, selectedTyre, onTyreClick }: Dyn
 
       tyres.push(
         <rect
-          key={tyreId}
+          key={`${tyreId}-${i}`}
           x={x}
           y={y - tyreHeight / 2}
           width={tyreWidth}

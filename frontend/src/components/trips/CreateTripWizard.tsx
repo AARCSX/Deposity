@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { TripRecord } from "@/types/trip";
+import { authenticatedFetch } from "@/lib/api";
 
 interface CreateTripWizardProps {
   isOpen: boolean;
@@ -45,6 +46,33 @@ export default function CreateTripWizard({ isOpen, onClose, onSubmit }: CreateTr
   const [formData, setFormData] = useState<TripRecord>(initialData);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Loaded dropdown options
+  const [companies, setCompanies] = useState<any[]>([]);
+  const [vehicles, setVehicles] = useState<any[]>([]);
+  const [drivers, setDrivers] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (isOpen) {
+      // Fetch Companies
+      authenticatedFetch("/companies")
+        .then((res) => (res.ok ? res.json() : []))
+        .then((data) => setCompanies(Array.isArray(data) ? data : []))
+        .catch(() => setCompanies([]));
+
+      // Fetch Vehicles
+      authenticatedFetch("/vehicles")
+        .then((res) => (res.ok ? res.json() : []))
+        .then((data) => setVehicles(Array.isArray(data) ? data : []))
+        .catch(() => setVehicles([]));
+
+      // Fetch Drivers
+      authenticatedFetch("/drivers")
+        .then((res) => (res.ok ? res.json() : []))
+        .then((data) => setDrivers(Array.isArray(data) ? data : []))
+        .catch(() => setDrivers([]));
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   const handleNext = () => {
@@ -57,13 +85,51 @@ export default function CreateTripWizard({ isOpen, onClose, onSubmit }: CreateTr
 
   const handleSubmit = async () => {
     setIsSubmitting(true);
-    await onSubmit(formData);
+    let originDate = formData.route.originDate;
+    if (!originDate || originDate === "T" || !originDate.includes("T")) {
+      originDate = `${new Date().toISOString().split("T")[0]}T00:00`;
+    }
+    let destDate = formData.route.destinationDate;
+    if (!destDate || destDate === "T" || !destDate.includes("T")) {
+      destDate = `${new Date().toISOString().split("T")[0]}T00:00`;
+    }
+
+    try {
+      originDate = new Date(originDate).toISOString();
+    } catch {
+      originDate = new Date().toISOString();
+    }
+
+    try {
+      destDate = new Date(destDate).toISOString();
+    } catch {
+      destDate = new Date().toISOString();
+    }
+
+    const payload = {
+      ...formData,
+      route: {
+        ...formData.route,
+        originDate,
+        destinationDate: destDate,
+      }
+    };
+
+    await onSubmit(payload);
     setIsSubmitting(false);
     setCurrentStep(0);
     setFormData(initialData);
   };
 
   const progressPercentage = ((currentStep + 1) / STEPS.length) * 100;
+
+  const originDateParts = formData.route.originDate.split("T");
+  const originDatePart = originDateParts[0] || "";
+  const originTimePart = originDateParts[1] || "";
+
+  const destDateParts = formData.route.destinationDate.split("T");
+  const destDatePart = destDateParts[0] || "";
+  const destTimePart = destDateParts[1] || "";
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
@@ -103,16 +169,56 @@ export default function CreateTripWizard({ isOpen, onClose, onSubmit }: CreateTr
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5 animate-in slide-in-from-right-4 duration-300">
               <div className="md:col-span-2 text-sm text-on-surface-variant mb-2">Define the trip route and timeline.</div>
               <Input label="Origin City/Location" placeholder="e.g. Mumbai, MH" value={formData.route.originName} onChange={(v: string) => setFormData(f => ({...f, route: {...f.route, originName: v}}))} />
-              <Input label="Start Date/Time" type="datetime-local" value={formData.route.originDate} onChange={(v: string) => setFormData(f => ({...f, route: {...f.route, originDate: v}}))} />
+              <div className="grid grid-cols-2 gap-3">
+                <Input 
+                  label="Start Date" 
+                  type="date" 
+                  value={originDatePart} 
+                  onChange={(v: string) => setFormData(f => ({...f, route: {...f.route, originDate: `${v}T${originTimePart || "00:00"}`}}))} 
+                />
+                <Input 
+                  label="Start Time" 
+                  type="time" 
+                  value={originTimePart} 
+                  onChange={(v: string) => setFormData(f => ({...f, route: {...f.route, originDate: `${originDatePart || new Date().toISOString().split("T")[0]}T${v}`}}))} 
+                />
+              </div>
               <Input label="Destination City/Location" placeholder="e.g. Delhi, DL" value={formData.route.destinationName} onChange={(v: string) => setFormData(f => ({...f, route: {...f.route, destinationName: v}}))} />
-              <Input label="Estimated Arrival Date/Time" type="datetime-local" value={formData.route.destinationDate} onChange={(v: string) => setFormData(f => ({...f, route: {...f.route, destinationDate: v}}))} />
+              <div className="grid grid-cols-2 gap-3">
+                <Input 
+                  label="Est. Arrival Date" 
+                  type="date" 
+                  value={destDatePart} 
+                  onChange={(v: string) => setFormData(f => ({...f, route: {...f.route, destinationDate: `${v}T${destTimePart || "00:00"}`}}))} 
+                />
+                <Input 
+                  label="Est. Arrival Time" 
+                  type="time" 
+                  value={destTimePart} 
+                  onChange={(v: string) => setFormData(f => ({...f, route: {...f.route, destinationDate: `${destDatePart || new Date().toISOString().split("T")[0]}T${v}`}}))} 
+                />
+              </div>
             </div>
           )}
 
           {currentStep === 1 && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5 animate-in slide-in-from-right-4 duration-300">
               <div className="md:col-span-2 text-sm text-on-surface-variant mb-2">Details about the load and the client.</div>
-              <Input label="Client / Company Name" placeholder="e.g. ABC Logistics Ltd." value={formData.cargo.company} onChange={(v: string) => setFormData(f => ({...f, cargo: {...f.cargo, company: v}}))} />
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-outline">Client / Company Name</label>
+                <select 
+                  value={formData.cargo.company}
+                  onChange={(e) => setFormData(f => ({...f, cargo: {...f.cargo, company: e.target.value}}))}
+                  className="w-full bg-surface-container-highest border border-outline-variant/20 rounded-xl px-4 py-2.5 text-sm text-on-surface outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all font-medium"
+                >
+                  <option value="">Select Company</option>
+                  {companies.map((c) => (
+                    <option key={c.id} value={c.name}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
               <Input label="Material Type" placeholder="e.g. Steel Coils, Cotton" value={formData.cargo.material} onChange={(v: string) => setFormData(f => ({...f, cargo: {...f.cargo, material: v}}))} />
               <Input label="Total Weight (MT)" type="number" placeholder="15" value={formData.cargo.weight.toString()} onChange={(v: string) => setFormData(f => ({...f, cargo: {...f.cargo, weight: Number(v)}}))} />
             </div>
@@ -121,8 +227,36 @@ export default function CreateTripWizard({ isOpen, onClose, onSubmit }: CreateTr
           {currentStep === 2 && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5 animate-in slide-in-from-right-4 duration-300">
               <div className="md:col-span-2 text-sm text-on-surface-variant mb-2">Assign resources to this trip.</div>
-              <Input label="Vehicle Registration No." placeholder="e.g. MH12 AB 1234" value={formData.assignment.vehicleId} onChange={(v: string) => setFormData(f => ({...f, assignment: {...f.assignment, vehicleId: v}}))} />
-              <Input label="Driver ID / Name" placeholder="e.g. Ramesh K." value={formData.assignment.driverId} onChange={(v: string) => setFormData(f => ({...f, assignment: {...f.assignment, driverId: v}}))} />
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-outline">Assigned Vehicle</label>
+                <select 
+                  value={formData.assignment.vehicleId}
+                  onChange={(e) => setFormData(f => ({...f, assignment: {...f.assignment, vehicleId: e.target.value}}))}
+                  className="w-full bg-surface-container-highest border border-outline-variant/20 rounded-xl px-4 py-2.5 text-sm text-on-surface outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all font-medium"
+                >
+                  <option value="">Select Vehicle</option>
+                  {vehicles.map((v) => (
+                    <option key={v.id} value={v.core.registrationNumber}>
+                      {v.core.registrationNumber} ({v.core.make} {v.core.model})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-outline">Assigned Driver</label>
+                <select 
+                  value={formData.assignment.driverId}
+                  onChange={(e) => setFormData(f => ({...f, assignment: {...f.assignment, driverId: e.target.value}}))}
+                  className="w-full bg-surface-container-highest border border-outline-variant/20 rounded-xl px-4 py-2.5 text-sm text-on-surface outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all font-medium"
+                >
+                  <option value="">Select Driver</option>
+                  {drivers.map((d) => (
+                    <option key={d.id} value={d.name}>
+                      {d.name} ({d.phone})
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
           )}
 
