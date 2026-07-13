@@ -15,6 +15,7 @@ import (
 	"github.com/Akshansh-29072005/Deposity/backend/internal/dashboard"
 	"github.com/Akshansh-29072005/Deposity/backend/internal/drivers"
 	"github.com/Akshansh-29072005/Deposity/backend/internal/maintenance"
+	"github.com/Akshansh-29072005/Deposity/backend/internal/platform/database"
 	"github.com/Akshansh-29072005/Deposity/backend/internal/platform/middleware"
 	"github.com/Akshansh-29072005/Deposity/backend/internal/trips"
 	"github.com/Akshansh-29072005/Deposity/backend/internal/vehicles"
@@ -39,6 +40,11 @@ func main() {
 		log.Fatalf("[main] FATAL: Database is unreachable: %v", err)
 	}
 	log.Println("[main] Connected to database successfully")
+
+	// Run auto-migrations
+	if err := database.RunMigrations(ctx, pool, "migrations"); err != nil {
+		log.Fatalf("[main] FATAL: Database migrations failed: %v", err)
+	}
 
 	// 3. Initialize Gin engine
 	router := gin.Default()

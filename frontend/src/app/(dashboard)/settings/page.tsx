@@ -1,11 +1,18 @@
 "use client";
 
-import LayoutWrapper from "@/components/layout/LayoutWrapper";
+import { useState, useEffect } from "react";
 import Image from "next/image";
+import { getOrgNameFromToken } from "@/lib/api";
 
 export default function SettingsPage() {
+  const [orgName, setOrgName] = useState("OnWay");
+
+  useEffect(() => {
+    setOrgName(getOrgNameFromToken());
+  }, []);
+
   return (
-    <LayoutWrapper>
+    <>
       <div className="max-w-6xl mx-auto space-y-10">
         {/* Header */}
         <div>
@@ -62,8 +69,8 @@ export default function SettingsPage() {
                 </div>
 
                 {/* Input Fields */}
-                <SettingsInput label="Legal Business Name" value="OnWay Logistics Solutions Pvt Ltd" />
-                <SettingsInput label="Brand Name (Display Name)" value="OnWay" />
+                <SettingsInput label="Legal Business Name" value={`${orgName} Logistics Solutions Pvt Ltd`} />
+                <SettingsInput label="Brand Name (Display Name)" value={orgName} />
                 <SettingsInput label="GST Registration Number" value="07AAAAA0000A1Z5" uppercase tabular />
                 <SettingsInput label="PAN Card Number" value="ABCDE1234F" uppercase tabular />
                 
@@ -94,14 +101,14 @@ export default function SettingsPage() {
 
         {/* Footer */}
         <footer className="mt-auto py-8 border-t border-outline-variant/10 flex flex-col md:flex-row justify-between items-center gap-4 text-center md:text-left">
-          <p className="text-xs text-on-surface-variant font-medium">© 2026 OnWay Depo. All rights reserved. Powered by AARCSX Deposity.</p>
+          <p className="text-xs text-on-surface-variant font-medium">© 2026 {orgName} Depo. All rights reserved. Powered by AARCSX Deposity.</p>
           <div className="flex gap-6">
             <a className="text-xs text-outline hover:text-primary font-bold uppercase tracking-widest transition-colors" href="#">Privacy Policy</a>
             <a className="text-xs text-outline hover:text-primary font-bold uppercase tracking-widest transition-colors" href="#">Support Portal</a>
           </div>
         </footer>
       </div>
-    </LayoutWrapper>
+    </>
   );
 }
 

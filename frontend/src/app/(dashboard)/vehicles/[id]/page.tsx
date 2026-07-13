@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import LayoutWrapper from "@/components/layout/LayoutWrapper";
 import { useParams } from "next/navigation";
 
 export default function VehicleDetailPage() {
@@ -9,7 +8,7 @@ export default function VehicleDetailPage() {
   const id = params.id as string;
 
   return (
-    <LayoutWrapper>
+    <>
       <div className="space-y-6">
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 text-sm text-on-surface-variant">
@@ -124,7 +123,7 @@ export default function VehicleDetailPage() {
         
         <div className="h-12"></div>
       </div>
-    </LayoutWrapper>
+    </>
   );
 }
 

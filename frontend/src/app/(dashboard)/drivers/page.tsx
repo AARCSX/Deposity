@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import LayoutWrapper from "@/components/layout/LayoutWrapper";
 import DriverCard from "@/components/dashboard/DriverCard";
 import CreateDriverWizard from "@/components/drivers/CreateDriverWizard";
 import { authenticatedFetch } from "@/lib/api";
@@ -84,7 +83,7 @@ export default function DriversPage() {
   }, [drivers]);
 
   return (
-    <LayoutWrapper>
+    <>
       <div className="space-y-8">
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-end md:items-center gap-6">
@@ -155,6 +154,6 @@ export default function DriversPage() {
           onSubmit={handleCreateSubmit}
         />
       </div>
-    </LayoutWrapper>
+    </>
   );
 }

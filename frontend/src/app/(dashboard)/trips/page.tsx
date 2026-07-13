@@ -2,7 +2,6 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import LayoutWrapper from "@/components/layout/LayoutWrapper";
 import MetricCard from "@/components/dashboard/MetricCard";
 import TripCard from "@/components/dashboard/TripCard";
 import CreateTripWizard from "@/components/trips/CreateTripWizard";
@@ -116,7 +115,7 @@ function TripsContent() {
     : `₹${pendingPayments}`;
 
   return (
-    <LayoutWrapper>
+    <>
       <div className="space-y-8">
         {/* Header Section */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
@@ -230,7 +229,7 @@ function TripsContent() {
           onSubmit={handleCreateSubmit} 
         />
       </div>
-    </LayoutWrapper>
+    </>
   );
 }
 

@@ -1,6 +1,15 @@
 "use client";
 
+import { useState, useEffect } from "react";
+import { getOrgNameFromToken } from "@/lib/api";
+
 export default function Header({ onMenuClick }: { onMenuClick: () => void }) {
+  const [orgName, setOrgName] = useState("OnWay");
+
+  useEffect(() => {
+    setOrgName(getOrgNameFromToken());
+  }, []);
+
   return (
     <header className="bg-white/80 backdrop-blur-xl font-inter antialiased tracking-[-0.01em] top-0 sticky z-40 border-none shadow-[0px_20px_40px_rgba(23,28,31,0.06)] flex justify-between items-center w-full px-6 py-3 h-16">
       <div className="flex items-center gap-4">
@@ -11,7 +20,8 @@ export default function Header({ onMenuClick }: { onMenuClick: () => void }) {
         >
           <span className="material-symbols-outlined">menu</span>
         </button>
-        <div className="text-xl font-bold tracking-tighter text-primary md:hidden">OnWay</div>
+        <div className="text-xl font-bold tracking-tighter text-primary md:hidden">{orgName}</div>
+
         
         {/* Search (Web) */}
         <div className="hidden md:flex items-center bg-surface-container-highest rounded-full px-4 py-2 border border-outline-variant/15 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/10 transition-all">

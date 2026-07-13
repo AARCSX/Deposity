@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import LayoutWrapper from "@/components/layout/LayoutWrapper";
 import CompanyCard from "@/components/dashboard/CompanyCard";
 import MetricCard from "@/components/dashboard/MetricCard";
 import CreateCompanyWizard from "@/components/companies/CreateCompanyWizard";
@@ -96,7 +95,7 @@ export default function CompaniesPage() {
   const totalPending = companies.reduce((sum, c) => sum + c.pendingAmount, 0);
 
   return (
-    <LayoutWrapper>
+    <>
       <div className="space-y-12">
         {/* Page Header */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
@@ -254,7 +253,7 @@ export default function CompaniesPage() {
           onSubmit={handleCreateSubmit}
         />
       </div>
-    </LayoutWrapper>
+    </>
   );
 }
 

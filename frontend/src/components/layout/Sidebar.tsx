@@ -1,7 +1,9 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { getOrgNameFromToken } from "@/lib/api";
 
 const navItems = [
   { label: "Dashboard", icon: "dashboard", href: "/dashboard" },
@@ -23,6 +25,11 @@ const footerItems = [
 
 export default function Sidebar({ isOpen, onClose }: { isOpen?: boolean; onClose?: () => void }) {
   const pathname = usePathname();
+  const [orgName, setOrgName] = useState("OnWay");
+
+  useEffect(() => {
+    setOrgName(getOrgNameFromToken());
+  }, []);
 
   return (
     <>
@@ -41,10 +48,11 @@ export default function Sidebar({ isOpen, onClose }: { isOpen?: boolean; onClose
       >
         <div className="px-6 pb-6">
           <Link href="/dashboard" className="block group">
-            <h1 className="text-2xl font-black tracking-tighter text-white group-hover:text-primary transition-colors">OnWay</h1>
+            <h1 className="text-2xl font-black tracking-tighter text-white group-hover:text-primary transition-colors">{orgName}</h1>
             <p className="text-slate-400 text-xs">AARCSX Deposity</p>
           </Link>
         </div>
+
 
         <div className="px-4 mb-4">
           <Link 

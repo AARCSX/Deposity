@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import LayoutWrapper from "@/components/layout/LayoutWrapper";
 import VehicleCard from "@/components/dashboard/VehicleCard";
 import CreateVehicleWizard from "@/components/vehicles/CreateVehicleWizard";
 import { VehicleRecord } from "@/types/vehicle";
@@ -88,7 +87,7 @@ export default function VehiclesPage() {
   };
 
   return (
-    <LayoutWrapper>
+    <>
       <div className="space-y-8">
         {/* Page Header */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
@@ -163,6 +162,6 @@ export default function VehiclesPage() {
           onSubmit={handleCreateSubmit} 
         />
       </div>
-    </LayoutWrapper>
+    </>
   );
 }

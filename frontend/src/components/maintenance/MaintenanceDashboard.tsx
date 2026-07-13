@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import LayoutWrapper from "@/components/layout/LayoutWrapper";
 import MetricCard from "@/components/dashboard/MetricCard";
 import DynamicChassis, { AxleConfig } from "./DynamicChassis";
 import TyreHistoryCard, { TyreActivity } from "./TyreHistoryCard";
@@ -370,7 +369,7 @@ export default function MaintenanceDashboard() {
   };
 
   return (
-    <LayoutWrapper>
+    <>
       <div className="space-y-8">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div>
@@ -683,7 +682,7 @@ export default function MaintenanceDashboard() {
         vehicles={vehicles}
         recordToEdit={recordToEdit}
       />
-    </LayoutWrapper>
+    </>
   );
 }
 

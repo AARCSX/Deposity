@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import LayoutWrapper from "@/components/layout/LayoutWrapper";
+import { getOrgNameFromToken } from "@/lib/api";
 import MetricCard from "@/components/dashboard/MetricCard";
 import AlertItem from "@/components/dashboard/AlertItem";
 import CreateTripWizard from "@/components/trips/CreateTripWizard";
@@ -24,6 +24,7 @@ export default function Home() {
   const [maintenance, setMaintenance] = useState<MaintenanceRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [orgName, setOrgName] = useState("OnWay");
 
   // Modal control states
   const [isTripWizardOpen, setIsTripWizardOpen] = useState(false);
@@ -35,6 +36,8 @@ export default function Home() {
       const token = localStorage.getItem("deposity_token");
       if (!token) {
         router.push("/");
+      } else {
+        setOrgName(getOrgNameFromToken());
       }
     }
   }, [router]);
@@ -370,12 +373,12 @@ export default function Home() {
   const maintStroke = (vehicleStatusCounts.maint / totalStatusCount) * circumference;
 
   return (
-    <LayoutWrapper>
+    <>
       <div className="space-y-8">
         {/* Page Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
           <div>
-            <h1 className="text-[2.75rem] font-black text-on-surface leading-tight tracking-tight mb-1">OnWay</h1>
+            <h1 className="text-[2.75rem] font-black text-on-surface leading-tight tracking-tight mb-1">{orgName}</h1>
             <p className="text-on-surface-variant text-sm font-semibold flex items-center gap-2">
               Business Operations Overview 
               <span className="w-1.5 h-1.5 rounded-full bg-outline-variant/30"></span>
@@ -618,7 +621,7 @@ export default function Home() {
         vehicles={vehicles}
         recordToEdit={null}
       />
-    </LayoutWrapper>
+    </>
   );
 }
 
