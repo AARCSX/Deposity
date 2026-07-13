@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import LayoutWrapper from "@/components/layout/LayoutWrapper";
 import MetricCard from "@/components/dashboard/MetricCard";
 import TripCard from "@/components/dashboard/TripCard";
@@ -9,33 +9,12 @@ import CreateTripWizard from "@/components/trips/CreateTripWizard";
 import { TripRecord } from "@/types/trip";
 import { authenticatedFetch } from "@/lib/api";
 
-const fallbackData: TripRecord[] = [
-  {
-    id: "TRP-8924",
-    status: "in-transit",
-    route: { 
-      originName: "Mumbai, MH", originDate: "12 Oct 2023, 08:00 AM", 
-      destinationName: "Delhi, DL", destinationDate: "15 Oct 2023", isEstimated: true 
-    },
-    cargo: { material: "15 MT Steel Coils", weight: 15, company: "ABC Logistics Ltd." },
-    assignment: { vehicleId: "MH12 AB 1234", driverId: "Ramesh K." },
-    financials: { totalFreight: 45000, advancePaid: 20000 },
-  },
-  {
-    id: "TRP-8910",
-    status: "delivered",
-    route: { 
-      originName: "Pune, MH", originDate: "10 Oct 2023", 
-      destinationName: "Surat, GJ", destinationDate: "11 Oct 2023", isEstimated: false 
-    },
-    cargo: { material: "10 MT Cotton", weight: 10, company: "Global Transporters" },
-    assignment: { vehicleId: "GJ05 XX 9988", driverId: "Suresh P." },
-    financials: { totalFreight: 22000, advancePaid: 17000 },
-  },
-];
+const fallbackData: TripRecord[] = [];
 
-export default function TripsPage() {
+function TripsContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const createParam = searchParams.get("create");
   const [trips, setTrips] = useState<TripRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -49,16 +28,21 @@ export default function TripsPage() {
     }
   }, [router]);
 
+  useEffect(() => {
+    if (createParam === "true") {
+      setIsCreateModalOpen(true);
+    }
+  }, [createParam]);
+
   const loadTrips = async () => {
     setIsLoading(true);
     try {
       const response = await authenticatedFetch("/trips");
       if (!response.ok) throw new Error("API unreachable");
       const data = await response.json();
-      setTrips(Array.isArray(data) && data.length > 0 ? data : fallbackData);
+      setTrips(Array.isArray(data) ? data : []);
     } catch {
-      // Fallback to mock data if API is unreachable for testing
-      setTrips(fallbackData);
+      setTrips([]);
     } finally {
       setIsLoading(false);
     }
@@ -119,6 +103,18 @@ export default function TripsPage() {
   const totalRevenue = trips.reduce((sum, t) => sum + t.financials.totalFreight, 0);
   const pendingPayments = trips.reduce((sum, t) => sum + (t.financials.totalFreight - t.financials.advancePaid), 0);
 
+  const formattedRevenue = totalRevenue >= 100000 
+    ? `₹${(totalRevenue / 100000).toFixed(1)}L` 
+    : totalRevenue >= 1000 
+    ? `₹${(totalRevenue / 1000).toFixed(1)}k` 
+    : `₹${totalRevenue}`;
+
+  const formattedPending = pendingPayments >= 100000 
+    ? `₹${(pendingPayments / 100000).toFixed(1)}L` 
+    : pendingPayments >= 1000 
+    ? `₹${(pendingPayments / 1000).toFixed(1)}k` 
+    : `₹${pendingPayments}`;
+
   return (
     <LayoutWrapper>
       <div className="space-y-8">
@@ -172,13 +168,13 @@ export default function TripsPage() {
           />
           <MetricCard 
             label="Pending Payments" 
-            value={`₹${(pendingPayments / 1000).toFixed(1)}k`} 
+            value={formattedPending} 
             icon="payments" 
             theme="error" 
           />
           <MetricCard 
             label="Total Revenue" 
-            value={`₹${(totalRevenue / 100000).toFixed(1)}L`} 
+            value={formattedRevenue} 
             icon="account_balance_wallet" 
             theme="tertiary" 
           />
@@ -227,11 +223,22 @@ export default function TripsPage() {
         {/* Modals */}
         <CreateTripWizard 
           isOpen={isCreateModalOpen} 
-          onClose={() => setIsCreateModalOpen(false)} 
+          onClose={() => {
+            setIsCreateModalOpen(false);
+            router.replace("/trips");
+          }} 
           onSubmit={handleCreateSubmit} 
         />
       </div>
     </LayoutWrapper>
+  );
+}
+
+export default function TripsPage() {
+  return (
+    <Suspense fallback={<div className="py-12 flex justify-center text-on-surface-variant font-medium">Loading Trips component...</div>}>
+      <TripsContent />
+    </Suspense>
   );
 }
 

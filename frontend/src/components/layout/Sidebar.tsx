@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const navItems = [
-  { label: "Dashboard", icon: "dashboard", href: "/" },
+  { label: "Dashboard", icon: "dashboard", href: "/dashboard" },
   { label: "Vehicles", icon: "local_shipping", href: "/vehicles" },
   { label: "Drivers", icon: "person", href: "/drivers" },
   { label: "Employees", icon: "badge", href: "/employees" },
@@ -40,13 +40,15 @@ export default function Sidebar({ isOpen, onClose }: { isOpen?: boolean; onClose
         } md:translate-x-0`}
       >
         <div className="px-6 pb-6">
-          <h1 className="text-2xl font-black tracking-tighter text-white">OnWay</h1>
-          <p className="text-slate-400 text-xs">AARCSX Deposity</p>
+          <Link href="/dashboard" className="block group">
+            <h1 className="text-2xl font-black tracking-tighter text-white group-hover:text-primary transition-colors">OnWay</h1>
+            <p className="text-slate-400 text-xs">AARCSX Deposity</p>
+          </Link>
         </div>
 
         <div className="px-4 mb-4">
           <Link 
-            href="/trips/new"
+            href="/trips?create=true"
             className="w-full bg-gradient-to-br from-primary to-primary-container text-on-primary py-3 rounded-xl font-bold flex items-center justify-center gap-2 hover:opacity-90 transition-opacity active:scale-[0.98]"
           >
             <span className="material-symbols-outlined text-[18px]">add</span>

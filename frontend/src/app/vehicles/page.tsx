@@ -8,39 +8,7 @@ import CreateVehicleWizard from "@/components/vehicles/CreateVehicleWizard";
 import { VehicleRecord } from "@/types/vehicle";
 import { authenticatedFetch } from "@/lib/api";
 
-const fallbackData: VehicleRecord[] = [
-  {
-    core: {
-      registrationNumber: "MH12AB1234",
-      make: "Tata",
-      model: "Signa 4923",
-      year: 2023,
-      bodyType: "Truck",
-      axleConfig: "10 Wheeler",
-      tonnageCapacity: 25,
-      fuelCapacity: 350,
-      averageMileage: 4.5
-    },
-    compliance: {
-      rcExpiry: "2028-10-12",
-      insuranceExpiry: "2027-05-10",
-      pucExpiry: "2026-12-01",
-      fitnessExpiry: "2027-10-12",
-      permitDetails: "National"
-    },
-    ownership: {
-      ownershipType: "Own",
-      driverId: "D-101",
-      homeBranch: "Pune",
-      gpsDeviceId: "GPS-9988"
-    },
-    maintenance: {
-      currentOdometer: 145000,
-      lastServicedDate: "2026-05-10"
-    },
-    status: "all-good"
-  }
-];
+const fallbackData: VehicleRecord[] = [];
 
 export default function VehiclesPage() {
   const router = useRouter();
@@ -63,10 +31,9 @@ export default function VehiclesPage() {
       const response = await authenticatedFetch("/vehicles");
       if (!response.ok) throw new Error("API unreachable");
       const data = await response.json();
-      setVehicles(Array.isArray(data) && data.length > 0 ? data : fallbackData);
+      setVehicles(Array.isArray(data) ? data : []);
     } catch {
-      // Fallback to mock data if API is unreachable for testing
-      setVehicles(fallbackData);
+      setVehicles([]);
     } finally {
       setIsLoading(false);
     }
@@ -175,6 +142,12 @@ export default function VehiclesPage() {
           {isLoading ? (
             <div className="col-span-full py-12 flex justify-center text-on-surface-variant font-medium">
               Loading vehicles...
+            </div>
+          ) : vehicles.length === 0 ? (
+            <div className="col-span-full py-16 flex flex-col items-center justify-center text-center rounded-2xl border border-dashed border-outline-variant/20 bg-surface-container-lowest">
+              <span className="material-symbols-outlined text-4xl text-outline mb-3">local_shipping</span>
+              <p className="text-sm font-semibold text-on-surface">No vehicles registered</p>
+              <p className="text-xs text-on-surface-variant mt-1 max-w-xs">Add your first vehicle to start tracking compliance, drivers, and GPS tracking.</p>
             </div>
           ) : vehicles.map((vehicle, index) => (
             <VehicleCard key={vehicle.id || vehicle.core.registrationNumber || index} {...mapToCardProps(vehicle)} />

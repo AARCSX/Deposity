@@ -13,60 +13,9 @@ import { VehicleRecord } from "@/types/vehicle";
 import { authenticatedFetch } from "@/lib/api";
 
 // Local fallbacks if backend is completely empty or down
-const fallbackVehicles: VehicleRecord[] = [
-  {
-    id: "V-101",
-    core: {
-      registrationNumber: "MH12AB1234",
-      make: "Tata",
-      model: "Signa 4923",
-      year: 2023,
-      bodyType: "Truck",
-      axleConfig: "10 Wheeler",
-      tonnageCapacity: 25,
-      fuelCapacity: 350,
-      averageMileage: 4.5
-    },
-    compliance: { rcExpiry: "2028-10-12", insuranceExpiry: "2027-05-10", pucExpiry: "2026-12-01", fitnessExpiry: "2027-10-12", permitDetails: "National" },
-    ownership: { ownershipType: "Own", driverId: "D-101", homeBranch: "Pune", gpsDeviceId: "GPS-9988" },
-    maintenance: { currentOdometer: 145000, lastServicedDate: "2026-05-10" },
-    status: "all-good"
-  }
-];
-
-const fallbackTrips: TripRecord[] = [
-  {
-    id: "TRP-8924",
-    status: "in-transit",
-    route: { 
-      originName: "Mumbai, MH", originDate: "12 Oct 2023, 08:00 AM", 
-      destinationName: "Delhi, DL", destinationDate: "15 Oct 2023", isEstimated: true 
-    },
-    cargo: { material: "15 MT Steel Coils", weight: 15, company: "ABC Logistics Ltd." },
-    assignment: { vehicleId: "MH12AB1234", driverId: "Rajesh Kumar" },
-    financials: { totalFreight: 45000, advancePaid: 20000 },
-  }
-];
-
-const fallbackMaintenance: MaintenanceRecord[] = [
-  {
-    id: "MNT-001",
-    vehicleId: "V-101",
-    vehicleNumber: "MH12AB1234",
-    maintenanceType: "Service",
-    maintenanceDate: "2026-05-12",
-    odometerReading: 12540,
-    serviceCenter: "Metro Truck Service",
-    mechanic: "Rahul Sharma",
-    cost: 8600,
-    description: "Routine service and brake inspection.",
-    partsReplaced: "Brake pads, engine oil",
-    nextServiceDate: "2026-08-12",
-    nextServiceOdometer: 14540,
-    status: "Completed",
-    notes: "Vehicle is running smoothly.",
-  }
-];
+const fallbackVehicles: VehicleRecord[] = [];
+const fallbackTrips: TripRecord[] = [];
+const fallbackMaintenance: MaintenanceRecord[] = [];
 
 export default function Home() {
   const router = useRouter();
@@ -114,15 +63,15 @@ export default function Home() {
           maintData = await resMaint.json();
         }
 
-        // Apply fallbacks if empty lists returned or API down
-        setVehicles(vehiclesData.length > 0 ? vehiclesData : fallbackVehicles);
-        setTrips(tripsData.length > 0 ? tripsData : fallbackTrips);
-        setMaintenance(maintData.length > 0 ? maintData : fallbackMaintenance);
+        // Set backend data or empty lists (no mock fallback)
+        setVehicles(Array.isArray(vehiclesData) ? vehiclesData : []);
+        setTrips(Array.isArray(tripsData) ? tripsData : []);
+        setMaintenance(Array.isArray(maintData) ? maintData : []);
       } catch (err) {
-        console.warn("API fetches failed, falling back to mock data:", err);
-        setVehicles(fallbackVehicles);
-        setTrips(fallbackTrips);
-        setMaintenance(fallbackMaintenance);
+        console.warn("API fetches failed, defaulting to empty arrays:", err);
+        setVehicles([]);
+        setTrips([]);
+        setMaintenance([]);
       } finally {
         setIsLoading(false);
       }
@@ -144,13 +93,13 @@ export default function Home() {
     trips.forEach((t) => {
       if (t.assignment?.driverId) drivers.add(t.assignment.driverId);
     });
-    return Math.max(drivers.size, 8); // Minimum baseline representation
+    return drivers.size;
   }, [vehicles, trips]);
 
   const availableDriversCount = useMemo(() => {
     // Available = Total minus active trips drivers
     const activeDrivers = trips.filter((t) => t.status === "in-transit" && t.assignment?.driverId).length;
-    return Math.max(uniqueDriversCount - activeDrivers, 1);
+    return Math.max(uniqueDriversCount - activeDrivers, 0);
   }, [uniqueDriversCount, trips]);
 
   const formattedRevenue = useMemo(() => {
@@ -522,30 +471,38 @@ export default function Home() {
               <div className="bg-surface-container-lowest rounded-xl p-6 border border-outline-variant/15 flex flex-col">
                 <h2 className="text-sm font-black text-on-surface mb-6 uppercase tracking-wider text-outline">Monthly Trip Revenue</h2>
                 <div className="flex-1 min-h-[220px] flex items-end gap-3 pb-4 pt-8 border-b border-outline-variant/15 relative">
-                  <div className="absolute left-0 top-0 bottom-4 flex flex-col justify-between text-[10px] text-on-surface-variant font-semibold">
-                    <span>{maxRevenue >= 100000 ? `₹${(maxRevenue / 100000).toFixed(1)}L` : `₹${(maxRevenue / 1000).toFixed(0)}k`}</span>
-                    <span>{maxRevenue >= 100000 ? `₹${(maxRevenue * 0.67 / 100000).toFixed(1)}L` : `₹${(maxRevenue * 0.67 / 1000).toFixed(0)}k`}</span>
-                    <span>{maxRevenue >= 100000 ? `₹${(maxRevenue * 0.33 / 100000).toFixed(1)}L` : `₹${(maxRevenue * 0.33 / 1000).toFixed(0)}k`}</span>
-                  </div>
-                  <div className="w-12 shrink-0"></div>
-                  {monthlyRevenueData.map((m, i) => {
-                    const percent = Math.min((m.revenue / maxRevenue) * 100, 100);
-                    return (
-                      <div 
-                        key={i} 
-                        className="flex-1 rounded-t-lg transition-all duration-300 relative group bg-surface-container-highest hover:bg-primary/20 flex flex-col justify-end"
-                        style={{ height: `${Math.max(percent, 8)}%` }}
-                      >
-                        <span className="absolute -top-7 left-1/2 -translate-x-1/2 text-[9px] font-bold text-on-surface bg-surface border border-outline-variant/10 px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap shadow-sm">
-                          ₹{m.revenue >= 100000 ? `${(m.revenue / 100000).toFixed(1)}L` : `${(m.revenue / 1000).toFixed(0)}k`}
-                        </span>
-                        <div className="w-full bg-primary rounded-t-lg" style={{ height: "100%" }}></div>
-                        <span className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[10px] font-bold text-on-surface-variant">
-                          {m.label}
-                        </span>
+                  {monthlyRevenueData.every(m => m.revenue === 0) ? (
+                    <div className="absolute inset-0 flex items-center justify-center text-xs font-semibold text-on-surface-variant">
+                      No revenue data available
+                    </div>
+                  ) : (
+                    <>
+                      <div className="absolute left-0 top-0 bottom-4 flex flex-col justify-between text-[10px] text-on-surface-variant font-semibold">
+                        <span>{maxRevenue >= 100000 ? `₹${(maxRevenue / 100000).toFixed(1)}L` : `₹${(maxRevenue / 1000).toFixed(0)}k`}</span>
+                        <span>{maxRevenue >= 100000 ? `₹${(maxRevenue * 0.67 / 100000).toFixed(1)}L` : `₹${(maxRevenue * 0.67 / 1000).toFixed(0)}k`}</span>
+                        <span>{maxRevenue >= 100000 ? `₹${(maxRevenue * 0.33 / 100000).toFixed(1)}L` : `₹${(maxRevenue * 0.33 / 1000).toFixed(0)}k`}</span>
                       </div>
-                    );
-                  })}
+                      <div className="w-12 shrink-0"></div>
+                      {monthlyRevenueData.map((m, i) => {
+                        const percent = Math.min((m.revenue / maxRevenue) * 100, 100);
+                        return (
+                          <div 
+                            key={i} 
+                            className="flex-1 rounded-t-lg transition-all duration-300 relative group bg-surface-container-highest hover:bg-primary/20 flex flex-col justify-end"
+                            style={{ height: `${Math.max(percent, 8)}%` }}
+                          >
+                            <span className="absolute -top-7 left-1/2 -translate-x-1/2 text-[9px] font-bold text-on-surface bg-surface border border-outline-variant/10 px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap shadow-sm">
+                              ₹{m.revenue >= 100000 ? `${(m.revenue / 100000).toFixed(1)}L` : `${(m.revenue / 1000).toFixed(0)}k`}
+                            </span>
+                            <div className="w-full bg-primary rounded-t-lg" style={{ height: "100%" }}></div>
+                            <span className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[10px] font-bold text-on-surface-variant">
+                              {m.label}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </>
+                  )}
                 </div>
               </div>
 
@@ -618,16 +575,20 @@ export default function Home() {
             <div className="bg-surface-container-lowest rounded-xl border border-outline-variant/15 p-6 h-full">
               <h2 className="text-lg font-black text-on-surface mb-6">Recent Activity</h2>
               <div className="relative pl-6 border-l-2 border-outline-variant/30 border-dashed space-y-8">
-                {timelineActivities.map((item, index) => (
-                  <TimelineItem 
-                    key={index}
-                    time={item.time} 
-                    title={item.title} 
-                    description={item.description} 
-                    amount={item.amount}
-                    type={item.type}
-                  />
-                ))}
+                {timelineActivities.length === 0 ? (
+                  <p className="text-xs text-on-surface-variant py-4">No recent activity logged.</p>
+                ) : (
+                  timelineActivities.map((item, index) => (
+                    <TimelineItem 
+                      key={index}
+                      time={item.time} 
+                      title={item.title} 
+                      description={item.description} 
+                      amount={item.amount}
+                      type={item.type}
+                    />
+                  ))
+                )}
               </div>
               <button className="w-full mt-8 py-2.5 text-sm font-bold text-primary border border-outline-variant/15 rounded-lg hover:bg-surface-container-low transition-colors active:scale-[0.98]">
                 View All History

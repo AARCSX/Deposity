@@ -9,62 +9,7 @@ import CreateCompanyWizard from "@/components/companies/CreateCompanyWizard";
 import { CompanyRecord } from "@/types/company";
 import { authenticatedFetch } from "@/lib/api";
 
-const fallbackData: CompanyRecord[] = [
-  {
-    id: "#ON-9921",
-    name: "Reliance Retail Ltd.",
-    logo: "https://lh3.googleusercontent.com/aida-public/AB6AXuBPk9M_HfORkYCVfbhxTZVqKGhxznHfh81J-CU11ZtCfbnyb6H3CWHF5H55wPtTHQwOCCoedssr6cblcwBEhU-MGixMurHPq_YDJWVXwOgf09m_edi-iNry18OKaZcHlsore9I11Kv85Yj0zv4dzDH-IXFXo3UZwm4mQhFnG3iFbbFpch-kzUIrapr_AHeC_HqJXZeeSLKVaTlHCzwRqQUoFJcrhklvZ_BCjpHmBDHYCOEVzdxDaHsjRQ-AfIH6K_J6_h6RJviktNRX",
-    status: "Premium Partner",
-    location: "Mumbai HQ • Supply Chain Division",
-    contactPerson: "Rajesh Deshmukh",
-    phone: "+91 98210 55432",
-    email: "r.deshmukh@reliance.com",
-    totalValue: 24500000,
-    isPaid: true,
-    pendingAmount: 0,
-    industry: "Retail & FMCG",
-  },
-  {
-    id: "#ON-8742",
-    name: "Tata Motors Mfg.",
-    logo: "https://lh3.googleusercontent.com/aida-public/AB6AXuCyGwCdXeGhok9umHTHSUgGEc3i0Ezxkzgf3sQYr9gGq3sQuCdnhVnZfP3SCqPRkR1Higi_B-G-Tmm00KvdzGrWXQzTtlMbKBmUksuVDnHObI6EFVW19TFxy2Pe-oRqS4-AneRZwj2-XqcC2njBXyvYjYnUeUXniYSgXGU-VIl5YzkAXxAcCcSs3X0tsSbBZJpCNRMgHPpQVDb7bRxHHKmDuGH3zNDSikRipCWO8QeEKXHm1lQ3iYVDwzRwgYS0daBtqIb5SDwyxYUF",
-    status: "Critical: Payment Overdue",
-    location: "Pune Plant • Chassis Logistics",
-    contactPerson: "Sneha Patil",
-    phone: "+91 70451 22987",
-    totalValue: 11200000,
-    isPaid: false,
-    pendingAmount: 1840000,
-    industry: "Automotive",
-  },
-  {
-    id: "#ON-1025",
-    name: "Flipkart Internet",
-    logo: "https://lh3.googleusercontent.com/aida-public/AB6AXuBtZG39AaQmIgBZtUTz3_ohMmvMOYvcqvowWU4-TuXqloslHgRddquYWWMFCMfZmDcQuefPLBHOzfZO_of6pkiazURFzyVcEtcTbtXPbR_Kdp7W4201ry506RruQm4ygOY1mYDDogBOTQEUQq9VWJOZ4wyzg4khGmwfucwlBOkJRp-6R_bl6h3X8ldmofXdZdzLstk1KP1vqeI5Mnj5SuM2VgYJi02T89xf4kedQN2ALFXMSuShf1DsUynTokcGbkUbX1nvBvbZTs17",
-    status: "Standard Account",
-    location: "Bangalore • Last Mile Operations",
-    contactPerson: "Amit Verma",
-    phone: "+91 88001 44556",
-    totalValue: 8250000,
-    isPaid: true,
-    pendingAmount: 0,
-    industry: "E-Commerce",
-  },
-  {
-    id: "#ON-7731",
-    name: "Mahindra Logistics",
-    logo: "https://lh3.googleusercontent.com/aida-public/AB6AXuAYAghnZU_e-wxziCVHvBdQAUE557fgQt9TXw6SVXBf4iQALfW1ZQZHnws7OzY3Ho-pLAYggonqwJL41ULU4J-E2i-2EQRx-2qRwTgfMveHmPYBjuZOcGb5uQb7ygLn2s3L8u-ZNA7_FWlJVkzXiY0z88AuVMEnhIYv5ceKNrSY7nSJUcv78ERTeiFz21RDQ7imjgE1pOau_T2v8OanC-611bWvwJBYj0pCgDSctmEoJ2xmddm02wDuj1u__R-MB_d-VU7ybB1CWBv0",
-    status: "Overdue",
-    location: "Gurgaon Hub • Warehousing",
-    contactPerson: "Karan Singh",
-    phone: "+91 88001 44556",
-    email: "k.singh@mahindra.com",
-    totalValue: 5420000,
-    isPaid: false,
-    pendingAmount: 450000,
-    industry: "Logistics",
-  },
-];
+const fallbackData: CompanyRecord[] = [];
 
 // Helper to format INR values
 function formatINR(value: number): string {
@@ -95,9 +40,9 @@ export default function CompaniesPage() {
       const response = await authenticatedFetch("/companies");
       if (!response.ok) throw new Error("API unreachable");
       const data = await response.json();
-      setCompanies(Array.isArray(data) && data.length > 0 ? data : fallbackData);
+      setCompanies(Array.isArray(data) ? data : []);
     } catch {
-      setCompanies(fallbackData);
+      setCompanies([]);
     } finally {
       setIsLoading(false);
     }

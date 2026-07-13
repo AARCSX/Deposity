@@ -183,10 +183,12 @@ function parseDate(value: string) {
   return Number.isNaN(parsed.getTime()) ? new Date(0) : parsed;
 }
 
+import { authenticatedFetch } from "@/lib/api";
+
 export default function MaintenanceDashboard() {
-  const [records, setRecords] = useState<MaintenanceRecord[]>(fallbackRecords);
-  const [vehicles, setVehicles] = useState<VehicleRecord[]>(fallbackVehicles);
-  const [selectedRecord, setSelectedRecord] = useState<MaintenanceRecord | null>(fallbackRecords[0]);
+  const [records, setRecords] = useState<MaintenanceRecord[]>([]);
+  const [vehicles, setVehicles] = useState<VehicleRecord[]>([]);
+  const [selectedRecord, setSelectedRecord] = useState<MaintenanceRecord | null>(null);
   const [filters, setFilters] = useState({ vehicle: "", type: "", status: "", from: "", to: "" });
   const [isWizardOpen, setIsWizardOpen] = useState(false);
   const [recordToEdit, setRecordToEdit] = useState<MaintenanceRecord | null>(null);
@@ -200,16 +202,14 @@ export default function MaintenanceDashboard() {
     { left: 2, right: 2 }
   ];
 
-  const apiBase = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
-
   useEffect(() => {
     const loadData = async () => {
       // Load records
       try {
-        const response = await fetch(`${apiBase}/maintenance`);
+        const response = await authenticatedFetch("/maintenance");
         if (response.ok) {
           const data = await response.json();
-          const recList = Array.isArray(data) ? data : fallbackRecords;
+          const recList = Array.isArray(data) ? data : [];
           setRecords(recList);
           if (recList.length > 0) {
             setSelectedRecord(recList[0]);
@@ -217,30 +217,30 @@ export default function MaintenanceDashboard() {
             setSelectedRecord(null);
           }
         } else {
-          setRecords(fallbackRecords);
-          setSelectedRecord(fallbackRecords[0]);
+          setRecords([]);
+          setSelectedRecord(null);
         }
       } catch {
-        setRecords(fallbackRecords);
-        setSelectedRecord(fallbackRecords[0]);
+        setRecords([]);
+        setSelectedRecord(null);
       }
 
       // Load vehicles
       try {
-        const response = await fetch(`${apiBase}/vehicles`);
+        const response = await authenticatedFetch("/vehicles");
         if (response.ok) {
           const data = await response.json();
-          setVehicles(Array.isArray(data) ? data : fallbackVehicles);
+          setVehicles(Array.isArray(data) ? data : []);
         } else {
-          setVehicles(fallbackVehicles);
+          setVehicles([]);
         }
       } catch {
-        setVehicles(fallbackVehicles);
+        setVehicles([]);
       }
     };
 
     loadData();
-  }, [apiBase, refreshKey]);
+  }, [refreshKey]);
 
   // Sync Chassis active vehicle with selected record
   useEffect(() => {
@@ -354,7 +354,7 @@ export default function MaintenanceDashboard() {
     try {
       const isEdit = !!payload.id;
       const method = isEdit ? "PATCH" : "POST";
-      const response = await fetch(`${apiBase}/maintenance${isEdit ? `/${payload.id}` : ""}`, {
+      const response = await authenticatedFetch(`/maintenance${isEdit ? `/${payload.id}` : ""}`, {
         method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(completeRecord),
