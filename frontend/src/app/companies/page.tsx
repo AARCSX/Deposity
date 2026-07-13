@@ -1,11 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import LayoutWrapper from "@/components/layout/LayoutWrapper";
 import CompanyCard from "@/components/dashboard/CompanyCard";
 import MetricCard from "@/components/dashboard/MetricCard";
 import CreateCompanyWizard from "@/components/companies/CreateCompanyWizard";
 import { CompanyRecord } from "@/types/company";
+import { authenticatedFetch } from "@/lib/api";
 
 const fallbackData: CompanyRecord[] = [
   {
@@ -73,16 +75,24 @@ function formatINR(value: number): string {
 }
 
 export default function CompaniesPage() {
+  const router = useRouter();
   const [companies, setCompanies] = useState<CompanyRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
-  const apiBase = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const token = localStorage.getItem("deposity_token");
+      if (!token) {
+        router.push("/");
+      }
+    }
+  }, [router]);
 
   const loadCompanies = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch(`${apiBase}/companies`);
+      const response = await authenticatedFetch("/companies");
       if (!response.ok) throw new Error("API unreachable");
       const data = await response.json();
       setCompanies(Array.isArray(data) && data.length > 0 ? data : fallbackData);
@@ -96,11 +106,11 @@ export default function CompaniesPage() {
   useEffect(() => {
     loadCompanies();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [apiBase]);
+  }, []);
 
   const handleCreateSubmit = async (data: CompanyRecord) => {
     try {
-      const response = await fetch(`${apiBase}/companies`, {
+      const response = await authenticatedFetch("/companies", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),

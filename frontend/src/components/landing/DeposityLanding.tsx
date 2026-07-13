@@ -1,6 +1,8 @@
 "use client";
 
 import { motion, type Variants } from 'framer-motion';
+import { useRouter } from 'next/navigation';
+import { generatePKCE } from '@/lib/pkce';
 import {
   ArrowRight,
   BarChart3,
@@ -36,6 +38,27 @@ const itemVariants: Variants = {
 };
 
 export default function DeposityLanding() {
+  const router = useRouter();
+
+  const handleSignIn = async () => {
+    if (typeof window === 'undefined') return;
+    const token = localStorage.getItem('deposity_token');
+    if (token) {
+      router.push('/dashboard');
+      return;
+    }
+    const { verifier, challenge, state } = await generatePKCE();
+    localStorage.setItem('oauth_code_verifier', verifier);
+    localStorage.setItem('oauth_state', state);
+
+    const clientId = 'deposity_client';
+    const redirectUri = window.location.origin + '/callback';
+    const scope = 'openid profile email';
+    const authUrl = `https://identity.aarcsx.com/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent(scope)}&state=${state}&code_challenge_method=S256&code_challenge=${challenge}`;
+
+    window.location.href = authUrl;
+  };
+
   return (
     <div className="min-h-[100dvh] bg-white text-[#0B132B] font-sans overflow-x-hidden selection:bg-[#7180B9] selection:text-white">
       <header className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md border-b border-[#9DB4C0]/20">
@@ -63,10 +86,10 @@ export default function DeposityLanding() {
             </a>
           </nav>
           <div className="flex items-center gap-4">
-            <a href="#login" className="text-sm font-medium text-[#0B132B]/70 hover:text-[#7180B9] transition-colors hidden sm:block">
+            <button onClick={handleSignIn} className="text-sm font-medium text-[#0B132B]/70 hover:text-[#7180B9] transition-colors hidden sm:block">
               Sign In
-            </a>
-            <button className="bg-[#7180B9] hover:bg-[#5a6797] text-white px-5 py-2.5 rounded-md text-sm font-medium transition-all shadow-sm hover:shadow-md active:scale-95">
+            </button>
+            <button onClick={handleSignIn} className="bg-[#7180B9] hover:bg-[#5a6797] text-white px-5 py-2.5 rounded-md text-sm font-medium transition-all shadow-sm hover:shadow-md active:scale-95">
               Get Started
             </button>
           </div>
@@ -95,7 +118,7 @@ export default function DeposityLanding() {
                 Replace spreadsheets and manual workflows. Manage vehicles, drivers, trips, expenses, and compliance from a single intelligent dashboard.
               </motion.p>
               <motion.div variants={itemVariants} className="flex flex-col sm:flex-row items-center gap-4">
-                <button className="w-full sm:w-auto flex items-center justify-center gap-2 bg-[#7180B9] hover:bg-[#5a6797] text-white px-8 py-4 rounded-md text-base font-medium transition-all shadow-lg hover:shadow-xl active:scale-95 group">
+                <button onClick={handleSignIn} className="w-full sm:w-auto flex items-center justify-center gap-2 bg-[#7180B9] hover:bg-[#5a6797] text-white px-8 py-4 rounded-md text-base font-medium transition-all shadow-lg hover:shadow-xl active:scale-95 group">
                   Start Your Free Trial
                   <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                 </button>
@@ -430,7 +453,7 @@ export default function DeposityLanding() {
               Join hundreds of logistics companies running smarter, more profitable operations with Deposity.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <button className="w-full sm:w-auto bg-[#7180B9] hover:bg-[#5a6797] text-white px-8 py-4 rounded-md text-base font-medium transition-all shadow-lg hover:shadow-xl active:scale-95">
+              <button onClick={handleSignIn} className="w-full sm:w-auto bg-[#7180B9] hover:bg-[#5a6797] text-white px-8 py-4 rounded-md text-base font-medium transition-all shadow-lg hover:shadow-xl active:scale-95">
                 Start Your Free Trial
               </button>
               <button className="w-full sm:w-auto bg-white border border-[#9DB4C0]/40 hover:border-[#7180B9] text-[#0B132B] hover:text-[#7180B9] px-8 py-4 rounded-md text-base font-medium transition-all">
