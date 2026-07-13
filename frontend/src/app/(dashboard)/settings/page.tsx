@@ -2,14 +2,103 @@
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
-import { getOrgNameFromToken } from "@/lib/api";
+import { getOrgNameFromToken, authenticatedFetch } from "@/lib/api";
 
 export default function SettingsPage() {
   const [orgName, setOrgName] = useState("OnWay");
+  const [profile, setProfile] = useState({
+    name: "",
+    logo: "",
+    gstNumber: "",
+    panNumber: "",
+    address: "",
+    email: "",
+    phone: ""
+  });
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
+  const [successMsg, setSuccessMsg] = useState("");
+
+  const loadSettings = async () => {
+    setIsLoading(true);
+    setErrorMsg("");
+    try {
+      const response = await authenticatedFetch("/settings");
+      if (!response.ok) {
+        throw new Error("Failed to load organization settings profile");
+      }
+      const data = await response.json();
+      setProfile({
+        name: data.name || "",
+        logo: data.logo || "",
+        gstNumber: data.gstNumber || "",
+        panNumber: data.panNumber || "",
+        address: data.address || "",
+        email: data.email || "",
+        phone: data.phone || ""
+      });
+      if (data.name) {
+        setOrgName(data.name);
+      }
+    } catch (err: any) {
+      setErrorMsg(err.message || "Something went wrong while fetching settings.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    setOrgName(getOrgNameFromToken());
+    loadSettings();
   }, []);
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    setErrorMsg("");
+    setSuccessMsg("");
+    try {
+      const response = await authenticatedFetch("/settings", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(profile)
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to save settings");
+      }
+      const updated = await response.json();
+      
+      // Update local storage override and dispatch event for sidebar/header updates
+      if (updated.name) {
+        localStorage.setItem("deposity_org_name", updated.name);
+        window.dispatchEvent(new Event("deposity_org_name_changed"));
+        setOrgName(updated.name);
+      }
+      
+      setSuccessMsg("Settings updated successfully!");
+    } catch (err: any) {
+      setErrorMsg(err.message || "Failed to save settings.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleInputChange = (field: string, value: string) => {
+    setProfile(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[500px]">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -21,6 +110,18 @@ export default function SettingsPage() {
             Configure your logistics hub parameters, manage team access, and tailor notification preferences for seamless operations.
           </p>
         </div>
+
+        {errorMsg && (
+          <div className="p-4 bg-error/10 text-error rounded-2xl border border-error/20 font-bold text-sm">
+            {errorMsg}
+          </div>
+        )}
+
+        {successMsg && (
+          <div className="p-4 bg-primary/10 text-primary rounded-2xl border border-primary/20 font-bold text-sm animate-pulse">
+            {successMsg}
+          </div>
+        )}
 
         <div className="flex flex-col lg:flex-row gap-10 items-start">
           {/* Vertical Tabs */}
@@ -41,8 +142,20 @@ export default function SettingsPage() {
                   <p className="text-sm text-on-surface-variant mt-1 font-medium">This information will be used for legal documentation and invoice generation.</p>
                 </div>
                 <div className="flex gap-3 shrink-0">
-                  <button className="px-6 py-2.5 text-xs font-black uppercase tracking-widest text-on-surface-variant bg-surface-container-low rounded-xl hover:bg-surface-container-high transition-colors">Discard</button>
-                  <button className="px-6 py-2.5 text-xs font-black uppercase tracking-widest text-white bg-gradient-to-br from-primary to-primary-container rounded-xl shadow-lg shadow-primary/20 hover:scale-[1.02] transition-transform">Save Changes</button>
+                  <button 
+                    onClick={loadSettings}
+                    disabled={isSaving}
+                    className="px-6 py-2.5 text-xs font-black uppercase tracking-widest text-on-surface-variant bg-surface-container-low rounded-xl hover:bg-surface-container-high transition-colors disabled:opacity-50"
+                  >
+                    Discard
+                  </button>
+                  <button 
+                    onClick={handleSave}
+                    disabled={isSaving}
+                    className="px-6 py-2.5 text-xs font-black uppercase tracking-widest text-white bg-gradient-to-br from-primary to-primary-container rounded-xl shadow-lg shadow-primary/20 hover:scale-[1.02] transition-transform disabled:opacity-50"
+                  >
+                    {isSaving ? "Saving..." : "Save Changes"}
+                  </button>
                 </div>
               </div>
 
@@ -51,7 +164,7 @@ export default function SettingsPage() {
                 <div className="md:col-span-2 flex items-center gap-8 p-8 bg-surface-container-low/50 rounded-3xl border-2 border-dashed border-outline-variant/20">
                   <div className="w-24 h-24 bg-white rounded-2xl flex items-center justify-center shadow-inner overflow-hidden border border-outline-variant/10 shrink-0">
                     <Image
-                      src="https://lh3.googleusercontent.com/aida-public/AB6AXuCaFrJ0vQXaSD5RPwSssWXMHsoN64FYGSTdcbYKyY6vkbRUJjvEko0q2Ecew2195s4J8Da8OfOGwPf3PjOQFm40d6fnRlrgrjLEZMuxIdk13YG4svuVQ-c5m2wDZd2KbBpx1oBAwg8hlCfG5U9JakqxzU1goH9z-JYhOA8yJ1a3GaHWtRICvy8VfamTMtFParLpDKeiST9FIPqKG8WQhwlmgmljoFRx-ZarfSzsVJ6RAexDxDF7tNIq73rj4jr03Bh75YEBUVTfmuKl"
+                      src={profile.logo || "https://lh3.googleusercontent.com/aida-public/AB6AXuCaFrJ0vQXaSD5RPwSssWXMHsoN64FYGSTdcbYKyY6vkbRUJjvEko0q2Ecew2195s4J8Da8OfOGwPf3PjOQFm40d6fnRlrgrjLEZMuxIdk13YG4svuVQ-c5m2wDZd2KbBpx1oBAwg8hlCfG5U9JakqxzU1goH9z-JYhOA8yJ1a3GaHWtRICvy8VfamTMtFParLpDKeiST9FIPqKG8WQhwlmgmljoFRx-ZarfSzsVJ6RAexDxDF7tNIq73rj4jr03Bh75YEBUVTfmuKl"}
                       alt="Organization Logo"
                       width={96}
                       height={96}
@@ -60,31 +173,71 @@ export default function SettingsPage() {
                   </div>
                   <div>
                     <h4 className="font-bold text-on-surface mb-1">Company Branding</h4>
-                    <p className="text-xs text-on-surface-variant mb-4 font-medium leading-relaxed">Upload a high-resolution logo (PNG or SVG). Recommended size 512x512px.</p>
-                    <div className="flex gap-3">
-                      <button className="text-[10px] font-black uppercase tracking-widest text-primary px-4 py-2 bg-primary/10 rounded-lg hover:bg-primary/20 transition-all">Change Logo</button>
-                      <button className="text-[10px] font-black uppercase tracking-widest text-error px-4 py-2 hover:bg-error/5 rounded-lg transition-all">Remove</button>
+                    <p className="text-xs text-on-surface-variant mb-4 font-medium leading-relaxed">Provide a logo image URL to configure organization brand logo.</p>
+                    <div className="flex flex-col gap-2">
+                      <input 
+                        type="text" 
+                        placeholder="Logo image URL"
+                        value={profile.logo} 
+                        onChange={(e) => handleInputChange("logo", e.target.value)}
+                        className="w-full bg-surface-container-highest border-none rounded-xl py-2 px-3 text-on-surface text-xs outline outline-1 outline-outline-variant/15 shadow-inner"
+                      />
+                      {profile.logo && (
+                        <button 
+                          onClick={() => handleInputChange("logo", "")} 
+                          className="text-[10px] font-black uppercase tracking-widest text-error px-4 py-2 hover:bg-error/5 rounded-lg transition-all self-start"
+                        >
+                          Remove Logo URL
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
 
                 {/* Input Fields */}
-                <SettingsInput label="Legal Business Name" value={`${orgName} Logistics Solutions Pvt Ltd`} />
-                <SettingsInput label="Brand Name (Display Name)" value={orgName} />
-                <SettingsInput label="GST Registration Number" value="07AAAAA0000A1Z5" uppercase tabular />
-                <SettingsInput label="PAN Card Number" value="ABCDE1234F" uppercase tabular />
+                <SettingsInput 
+                  label="Legal Business Name / Brand Name" 
+                  value={profile.name} 
+                  onChange={(val: string) => handleInputChange("name", val)}
+                />
+                <SettingsInput 
+                  label="GST Registration Number" 
+                  value={profile.gstNumber} 
+                  onChange={(val: string) => handleInputChange("gstNumber", val)}
+                  uppercase 
+                  tabular 
+                />
+                <SettingsInput 
+                  label="PAN Card Number" 
+                  value={profile.panNumber} 
+                  onChange={(val: string) => handleInputChange("panNumber", val)}
+                  uppercase 
+                  tabular 
+                />
                 
                 <div className="md:col-span-2 space-y-2">
                   <label className="text-[0.65rem] font-black uppercase tracking-widest text-outline ml-2">Registered Headquarters Address</label>
                   <textarea 
                     className="w-full bg-surface-container-highest border-none rounded-2xl py-4 px-5 text-on-surface font-bold text-sm focus:ring-2 focus:ring-primary focus:bg-white transition-all outline outline-1 outline-outline-variant/15 resize-none shadow-inner" 
                     rows={3}
-                    defaultValue="4th Floor, Logistic Heights, Phase III, Okhla Industrial Area, New Delhi, 110020, India"
+                    value={profile.address}
+                    onChange={(e) => handleInputChange("address", e.target.value)}
+                    placeholder="Enter registered business address..."
                   />
                 </div>
 
-                <SettingsInput label="Primary Support Email" value="ops@onwaylogistics.in" type="email" />
-                <SettingsInput label="Primary Contact Number" value="+91 98765 43210" tabular />
+                <SettingsInput 
+                  label="Primary Support Email" 
+                  value={profile.email} 
+                  onChange={(val: string) => handleInputChange("email", val)}
+                  type="email" 
+                />
+                <SettingsInput 
+                  label="Primary Contact Number" 
+                  value={profile.phone} 
+                  onChange={(val: string) => handleInputChange("phone", val)}
+                  tabular 
+                />
               </div>
 
               {/* Info Alert */}
@@ -121,13 +274,14 @@ function SettingsTab({ icon, label, active }: any) {
   );
 }
 
-function SettingsInput({ label, value, type = "text", uppercase, tabular }: any) {
+function SettingsInput({ label, value, type = "text", uppercase, tabular, onChange }: any) {
   return (
     <div className="space-y-2">
       <label className="text-[0.65rem] font-black uppercase tracking-widest text-outline ml-2">{label}</label>
       <input 
         type={type}
-        defaultValue={value}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
         className={`w-full bg-surface-container-highest border-none rounded-2xl py-4 px-5 text-on-surface font-bold text-sm focus:ring-2 focus:ring-primary focus:bg-white transition-all outline outline-1 outline-outline-variant/15 shadow-inner ${uppercase ? 'uppercase' : ''} ${tabular ? 'tabular-nums' : ''}`}
       />
     </div>

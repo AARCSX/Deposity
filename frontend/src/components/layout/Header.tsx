@@ -8,6 +8,14 @@ export default function Header({ onMenuClick }: { onMenuClick: () => void }) {
 
   useEffect(() => {
     setOrgName(getOrgNameFromToken());
+
+    const handleOrgNameChange = () => {
+      setOrgName(getOrgNameFromToken());
+    };
+    window.addEventListener("deposity_org_name_changed", handleOrgNameChange);
+    return () => {
+      window.removeEventListener("deposity_org_name_changed", handleOrgNameChange);
+    };
   }, []);
 
   return (

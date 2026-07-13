@@ -17,6 +17,7 @@ import (
 	"github.com/Akshansh-29072005/Deposity/backend/internal/maintenance"
 	"github.com/Akshansh-29072005/Deposity/backend/internal/platform/database"
 	"github.com/Akshansh-29072005/Deposity/backend/internal/platform/middleware"
+	"github.com/Akshansh-29072005/Deposity/backend/internal/settings"
 	"github.com/Akshansh-29072005/Deposity/backend/internal/trips"
 	"github.com/Akshansh-29072005/Deposity/backend/internal/vehicles"
 )
@@ -73,6 +74,7 @@ func main() {
 		trips.RegisterRoutes(apiGroup.Group("/trips"), pool, authMiddleware)
 		maintenance.RegisterRoutes(apiGroup.Group("/maintenance"), pool, authMiddleware)
 		dashboard.RegisterRoutes(apiGroup.Group("/dashboard"), pool, authMiddleware)
+		settings.RegisterRoutes(apiGroup.Group("/settings"), pool, authMiddleware)
 	}
 
 	// 6. Start server

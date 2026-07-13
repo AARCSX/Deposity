@@ -29,6 +29,14 @@ export default function Sidebar({ isOpen, onClose }: { isOpen?: boolean; onClose
 
   useEffect(() => {
     setOrgName(getOrgNameFromToken());
+
+    const handleOrgNameChange = () => {
+      setOrgName(getOrgNameFromToken());
+    };
+    window.addEventListener("deposity_org_name_changed", handleOrgNameChange);
+    return () => {
+      window.removeEventListener("deposity_org_name_changed", handleOrgNameChange);
+    };
   }, []);
 
   return (

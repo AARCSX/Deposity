@@ -44,6 +44,10 @@ export async function authenticatedFetch(path: string, options: RequestInit = {}
 }
 
 export function getOrgNameFromToken(): string {
+  if (typeof window !== "undefined") {
+    const overridden = localStorage.getItem("deposity_org_name");
+    if (overridden) return overridden;
+  }
   const token = getAuthToken();
   if (!token) return "OnWay";
   try {
