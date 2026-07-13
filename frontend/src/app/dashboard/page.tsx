@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import LayoutWrapper from "@/components/layout/LayoutWrapper";
 import MetricCard from "@/components/dashboard/MetricCard";
 import AlertItem from "@/components/dashboard/AlertItem";
@@ -9,6 +10,7 @@ import CreateVehicleWizard from "@/components/vehicles/CreateVehicleWizard";
 import CreateMaintenanceWizard, { MaintenanceRecord } from "@/components/maintenance/CreateMaintenanceWizard";
 import { TripRecord } from "@/types/trip";
 import { VehicleRecord } from "@/types/vehicle";
+import { authenticatedFetch } from "@/lib/api";
 
 // Local fallbacks if backend is completely empty or down
 const fallbackVehicles: VehicleRecord[] = [
@@ -67,6 +69,7 @@ const fallbackMaintenance: MaintenanceRecord[] = [
 ];
 
 export default function Home() {
+  const router = useRouter();
   const [vehicles, setVehicles] = useState<VehicleRecord[]>([]);
   const [trips, setTrips] = useState<TripRecord[]>([]);
   const [maintenance, setMaintenance] = useState<MaintenanceRecord[]>([]);
@@ -78,16 +81,23 @@ export default function Home() {
   const [isVehicleWizardOpen, setIsVehicleWizardOpen] = useState(false);
   const [isMaintenanceWizardOpen, setIsMaintenanceWizardOpen] = useState(false);
 
-  const apiBase = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const token = localStorage.getItem("deposity_token");
+      if (!token) {
+        router.push("/");
+      }
+    }
+  }, [router]);
 
   useEffect(() => {
     const loadDashboardData = async () => {
       setIsLoading(true);
       try {
         const [resVehicles, resTrips, resMaint] = await Promise.all([
-          fetch(`${apiBase}/vehicles`).catch(() => null),
-          fetch(`${apiBase}/trips`).catch(() => null),
-          fetch(`${apiBase}/maintenance`).catch(() => null),
+          authenticatedFetch("/vehicles").catch(() => null),
+          authenticatedFetch("/trips").catch(() => null),
+          authenticatedFetch("/maintenance").catch(() => null),
         ]);
 
         let vehiclesData = [];
@@ -119,7 +129,7 @@ export default function Home() {
     };
 
     loadDashboardData();
-  }, [apiBase, refreshKey]);
+  }, [refreshKey]);
 
   // Derived metrics
   const activeTripsCount = useMemo(() => {
@@ -348,7 +358,7 @@ export default function Home() {
   // Submission handler wrappers
   const handleTripSubmit = async (data: TripRecord) => {
     try {
-      const response = await fetch(`${apiBase}/trips`, {
+      const response = await authenticatedFetch("/trips", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data)
@@ -366,7 +376,7 @@ export default function Home() {
 
   const handleVehicleSubmit = async (data: VehicleRecord) => {
     try {
-      const response = await fetch(`${apiBase}/vehicles`, {
+      const response = await authenticatedFetch("/vehicles", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data)
@@ -385,7 +395,7 @@ export default function Home() {
   const handleMaintenanceSubmit = async (data: MaintenanceRecord) => {
     try {
       const completeRecord = { ...data, id: data.id || `MNT-${Math.floor(100 + Math.random() * 900)}` };
-      const response = await fetch(`${apiBase}/maintenance`, {
+      const response = await authenticatedFetch("/maintenance", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(completeRecord)

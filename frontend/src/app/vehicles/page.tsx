@@ -1,10 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import LayoutWrapper from "@/components/layout/LayoutWrapper";
 import VehicleCard from "@/components/dashboard/VehicleCard";
 import CreateVehicleWizard from "@/components/vehicles/CreateVehicleWizard";
 import { VehicleRecord } from "@/types/vehicle";
+import { authenticatedFetch } from "@/lib/api";
 
 const fallbackData: VehicleRecord[] = [
   {
@@ -41,16 +43,24 @@ const fallbackData: VehicleRecord[] = [
 ];
 
 export default function VehiclesPage() {
+  const router = useRouter();
   const [vehicles, setVehicles] = useState<VehicleRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
-  const apiBase = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const token = localStorage.getItem("deposity_token");
+      if (!token) {
+        router.push("/");
+      }
+    }
+  }, [router]);
 
   const loadVehicles = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch(`${apiBase}/vehicles`);
+      const response = await authenticatedFetch("/vehicles");
       if (!response.ok) throw new Error("API unreachable");
       const data = await response.json();
       setVehicles(Array.isArray(data) && data.length > 0 ? data : fallbackData);
@@ -64,11 +74,11 @@ export default function VehiclesPage() {
 
   useEffect(() => {
     loadVehicles();
-  }, [apiBase]);
+  }, []);
 
   const handleCreateSubmit = async (data: VehicleRecord) => {
     try {
-      const response = await fetch(`${apiBase}/vehicles`, {
+      const response = await authenticatedFetch("/vehicles", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data)

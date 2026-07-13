@@ -1,11 +1,33 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Sidebar from "./Sidebar";
 import Header from "./Header";
 
 export default function LayoutWrapper({ children }: { children: React.ReactNode }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const router = useRouter();
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const token = localStorage.getItem("deposity_token");
+      if (!token) {
+        router.push("/");
+      } else {
+        setIsAuthenticated(true);
+      }
+    }
+  }, [router]);
+
+  if (!isAuthenticated) {
+    return (
+      <div className="flex h-screen w-screen items-center justify-center bg-slate-950">
+        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[#7180B9]"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen overflow-hidden bg-surface text-on-surface">
