@@ -64,8 +64,8 @@ func main() {
 	// 5. Register Routes Grouped by API Version
 	apiGroup := router.Group("")
 	{
-		// Auth callback route (no token validation required)
-		auth.RegisterRoutes(apiGroup.Group("/auth"), cfg.IdentityURL, cfg.IdentityAnonKey)
+		// Auth callback route (no token validation required, but logout requires it)
+		auth.RegisterRoutes(apiGroup.Group("/auth"), cfg.IdentityURL, cfg.IdentityAnonKey, authMiddleware)
 
 		// Secure CRUD routes
 		companies.RegisterRoutes(apiGroup.Group("/companies"), pool, authMiddleware)

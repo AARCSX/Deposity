@@ -1,6 +1,8 @@
 package middleware
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"log"
 	"net/http"
 	"strings"
@@ -69,6 +71,16 @@ func AuthRequired(jwksURL string, anonKey string) gin.HandlerFunc {
 
 		tokenString := parts[1]
 
+		// Hash token string to check against blacklist
+		hasher := sha256.New()
+		hasher.Write([]byte(tokenString))
+		tokenHash := hex.EncodeToString(hasher.Sum(nil))
+
+		if TokenBlacklist.IsBlacklisted(tokenHash) {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, apperror.New(http.StatusUnauthorized, "Token is revoked"))
+			return
+		}
+
 		// Parse and verify the token using the JWKS keyfunc
 		token, err := jwt.Parse(tokenString, jwks.Keyfunc)
 		if err != nil {
@@ -106,6 +118,8 @@ func AuthRequired(jwksURL string, anonKey string) gin.HandlerFunc {
 		// Inject into gin context for downstream handlers
 		c.Set("tenant_id", tenantID)
 		c.Set("user_id", userID)
+		c.Set("raw_token", tokenString)
+		c.Set("token_claims", claims)
 
 		c.Next()
 	}

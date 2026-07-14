@@ -1,20 +1,33 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
-import { setAuthToken } from "@/lib/api";
+import { setAuthToken, authenticatedFetch } from "@/lib/api";
 
 export default function LogoutPage() {
   const router = useRouter();
+  const logoutAttempted = useRef(false);
 
   useEffect(() => {
-    setAuthToken(null);
-    localStorage.removeItem("deposity_token");
-    localStorage.removeItem("oauth_code_verifier");
-    localStorage.removeItem("oauth_state");
+    if (logoutAttempted.current) return;
+    logoutAttempted.current = true;
 
-    router.push("/");
+    async function performLogout() {
+      try {
+        await authenticatedFetch("/auth/logout", { method: "POST" });
+      } catch (err) {
+        console.error("Failed to notify backend of logout:", err);
+      } finally {
+        setAuthToken(null);
+        localStorage.removeItem("deposity_token");
+        localStorage.removeItem("oauth_code_verifier");
+        localStorage.removeItem("oauth_state");
+        router.push("/");
+      }
+    }
+
+    performLogout();
   }, [router]);
 
   return (
