@@ -26,6 +26,11 @@ func main() {
 	// 1. Load application configuration
 	cfg := config.Load()
 
+	// Initialize Redis Blacklist if URL is provided
+	if cfg.RedisURL != "" {
+		middleware.InitializeRedisBlacklist(cfg.RedisURL)
+	}
+
 	// 2. Establish database connection pool
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()

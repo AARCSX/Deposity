@@ -17,6 +17,7 @@ type Config struct {
 	IdentityAnonKey          string
 	BrevoAPIKey              string
 	EmailDeposityWelcomeFrom string
+	RedisURL                 string
 }
 
 // Load reads environment variables (with .env fallback) and returns a Config.
@@ -34,6 +35,7 @@ func Load() *Config {
 		IdentityAnonKey:          getEnv("IDENTITY_ANON_KEY", ""),
 		BrevoAPIKey:              getEnv("BREVO_API_KEY", ""),
 		EmailDeposityWelcomeFrom: getEnv("EMAIL_DEPOSITY_WELCOME_FROM", "welcome@deposity.aarcsx.com"),
+		RedisURL:                 getEnv("REDIS_URL", getEnv("UPSTASH_REDIS_URL", "")),
 	}
 
 	if cfg.DatabaseURL == "" {

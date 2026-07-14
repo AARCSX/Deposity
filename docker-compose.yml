@@ -19,6 +19,15 @@ services:
       - ./backend/.env
     working_dir: /app
     command: ["air", "-c", ".air.toml"]
+    depends_on:
+      - redis
+
+  # ── Redis (Local Cache & Blacklist) ──────────────────────────
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
 
   # ── Frontend (Next.js dev server) ──────────────────────────
   frontend:
