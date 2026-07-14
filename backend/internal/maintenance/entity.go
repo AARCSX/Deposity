@@ -22,6 +22,7 @@ type Maintenance struct {
 	NextServiceOdometer int       `json:"nextServiceOdometer" db:"next_service_odometer"`
 	Status              string    `json:"status" db:"status"` // E.g., Completed, Scheduled
 	Notes               string    `json:"notes" db:"notes"`
+	TyreID              string    `json:"tyreId" db:"tyre_id"`
 	CreatedAt           time.Time `json:"createdAt" db:"created_at"`
 	UpdatedAt           time.Time `json:"updatedAt" db:"updated_at"`
 }

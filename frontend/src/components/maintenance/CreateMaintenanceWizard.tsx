@@ -2,6 +2,8 @@
 
 import React, { useEffect, useState } from "react";
 import { VehicleRecord } from "@/types/vehicle";
+import DynamicChassis from "./DynamicChassis";
+import { parseAxleConfig } from "./MaintenanceDashboard";
 
 export interface MaintenanceRecord {
   id?: string;
@@ -19,6 +21,7 @@ export interface MaintenanceRecord {
   nextServiceOdometer: number;
   status: string;
   notes: string;
+  tyreId?: string;
 }
 
 interface CreateMaintenanceWizardProps {
@@ -44,6 +47,18 @@ interface FormState {
   nextServiceOdometer: string;
   status: string;
   notes: string;
+  tyreId: string;
+}
+
+function getTyreDisplayName(tyreId: string): string {
+  if (!tyreId) return "None";
+  const parts = tyreId.split("-");
+  if (parts.length < 3) return tyreId;
+  const axleIndex = parseInt(parts[1]);
+  const side = parts[2] === "left" ? "Left" : "Right";
+  const innerOuter = parts[3] ? ` (${parts[3].charAt(0).toUpperCase() + parts[3].slice(1)})` : "";
+  const position = axleIndex === 0 ? "Front" : `Axle ${axleIndex + 1}`;
+  return `${position} ${side}${innerOuter}`;
 }
 
 const getInitialFormState = (vehicles: VehicleRecord[]): FormState => ({
@@ -61,12 +76,14 @@ const getInitialFormState = (vehicles: VehicleRecord[]): FormState => ({
   nextServiceOdometer: "",
   status: "Scheduled",
   notes: "",
+  tyreId: "",
 });
 
 const STEPS = [
   { id: 0, title: "Vehicle & Odo", subtitle: "Select truck and type" },
-  { id: 1, title: "Service Details", subtitle: "Center, mechanic and cost" },
-  { id: 2, title: "Parts & Next Date", subtitle: "Replaced parts & notes" },
+  { id: 1, title: "Tyre Selection", subtitle: "Select affected tyre (optional)" },
+  { id: 2, title: "Service Details", subtitle: "Center, mechanic and cost" },
+  { id: 3, title: "Parts & Next Date", subtitle: "Replaced parts & notes" },
 ];
 
 export default function CreateMaintenanceWizard({
@@ -103,6 +120,7 @@ export default function CreateMaintenanceWizard({
         nextServiceOdometer: recordToEdit.nextServiceOdometer ? String(recordToEdit.nextServiceOdometer) : "",
         status: recordToEdit.status || "Scheduled",
         notes: recordToEdit.notes || "",
+        tyreId: recordToEdit.tyreId || "",
       });
     } else {
       setFormData(getInitialFormState(vehicles));
@@ -133,7 +151,7 @@ export default function CreateMaintenanceWizard({
         setValidationError("Maintenance Date is required.");
         return false;
       }
-    } else if (step === 1) {
+    } else if (step === 2) {
       if (!formData.serviceCenter.trim()) {
         setValidationError("Service Center name is required.");
         return false;
@@ -166,7 +184,7 @@ export default function CreateMaintenanceWizard({
   const handleVehicleChange = (regNum: string) => {
     if (regNum === "custom") {
       setUseCustomVehicle(true);
-      setFormData((f) => ({ ...f, vehicleNumber: "", vehicleId: "" }));
+      setFormData((f) => ({ ...f, vehicleNumber: "", vehicleId: "", tyreId: "" }));
     } else {
       setUseCustomVehicle(false);
       const vehicle = vehicles.find((v) => v.core.registrationNumber === regNum);
@@ -175,6 +193,7 @@ export default function CreateMaintenanceWizard({
           ...f,
           vehicleNumber: vehicle.core.registrationNumber,
           vehicleId: vehicle.id || `V-${vehicle.core.registrationNumber}`,
+          tyreId: "",
         }));
       }
     }
@@ -200,6 +219,7 @@ export default function CreateMaintenanceWizard({
         nextServiceOdometer: Number(formData.nextServiceOdometer) || 0,
         status: formData.status,
         notes: formData.notes,
+        tyreId: formData.tyreId,
       };
       await onSubmit(payload);
       onClose();
@@ -371,6 +391,64 @@ export default function CreateMaintenanceWizard({
 
           {currentStep === 1 && (
             <div className="space-y-4 animate-in slide-in-from-right-4 duration-300">
+              <div className="text-center">
+                <p className="text-sm font-semibold text-on-surface">Select Affected Tyre</p>
+                <p className="text-xs text-on-surface-variant mt-1">
+                  Click on the chassis diagram to select the tyre being replaced or repaired. 
+                  Leave blank if this service is for non-tyre components (e.g. engine, battery).
+                </p>
+              </div>
+
+              <div className="bg-surface-container-low/30 rounded-2xl border border-outline-variant/10 flex items-center justify-center min-h-[250px] py-4">
+                <DynamicChassis
+                  axles={
+                    vehicles.find(
+                      (v) => v.core.registrationNumber.toLowerCase() === formData.vehicleNumber.toLowerCase()
+                    )?.core.axleConfig
+                      ? parseAxleConfig(
+                          vehicles.find(
+                            (v) => v.core.registrationNumber.toLowerCase() === formData.vehicleNumber.toLowerCase()
+                          )!.core.axleConfig
+                        )
+                      : [{ left: 1, right: 1 }, { left: 2, right: 2 }, { left: 2, right: 2 }]
+                  }
+                  selectedTyre={formData.tyreId || null}
+                  onTyreClick={(tyreId) => {
+                    setFormData((f) => ({
+                      ...f,
+                      tyreId: f.tyreId === tyreId ? "" : tyreId,
+                    }));
+                  }}
+                />
+              </div>
+
+              <div className="flex items-center justify-between p-3.5 bg-surface-container-low rounded-2xl border border-outline-variant/10">
+                <div className="flex items-center gap-3">
+                  <span className="material-symbols-outlined text-primary text-[20px]">
+                    {formData.tyreId ? "adjust" : "circle"}
+                  </span>
+                  <div>
+                    <p className="text-xs font-bold text-outline uppercase tracking-wider">Linked Tyre Position</p>
+                    <p className="text-sm font-bold text-on-surface">
+                      {formData.tyreId ? getTyreDisplayName(formData.tyreId) : "General Vehicle Maintenance (No Tyre)"}
+                    </p>
+                  </div>
+                </div>
+                {formData.tyreId && (
+                  <button
+                    type="button"
+                    onClick={() => setFormData((f) => ({ ...f, tyreId: "" }))}
+                    className="px-3 py-1.5 rounded-xl bg-surface-container-high hover:bg-surface-container-highest text-xs font-black text-on-surface-variant transition-colors"
+                  >
+                    Clear Selection
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
+          {currentStep === 2 && (
+            <div className="space-y-4 animate-in slide-in-from-right-4 duration-300">
               <div className="grid gap-4 md:grid-cols-2">
                 <Input
                   label="Service Center *"
@@ -403,7 +481,7 @@ export default function CreateMaintenanceWizard({
             </div>
           )}
 
-          {currentStep === 2 && (
+          {currentStep === 3 && (
             <div className="space-y-4 animate-in slide-in-from-right-4 duration-300">
               <Input
                 label="Parts Replaced"

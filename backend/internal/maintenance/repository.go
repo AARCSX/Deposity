@@ -21,7 +21,7 @@ func (r *Repository) GetAll(ctx context.Context, tenantID string) ([]Maintenance
 	query := `
 		SELECT id, tenant_id, vehicle_id, vehicle_number, maintenance_type, maintenance_date, odometer_reading,
 		       service_center, mechanic, cost, description, parts_replaced, next_service_date, next_service_odometer,
-		       status, notes, created_at, updated_at
+		       status, notes, tyre_id, created_at, updated_at
 		FROM maintenance
 		WHERE tenant_id = $1
 		ORDER BY maintenance_date DESC
@@ -38,7 +38,7 @@ func (r *Repository) GetAll(ctx context.Context, tenantID string) ([]Maintenance
 		err := rows.Scan(
 			&m.ID, &m.TenantID, &m.VehicleID, &m.VehicleNumber, &m.MaintenanceType, &m.MaintenanceDate, &m.OdometerReading,
 			&m.ServiceCenter, &m.Mechanic, &m.Cost, &m.Description, &m.PartsReplaced, &m.NextServiceDate, &m.NextServiceOdometer,
-			&m.Status, &m.Notes, &m.CreatedAt, &m.UpdatedAt,
+			&m.Status, &m.Notes, &m.TyreID, &m.CreatedAt, &m.UpdatedAt,
 		)
 		if err != nil {
 			return nil, err
@@ -54,7 +54,7 @@ func (r *Repository) GetByID(ctx context.Context, tenantID, id string) (*Mainten
 	query := `
 		SELECT id, tenant_id, vehicle_id, vehicle_number, maintenance_type, maintenance_date, odometer_reading,
 		       service_center, mechanic, cost, description, parts_replaced, next_service_date, next_service_odometer,
-		       status, notes, created_at, updated_at
+		       status, notes, tyre_id, created_at, updated_at
 		FROM maintenance
 		WHERE tenant_id = $1 AND id = $2
 	`
@@ -62,7 +62,7 @@ func (r *Repository) GetByID(ctx context.Context, tenantID, id string) (*Mainten
 	err := r.pool.QueryRow(ctx, query, tenantID, id).Scan(
 		&m.ID, &m.TenantID, &m.VehicleID, &m.VehicleNumber, &m.MaintenanceType, &m.MaintenanceDate, &m.OdometerReading,
 		&m.ServiceCenter, &m.Mechanic, &m.Cost, &m.Description, &m.PartsReplaced, &m.NextServiceDate, &m.NextServiceOdometer,
-		&m.Status, &m.Notes, &m.CreatedAt, &m.UpdatedAt,
+		&m.Status, &m.Notes, &m.TyreID, &m.CreatedAt, &m.UpdatedAt,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -80,14 +80,14 @@ func (r *Repository) Create(ctx context.Context, tenantID string, m *Maintenance
 		INSERT INTO maintenance (
 			tenant_id, vehicle_id, vehicle_number, maintenance_type, maintenance_date, odometer_reading,
 			service_center, mechanic, cost, description, parts_replaced, next_service_date, next_service_odometer,
-			status, notes
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+			status, notes, tyre_id
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
 		RETURNING id, created_at, updated_at
 	`
 	return r.pool.QueryRow(ctx, query,
 		tenantID, m.VehicleID, m.VehicleNumber, m.MaintenanceType, m.MaintenanceDate, m.OdometerReading,
 		m.ServiceCenter, m.Mechanic, m.Cost, m.Description, m.PartsReplaced, m.NextServiceDate, m.NextServiceOdometer,
-		m.Status, m.Notes,
+		m.Status, m.Notes, m.TyreID,
 	).Scan(&m.ID, &m.CreatedAt, &m.UpdatedAt)
 }
 
@@ -102,7 +102,7 @@ func (r *Repository) Update(ctx context.Context, tenantID, id string, updateFn f
 	querySelect := `
 		SELECT id, tenant_id, vehicle_id, vehicle_number, maintenance_type, maintenance_date, odometer_reading,
 		       service_center, mechanic, cost, description, parts_replaced, next_service_date, next_service_odometer,
-		       status, notes, created_at, updated_at
+		       status, notes, tyre_id, created_at, updated_at
 		FROM maintenance
 		WHERE tenant_id = $1 AND id = $2
 	`
@@ -110,7 +110,7 @@ func (r *Repository) Update(ctx context.Context, tenantID, id string, updateFn f
 	err = tx.QueryRow(ctx, querySelect, tenantID, id).Scan(
 		&m.ID, &m.TenantID, &m.VehicleID, &m.VehicleNumber, &m.MaintenanceType, &m.MaintenanceDate, &m.OdometerReading,
 		&m.ServiceCenter, &m.Mechanic, &m.Cost, &m.Description, &m.PartsReplaced, &m.NextServiceDate, &m.NextServiceOdometer,
-		&m.Status, &m.Notes, &m.CreatedAt, &m.UpdatedAt,
+		&m.Status, &m.Notes, &m.TyreID, &m.CreatedAt, &m.UpdatedAt,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -127,14 +127,14 @@ func (r *Repository) Update(ctx context.Context, tenantID, id string, updateFn f
 		UPDATE maintenance
 		SET vehicle_id = $1, vehicle_number = $2, maintenance_type = $3, maintenance_date = $4, odometer_reading = $5,
 		    service_center = $6, mechanic = $7, cost = $8, description = $9, parts_replaced = $10,
-		    next_service_date = $11, next_service_odometer = $12, status = $13, notes = $14, updated_at = NOW()
-		WHERE tenant_id = $15 AND id = $16
+		    next_service_date = $11, next_service_odometer = $12, status = $13, notes = $14, tyre_id = $15, updated_at = NOW()
+		WHERE tenant_id = $16 AND id = $17
 		RETURNING updated_at
 	`
 	err = tx.QueryRow(ctx, queryUpdate,
 		m.VehicleID, m.VehicleNumber, m.MaintenanceType, m.MaintenanceDate, m.OdometerReading,
 		m.ServiceCenter, m.Mechanic, m.Cost, m.Description, m.PartsReplaced,
-		m.NextServiceDate, m.NextServiceOdometer, m.Status, m.Notes,
+		m.NextServiceDate, m.NextServiceOdometer, m.Status, m.Notes, m.TyreID,
 		tenantID, id,
 	).Scan(&m.UpdatedAt)
 	if err != nil {

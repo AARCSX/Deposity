@@ -63,6 +63,7 @@ func (s *Service) Create(ctx context.Context, tenantID string, req CreateMainten
 		NextServiceOdometer: req.NextServiceOdometer,
 		Status:              status,
 		Notes:               req.Notes,
+		TyreID:              req.TyreID,
 	}
 
 	if err := s.repo.Create(ctx, tenantID, m); err != nil {
@@ -117,6 +118,9 @@ func (s *Service) Update(ctx context.Context, tenantID, id string, req UpdateMai
 		if req.Notes != nil {
 			m.Notes = *req.Notes
 		}
+		if req.TyreID != nil {
+			m.TyreID = *req.TyreID
+		}
 		return nil
 	})
 
@@ -165,6 +169,7 @@ func MapToResponse(m Maintenance) MaintenanceResponse {
 		NextServiceOdometer: m.NextServiceOdometer,
 		Status:              m.Status,
 		Notes:               m.Notes,
+		TyreID:              m.TyreID,
 	}
 }
 

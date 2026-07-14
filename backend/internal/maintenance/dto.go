@@ -17,6 +17,7 @@ type MaintenanceResponse struct {
 	NextServiceOdometer int     `json:"nextServiceOdometer"`
 	Status              string  `json:"status"`
 	Notes               string  `json:"notes"`
+	TyreID              string  `json:"tyreId"`
 }
 
 // CreateMaintenanceRequest represents the payload to create a maintenance log.
@@ -35,6 +36,7 @@ type CreateMaintenanceRequest struct {
 	NextServiceOdometer int     `json:"nextServiceOdometer"`
 	Status              string  `json:"status"`
 	Notes               string  `json:"notes"`
+	TyreID              string  `json:"tyreId"`
 }
 
 // UpdateMaintenanceRequest represents the payload to update a maintenance log.
@@ -53,4 +55,5 @@ type UpdateMaintenanceRequest struct {
 	NextServiceOdometer *int     `json:"nextServiceOdometer"`
 	Status              *string  `json:"status"`
 	Notes               *string  `json:"notes"`
+	TyreID              *string  `json:"tyreId"`
 }

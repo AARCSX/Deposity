@@ -167,6 +167,9 @@ export function parseAxleConfig(configStr: string): AxleConfig[] {
 }
 
 function isTyreMatch(record: MaintenanceRecord, tyreId: string): boolean {
+  if (record.tyreId) {
+    return record.tyreId === tyreId;
+  }
   const text = `${record.maintenanceType} ${record.description} ${record.partsReplaced} ${record.notes}`.toLowerCase();
   if (text.includes(tyreId.toLowerCase())) return true;
   
