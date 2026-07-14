@@ -74,7 +74,7 @@ func main() {
 		trips.RegisterRoutes(apiGroup.Group("/trips"), pool, authMiddleware)
 		maintenance.RegisterRoutes(apiGroup.Group("/maintenance"), pool, authMiddleware)
 		dashboard.RegisterRoutes(apiGroup.Group("/dashboard"), pool, authMiddleware)
-		settings.RegisterRoutes(apiGroup.Group("/settings"), pool, authMiddleware)
+		settings.RegisterRoutes(apiGroup.Group("/settings"), pool, authMiddleware, cfg.BrevoAPIKey, cfg.EmailDeposityWelcomeFrom)
 	}
 
 	// 6. Start server

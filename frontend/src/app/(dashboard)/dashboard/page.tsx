@@ -46,10 +46,11 @@ export default function Home() {
     const loadDashboardData = async () => {
       setIsLoading(true);
       try {
-        const [resVehicles, resTrips, resMaint] = await Promise.all([
+        const [resVehicles, resTrips, resMaint, resSettings] = await Promise.all([
           authenticatedFetch("/vehicles").catch(() => null),
           authenticatedFetch("/trips").catch(() => null),
           authenticatedFetch("/maintenance").catch(() => null),
+          authenticatedFetch("/settings").catch(() => null),
         ]);
 
         let vehiclesData = [];
@@ -64,6 +65,12 @@ export default function Home() {
         }
         if (resMaint && resMaint.ok) {
           maintData = await resMaint.json();
+        }
+        if (resSettings && resSettings.ok) {
+          const settingsData = await resSettings.json();
+          if (settingsData && settingsData.name) {
+            setOrgName(settingsData.name);
+          }
         }
 
         // Set backend data or empty lists (no mock fallback)

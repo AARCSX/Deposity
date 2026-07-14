@@ -63,6 +63,18 @@ function CallbackHandler() {
         // Save token
         setAuthToken(data.access_token);
 
+        // Auto-initialize profile & send welcome email by pinging settings endpoint
+        try {
+          await fetch(`${apiBase}/settings`, {
+            method: "GET",
+            headers: {
+              "Authorization": `Bearer ${data.access_token}`,
+            },
+          });
+        } catch (settingsErr) {
+          console.error("Failed to auto-initialize settings profile:", settingsErr);
+        }
+
         // Clean up
         localStorage.removeItem("oauth_code_verifier");
         localStorage.removeItem("oauth_state");

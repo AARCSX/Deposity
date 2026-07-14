@@ -6,9 +6,9 @@ import (
 )
 
 // RegisterRoutes registers the settings profile routes.
-func RegisterRoutes(rg *gin.RouterGroup, pool *pgxpool.Pool, authMiddleware gin.HandlerFunc) {
+func RegisterRoutes(rg *gin.RouterGroup, pool *pgxpool.Pool, authMiddleware gin.HandlerFunc, brevoAPIKey, welcomeFrom string) {
 	repo := NewRepository(pool)
-	service := NewService(repo)
+	service := NewService(repo, brevoAPIKey, welcomeFrom)
 	handler := NewHandler(service)
 
 	rg.Use(authMiddleware)

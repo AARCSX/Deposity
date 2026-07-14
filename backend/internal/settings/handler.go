@@ -22,8 +22,11 @@ func (h *Handler) Get(c *gin.Context) {
 	tenantID := middleware.GetTenantID(c)
 	authHeader := c.GetHeader("Authorization")
 	defaultName := getOrgNameFromJWT(authHeader)
+	userEmail := getUserEmailFromJWT(authHeader)
+	userName := getUserNameFromJWT(authHeader)
+	orgSlug := getOrgSlugFromJWT(authHeader)
 
-	profile, err := h.service.GetOrCreateProfile(c.Request.Context(), tenantID, defaultName)
+	profile, err := h.service.GetOrCreateProfile(c.Request.Context(), tenantID, defaultName, userEmail, userName, orgSlug)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -65,4 +68,64 @@ func getOrgNameFromJWT(authHeader string) string {
 		}
 	}
 	return "OnWay"
+}
+
+func getUserEmailFromJWT(authHeader string) string {
+	parts := strings.Split(authHeader, " ")
+	if len(parts) != 2 || parts[0] != "Bearer" {
+		return ""
+	}
+	tokenString := parts[1]
+
+	parser := jwt.NewParser()
+	token, _, err := parser.ParseUnverified(tokenString, jwt.MapClaims{})
+	if err != nil {
+		return ""
+	}
+	if claims, ok := token.Claims.(jwt.MapClaims); ok {
+		if email, ok := claims["email"].(string); ok {
+			return email
+		}
+	}
+	return ""
+}
+
+func getUserNameFromJWT(authHeader string) string {
+	parts := strings.Split(authHeader, " ")
+	if len(parts) != 2 || parts[0] != "Bearer" {
+		return ""
+	}
+	tokenString := parts[1]
+
+	parser := jwt.NewParser()
+	token, _, err := parser.ParseUnverified(tokenString, jwt.MapClaims{})
+	if err != nil {
+		return ""
+	}
+	if claims, ok := token.Claims.(jwt.MapClaims); ok {
+		if name, ok := claims["name"].(string); ok {
+			return name
+		}
+	}
+	return ""
+}
+
+func getOrgSlugFromJWT(authHeader string) string {
+	parts := strings.Split(authHeader, " ")
+	if len(parts) != 2 || parts[0] != "Bearer" {
+		return ""
+	}
+	tokenString := parts[1]
+
+	parser := jwt.NewParser()
+	token, _, err := parser.ParseUnverified(tokenString, jwt.MapClaims{})
+	if err != nil {
+		return ""
+	}
+	if claims, ok := token.Claims.(jwt.MapClaims); ok {
+		if orgSlug, ok := claims["org_slug"].(string); ok {
+			return orgSlug
+		}
+	}
+	return ""
 }

@@ -2,17 +2,27 @@ package settings
 
 import (
 	"context"
+
+	"github.com/Akshansh-29072005/Deposity/backend/internal/platform/mail"
 )
 
 type Service struct {
-	repo *Repository
+	repo       *Repository
+	mailClient *mail.Client
 }
 
-func NewService(repo *Repository) *Service {
-	return &Service{repo: repo}
+func NewService(repo *Repository, brevoAPIKey, welcomeFrom string) *Service {
+	var mailClient *mail.Client
+	if brevoAPIKey != "" {
+		mailClient = mail.NewClient(brevoAPIKey, welcomeFrom)
+	}
+	return &Service{
+		repo:       repo,
+		mailClient: mailClient,
+	}
 }
 
-func (s *Service) GetOrCreateProfile(ctx context.Context, tenantID, defaultName string) (*TenantProfile, error) {
+func (s *Service) GetOrCreateProfile(ctx context.Context, tenantID, defaultName, userEmail, userName, orgSlug string) (*TenantProfile, error) {
 	profile, err := s.repo.GetByTenantID(ctx, tenantID)
 	if err != nil {
 		return nil, err
@@ -26,11 +36,20 @@ func (s *Service) GetOrCreateProfile(ctx context.Context, tenantID, defaultName 
 			GstNumber: "",
 			PanNumber: "",
 			Address:   "",
-			Email:     "",
+			Email:     userEmail,
 			Phone:     "",
 		}
 		if err := s.repo.Create(ctx, profile); err != nil {
 			return nil, err
+		}
+
+		// Trigger "Welcome to Deposity" email!
+		if s.mailClient != nil && userEmail != "" {
+			go func(email, name, oName, oSlug, tID string) {
+				if err := s.mailClient.SendWelcomeEmail(email, name, oName, oSlug, tID); err != nil {
+					println("[mail] Failed to send welcome email:", err.Error())
+				}
+			}(userEmail, userName, defaultName, orgSlug, tenantID)
 		}
 	}
 	return profile, nil
