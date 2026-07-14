@@ -105,3 +105,8 @@ func (s *Service) UpdateProfile(ctx context.Context, tenantID string, req Update
 
 	return profile, nil
 }
+
+func (s *Service) DeleteProfile(ctx context.Context, tenantID string) error {
+	return s.repo.DeleteAllTenantData(ctx, tenantID)
+}
+

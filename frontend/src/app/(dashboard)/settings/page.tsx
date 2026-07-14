@@ -20,6 +20,10 @@ export default function SettingsPage() {
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
 
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [confirmNameInput, setConfirmNameInput] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
+
   const loadSettings = async () => {
     setIsLoading(true);
     setErrorMsg("");
@@ -90,6 +94,33 @@ export default function SettingsPage() {
       ...prev,
       [field]: value
     }));
+  };
+
+  const handleDeleteAccount = async () => {
+    if (confirmNameInput !== orgName) {
+      setErrorMsg("Confirmation organization name does not match.");
+      return;
+    }
+    setIsDeleting(true);
+    setErrorMsg("");
+    setSuccessMsg("");
+    try {
+      const response = await authenticatedFetch("/settings", {
+        method: "DELETE"
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to delete account data");
+      }
+      setSuccessMsg("Organization account and data deleted successfully. Redirecting...");
+      setTimeout(() => {
+        window.location.href = "/logout";
+      }, 2000);
+    } catch (err: any) {
+      setErrorMsg(err.message || "Failed to delete organization data.");
+      setIsDeleting(false);
+      setShowDeleteModal(false);
+    }
   };
 
   if (isLoading) {
@@ -248,6 +279,29 @@ export default function SettingsPage() {
                   <p className="font-medium opacity-80">Updating GST or PAN details will trigger a re-verification process which might take up to 48 hours. During this period, some billing features may be restricted.</p>
                 </div>
               </div>
+
+              {/* Danger Zone */}
+              <div className="mt-12 p-8 rounded-3xl border-2 border-dashed border-error/30 bg-error/5 shadow-sm">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
+                  <div className="space-y-1">
+                    <h4 className="text-lg font-bold text-error flex items-center gap-2">
+                      <span className="material-symbols-outlined">warning</span> Danger Zone
+                    </h4>
+                    <p className="text-xs text-on-surface-variant font-medium leading-relaxed max-w-xl">
+                      Permanently delete this organization, including all associated drivers, vehicles, trips, and maintenance records. This action is irreversible.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setConfirmNameInput("");
+                      setShowDeleteModal(true);
+                    }}
+                    className="px-6 py-3 text-xs font-black uppercase tracking-widest text-white bg-error rounded-xl hover:bg-error/90 hover:scale-[1.02] transition-all shadow-md shadow-error/10 whitespace-nowrap self-start sm:self-auto"
+                  >
+                    Delete Organization
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -261,6 +315,55 @@ export default function SettingsPage() {
           </div>
         </footer>
       </div>
+
+      {/* Double Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-surface-container-lowest border border-outline-variant/20 rounded-[2.5rem] p-10 max-w-md w-full mx-4 shadow-[0_50px_100px_rgba(0,0,0,0.4)] space-y-6">
+            <div className="flex items-center gap-4 text-error">
+              <span className="material-symbols-outlined text-4xl">warning</span>
+              <div>
+                <h3 className="text-xl font-bold tracking-tight">Are you absolutely sure?</h3>
+                <p className="text-[10px] font-black uppercase tracking-widest text-error mt-0.5">Irreversible Action</p>
+              </div>
+            </div>
+
+            <div className="text-sm text-on-surface-variant space-y-3 leading-relaxed">
+              <p>
+                This will permanently delete the organization <strong className="text-on-surface">{orgName}</strong> and all of its fleet profiles, records, and trips.
+              </p>
+              <p>
+                To confirm, please type <strong className="text-on-surface select-none">{orgName}</strong> below:
+              </p>
+            </div>
+
+            <input
+              type="text"
+              value={confirmNameInput}
+              onChange={(e) => setConfirmNameInput(e.target.value)}
+              placeholder={`Type "${orgName}" to confirm`}
+              className="w-full bg-surface-container-highest border-none rounded-2xl py-4 px-5 text-on-surface font-bold text-sm focus:ring-2 focus:ring-error focus:bg-white transition-all outline outline-1 outline-outline-variant/15 shadow-inner"
+            />
+
+            <div className="flex gap-4 pt-2">
+              <button
+                onClick={() => setShowDeleteModal(false)}
+                disabled={isDeleting}
+                className="flex-1 py-3 text-xs font-black uppercase tracking-widest text-on-surface-variant bg-surface-container-low rounded-xl hover:bg-surface-container-high transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteAccount}
+                disabled={confirmNameInput !== orgName || isDeleting}
+                className="flex-1 py-3 text-xs font-black uppercase tracking-widest text-white bg-error rounded-xl hover:bg-error/90 disabled:opacity-30 disabled:scale-100 hover:scale-[1.02] transition-all shadow-md shadow-error/10"
+              >
+                {isDeleting ? "Deleting..." : "Permanently Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

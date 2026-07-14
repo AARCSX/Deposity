@@ -50,6 +50,16 @@ func (h *Handler) Update(c *gin.Context) {
 	c.JSON(http.StatusOK, profile)
 }
 
+func (h *Handler) Delete(c *gin.Context) {
+	tenantID := middleware.GetTenantID(c)
+	if err := h.service.DeleteProfile(c.Request.Context(), tenantID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"success": true, "message": "All data for the organization has been permanently deleted."})
+}
+
+
 func getOrgNameFromJWT(authHeader string) string {
 	parts := strings.Split(authHeader, " ")
 	if len(parts) != 2 || parts[0] != "Bearer" {

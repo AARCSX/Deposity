@@ -60,3 +60,43 @@ func (r *Repository) Update(ctx context.Context, p *TenantProfile) error {
 		p.Name, p.Logo, p.GstNumber, p.PanNumber, p.Address, p.Email, p.Phone, p.TenantID,
 	).Scan(&p.UpdatedAt)
 }
+
+// DeleteAllTenantData deletes the tenant profile and all associated data within a transaction.
+func (r *Repository) DeleteAllTenantData(ctx context.Context, tenantID string) error {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	// 1. Break cyclic foreign key relationships to prevent constraint failures
+	if _, err := tx.Exec(ctx, "UPDATE vehicles SET driver_id = NULL WHERE tenant_id = $1", tenantID); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(ctx, "UPDATE drivers SET vehicle_id = NULL WHERE tenant_id = $1", tenantID); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(ctx, "UPDATE trips SET vehicle_id = NULL, driver_id = NULL WHERE tenant_id = $1", tenantID); err != nil {
+		return err
+	}
+
+	// 2. Cascade delete all records belonging to the tenant
+	tables := []string{
+		"trips",
+		"maintenance",
+		"vehicles",
+		"drivers",
+		"companies",
+		"tenant_profiles",
+	}
+
+	for _, table := range tables {
+		query := "DELETE FROM " + table + " WHERE tenant_id = $1"
+		if _, err := tx.Exec(ctx, query, tenantID); err != nil {
+			return err
+		}
+	}
+
+	return tx.Commit(ctx)
+}
+
