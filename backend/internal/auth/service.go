@@ -74,3 +74,45 @@ func (s *Service) ExchangeCode(ctx context.Context, req ExchangeCodeRequest) (*T
 
 	return &tokenResp, nil
 }
+
+// RefreshToken calls the AARCSX Identity /oauth-token edge function with grant_type=refresh_token.
+func (s *Service) RefreshToken(ctx context.Context, refreshToken string) (*TokenResponse, error) {
+	payload := map[string]string{
+		"grant_type":    "refresh_token",
+		"client_id":     "deposity_client",
+		"refresh_token": refreshToken,
+	}
+
+	bodyBytes, err := json.Marshal(payload)
+	if err != nil {
+		return nil, apperror.Internal("failed to marshal refresh token payload")
+	}
+
+	url := fmt.Sprintf("%s/oauth-token", s.identityURL)
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewBuffer(bodyBytes))
+	if err != nil {
+		return nil, apperror.Internal("failed to create refresh token request")
+	}
+	httpReq.Header.Set("Content-Type", "application/json")
+	if s.anonKey != "" {
+		httpReq.Header.Set("Authorization", "Bearer "+s.anonKey)
+		httpReq.Header.Set("apikey", s.anonKey)
+	}
+
+	resp, err := s.httpClient.Do(httpReq)
+	if err != nil {
+		return nil, apperror.Internal("network error contacting identity provider")
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, apperror.New(resp.StatusCode, "identity provider rejected the refresh token")
+	}
+
+	var tokenResp TokenResponse
+	if err := json.NewDecoder(resp.Body).Decode(&tokenResp); err != nil {
+		return nil, apperror.Internal("failed to parse refresh token response from identity provider")
+	}
+
+	return &tokenResp, nil
+}

@@ -12,5 +12,6 @@ func RegisterRoutes(rg *gin.RouterGroup, identityURL string, anonKey string, aut
 	handler := NewHandler(service)
 
 	rg.POST("/callback", handler.ExchangeCode)
+	rg.POST("/refresh", handler.RefreshToken) // No auth middleware — caller's access_token is expired
 	rg.POST("/logout", authMiddleware, handler.Logout)
 }

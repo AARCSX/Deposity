@@ -16,3 +16,8 @@ type TokenResponse struct {
 	ExpiresIn    int    `json:"expires_in"`
 	TokenType    string `json:"token_type"`
 }
+
+// RefreshTokenRequest represents the payload to refresh an access token.
+type RefreshTokenRequest struct {
+	RefreshToken string `json:"refresh_token" binding:"required"`
+}

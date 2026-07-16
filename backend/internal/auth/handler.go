@@ -78,3 +78,20 @@ func (h *Handler) Logout(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"success": true, "message": "Successfully logged out. Token has been blacklisted."})
 }
+
+// RefreshToken handles POST /auth/refresh to exchange a refresh_token for new tokens.
+func (h *Handler) RefreshToken(c *gin.Context) {
+	var req RefreshTokenRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "refresh_token is required"})
+		return
+	}
+
+	tokenResp, err := h.service.RefreshToken(c.Request.Context(), req.RefreshToken)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Failed to refresh token. Please login again."})
+		return
+	}
+
+	c.JSON(http.StatusOK, tokenResp)
+}
