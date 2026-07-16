@@ -46,6 +46,9 @@ func (s *Service) Create(ctx context.Context, tenantID string, req CreateMainten
 	if req.Status != "" {
 		status = req.Status
 	}
+	if status != "Pending" && status != "Scheduled" && status != "Completed" {
+		return nil, apperror.BadRequest("invalid maintenance status: must be Pending, Scheduled, or Completed")
+	}
 
 	m := &Maintenance{
 		TenantID:            tenantID,
@@ -113,7 +116,14 @@ func (s *Service) Update(ctx context.Context, tenantID, id string, req UpdateMai
 			m.NextServiceOdometer = *req.NextServiceOdometer
 		}
 		if req.Status != nil {
-			m.Status = *req.Status
+			nextStatus := *req.Status
+			if nextStatus != "Pending" && nextStatus != "Scheduled" && nextStatus != "Completed" {
+				return apperror.BadRequest("invalid maintenance status: must be Pending, Scheduled, or Completed")
+			}
+			if !validateStatusTransition(m.Status, nextStatus) {
+				return apperror.BadRequest("invalid status transition from " + m.Status + " to " + nextStatus)
+			}
+			m.Status = nextStatus
 		}
 		if req.Notes != nil {
 			m.Notes = *req.Notes
@@ -191,4 +201,17 @@ func parseFlexibleDate(dateStr string) time.Time {
 		}
 	}
 	return time.Now()
+}
+
+func validateStatusTransition(current, next string) bool {
+	switch current {
+	case "Pending":
+		return next == "Pending" || next == "Scheduled" || next == "Completed"
+	case "Scheduled":
+		return next == "Scheduled" || next == "Completed"
+	case "Completed":
+		return next == "Completed"
+	default:
+		return next == "Pending" || next == "Scheduled" || next == "Completed"
+	}
 }
