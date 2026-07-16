@@ -50,13 +50,14 @@ func (s *Service) Create(ctx context.Context, tenantID string, req CreateDriverR
 		VehicleID:       vehicleID,
 		LicenseNumber:   req.LicenseNumber,
 		LicenseExpiry:   req.LicenseExpiry,
+		LicenseIssuance: req.LicenseIssuance,
 		Salary:          req.Salary,
 		PendingBalance:  req.PendingBalance,
 		IsStatusWarning: req.IsStatusWarning,
 	}
 
 	if err := s.repo.Create(ctx, tenantID, d); err != nil {
-		return nil, err
+		return nil, apperror.FromDBError(err)
 	}
 
 	return d, nil
@@ -89,6 +90,9 @@ func (s *Service) Update(ctx context.Context, tenantID, id string, req UpdateDri
 		if req.LicenseExpiry != nil {
 			d.LicenseExpiry = *req.LicenseExpiry
 		}
+		if req.LicenseIssuance != nil {
+			d.LicenseIssuance = req.LicenseIssuance
+		}
 		if req.Salary != nil {
 			d.Salary = *req.Salary
 		}
@@ -102,7 +106,7 @@ func (s *Service) Update(ctx context.Context, tenantID, id string, req UpdateDri
 	})
 
 	if err != nil {
-		return nil, err
+		return nil, apperror.FromDBError(err)
 	}
 	if d == nil {
 		return nil, apperror.NotFound("driver not found")

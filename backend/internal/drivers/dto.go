@@ -10,8 +10,9 @@ type CreateDriverRequest struct {
 	Phone           string    `json:"phone" binding:"required"`
 	VehicleID       *string   `json:"vehicleId"` // Optional vehicle assignment
 	LicenseNumber   string    `json:"licenseNumber" binding:"required"`
-	LicenseExpiry   time.Time `json:"licenseExpiry" binding:"required"`
-	Salary          float64   `json:"salary"`
+	LicenseExpiry   time.Time  `json:"licenseExpiry" binding:"required"`
+	LicenseIssuance *time.Time `json:"licenseIssuance"`
+	Salary          float64    `json:"salary"`
 	PendingBalance  float64   `json:"pendingBalance"`
 	IsStatusWarning bool      `json:"isStatusWarning"`
 }
@@ -25,6 +26,7 @@ type UpdateDriverRequest struct {
 	VehicleID       **string   `json:"vehicleId"` // Pointer to pointer to allow setting to null
 	LicenseNumber   *string    `json:"licenseNumber"`
 	LicenseExpiry   *time.Time `json:"licenseExpiry"`
+	LicenseIssuance *time.Time `json:"licenseIssuance"`
 	Salary          *float64   `json:"salary"`
 	PendingBalance  *float64   `json:"pendingBalance"`
 	IsStatusWarning *bool      `json:"isStatusWarning"`
@@ -41,6 +43,7 @@ type DriverResponse struct {
 	VehicleID       string `json:"vehicleId,omitempty"`
 	LicenseNumber   string `json:"licenseNumber"`
 	LicenseExpiry   string `json:"licenseExpiry"` // Formatted date
+	LicenseIssuance string `json:"licenseIssuance,omitempty"`
 	Salary          string `json:"salary"`        // Formatted salary, e.g., ₹25,000
 	PendingBalance  string `json:"pendingBalance"` // Formatted balance, e.g., ₹1,240
 	IsStatusWarning bool   `json:"isStatusWarning"`

@@ -22,7 +22,7 @@ func NewRepository(pool *pgxpool.Pool) *Repository {
 // GetAll returns all drivers for the given tenant with their associated vehicle registration numbers.
 func (r *Repository) GetAll(ctx context.Context, tenantID string) ([]DriverResponse, error) {
 	query := `
-		SELECT d.id, d.name, d.avatar, d.status, d.phone, COALESCE(v.registration_number, '') as vehicle_number, COALESCE(d.vehicle_id::text, '') as vehicle_id, d.license_number, d.license_expiry, d.salary, d.pending_balance, d.is_status_warning
+		SELECT d.id, d.name, d.avatar, d.status, d.phone, COALESCE(v.registration_number, '') as vehicle_number, COALESCE(d.vehicle_id::text, '') as vehicle_id, d.license_number, d.license_expiry, d.license_issuance, d.salary, d.pending_balance, d.is_status_warning
 		FROM drivers d
 		LEFT JOIN vehicles v ON d.vehicle_id = v.id
 		WHERE d.tenant_id = $1
@@ -38,10 +38,11 @@ func (r *Repository) GetAll(ctx context.Context, tenantID string) ([]DriverRespo
 	for rows.Next() {
 		var d DriverResponse
 		var expiry time.Time
+		var issuance *time.Time
 		var salaryVal, balanceVal float64
 		err := rows.Scan(
 			&d.ID, &d.Name, &d.Avatar, &d.Status, &d.Phone, &d.Vehicle, &d.VehicleID,
-			&d.LicenseNumber, &expiry, &salaryVal, &balanceVal, &d.IsStatusWarning,
+			&d.LicenseNumber, &expiry, &issuance, &salaryVal, &balanceVal, &d.IsStatusWarning,
 		)
 		if err != nil {
 			return nil, err
@@ -49,6 +50,9 @@ func (r *Repository) GetAll(ctx context.Context, tenantID string) ([]DriverRespo
 		
 		// Format responses for frontend representation
 		d.LicenseExpiry = expiry.Format("02/01/2006") // DD/MM/YYYY
+		if issuance != nil {
+			d.LicenseIssuance = issuance.Format("02/01/2006")
+		}
 		d.Salary = formatCurrency(salaryVal)
 		d.PendingBalance = formatCurrency(balanceVal)
 		
@@ -61,17 +65,18 @@ func (r *Repository) GetAll(ctx context.Context, tenantID string) ([]DriverRespo
 // GetByID returns a single driver by ID, scoped to the tenant.
 func (r *Repository) GetByID(ctx context.Context, tenantID, id string) (*DriverResponse, error) {
 	query := `
-		SELECT d.id, d.name, d.avatar, d.status, d.phone, COALESCE(v.registration_number, '') as vehicle_number, COALESCE(d.vehicle_id::text, '') as vehicle_id, d.license_number, d.license_expiry, d.salary, d.pending_balance, d.is_status_warning
+		SELECT d.id, d.name, d.avatar, d.status, d.phone, COALESCE(v.registration_number, '') as vehicle_number, COALESCE(d.vehicle_id::text, '') as vehicle_id, d.license_number, d.license_expiry, d.license_issuance, d.salary, d.pending_balance, d.is_status_warning
 		FROM drivers d
 		LEFT JOIN vehicles v ON d.vehicle_id = v.id
 		WHERE d.tenant_id = $1 AND d.id = $2
 	`
 	var d DriverResponse
 	var expiry time.Time
+	var issuance *time.Time
 	var salaryVal, balanceVal float64
 	err := r.pool.QueryRow(ctx, query, tenantID, id).Scan(
 		&d.ID, &d.Name, &d.Avatar, &d.Status, &d.Phone, &d.Vehicle, &d.VehicleID,
-		&d.LicenseNumber, &expiry, &salaryVal, &balanceVal, &d.IsStatusWarning,
+		&d.LicenseNumber, &expiry, &issuance, &salaryVal, &balanceVal, &d.IsStatusWarning,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -81,6 +86,9 @@ func (r *Repository) GetByID(ctx context.Context, tenantID, id string) (*DriverR
 	}
 
 	d.LicenseExpiry = expiry.Format("02/01/2006")
+	if issuance != nil {
+		d.LicenseIssuance = issuance.Format("02/01/2006")
+	}
 	d.Salary = formatCurrency(salaryVal)
 	d.PendingBalance = formatCurrency(balanceVal)
 
@@ -89,9 +97,15 @@ func (r *Repository) GetByID(ctx context.Context, tenantID, id string) (*DriverR
 
 // Create inserts a new driver.
 func (r *Repository) Create(ctx context.Context, tenantID string, d *Driver) error {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
 	query := `
-		INSERT INTO drivers (tenant_id, name, avatar, status, phone, vehicle_id, license_number, license_expiry, salary, pending_balance, is_status_warning)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+		INSERT INTO drivers (tenant_id, name, avatar, status, phone, vehicle_id, license_number, license_expiry, license_issuance, salary, pending_balance, is_status_warning)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
 		RETURNING id, created_at, updated_at
 	`
 	
@@ -102,10 +116,26 @@ func (r *Repository) Create(ctx context.Context, tenantID string, d *Driver) err
 		vehicleID = nil
 	}
 
-	return r.pool.QueryRow(ctx, query,
+	err = tx.QueryRow(ctx, query,
 		tenantID, d.Name, d.Avatar, d.Status, d.Phone, vehicleID,
-		d.LicenseNumber, d.LicenseExpiry, d.Salary, d.PendingBalance, d.IsStatusWarning,
+		d.LicenseNumber, d.LicenseExpiry, d.LicenseIssuance, d.Salary, d.PendingBalance, d.IsStatusWarning,
 	).Scan(&d.ID, &d.CreatedAt, &d.UpdatedAt)
+	if err != nil {
+		return err
+	}
+
+	if d.VehicleID.Valid {
+		_, err = tx.Exec(ctx, `UPDATE drivers SET vehicle_id = NULL WHERE vehicle_id = $1 AND id != $2 AND tenant_id = $3`, d.VehicleID.String, d.ID, tenantID)
+		if err != nil {
+			return err
+		}
+		_, err = tx.Exec(ctx, `UPDATE vehicles SET driver_id = $1 WHERE id = $2 AND tenant_id = $3`, d.ID, d.VehicleID.String, tenantID)
+		if err != nil {
+			return err
+		}
+	}
+
+	return tx.Commit(ctx)
 }
 
 // Update updates an existing driver within a transaction.
@@ -117,15 +147,15 @@ func (r *Repository) Update(ctx context.Context, tenantID, id string, updateFn f
 	defer tx.Rollback(ctx)
 
 	querySelect := `
-		SELECT id, tenant_id, name, avatar, status, phone, vehicle_id, license_number, license_expiry, salary, pending_balance, is_status_warning, created_at, updated_at
+		SELECT id, tenant_id, name, avatar, status, phone, vehicle_id, license_number, license_expiry, license_issuance, salary, pending_balance, is_status_warning, created_at, updated_at
 		FROM drivers
 		WHERE tenant_id = $1 AND id = $2
 	`
 	var d Driver
-	var vehicleID sql.NullString
+	var oldVehicleID sql.NullString
 	err = tx.QueryRow(ctx, querySelect, tenantID, id).Scan(
-		&d.ID, &d.TenantID, &d.Name, &d.Avatar, &d.Status, &d.Phone, &vehicleID,
-		&d.LicenseNumber, &d.LicenseExpiry, &d.Salary, &d.PendingBalance, &d.IsStatusWarning, &d.CreatedAt, &d.UpdatedAt,
+		&d.ID, &d.TenantID, &d.Name, &d.Avatar, &d.Status, &d.Phone, &oldVehicleID,
+		&d.LicenseNumber, &d.LicenseExpiry, &d.LicenseIssuance, &d.Salary, &d.PendingBalance, &d.IsStatusWarning, &d.CreatedAt, &d.UpdatedAt,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -133,7 +163,7 @@ func (r *Repository) Update(ctx context.Context, tenantID, id string, updateFn f
 		}
 		return nil, err
 	}
-	d.VehicleID = vehicleID
+	d.VehicleID = oldVehicleID
 
 	if err := updateFn(&d); err != nil {
 		return nil, err
@@ -148,16 +178,37 @@ func (r *Repository) Update(ctx context.Context, tenantID, id string, updateFn f
 
 	queryUpdate := `
 		UPDATE drivers
-		SET name = $1, avatar = $2, status = $3, phone = $4, vehicle_id = $5, license_number = $6, license_expiry = $7, salary = $8, pending_balance = $9, is_status_warning = $10, updated_at = NOW()
-		WHERE tenant_id = $11 AND id = $12
+		SET name = $1, avatar = $2, status = $3, phone = $4, vehicle_id = $5, license_number = $6, license_expiry = $7, license_issuance = $8, salary = $9, pending_balance = $10, is_status_warning = $11, updated_at = NOW()
+		WHERE tenant_id = $12 AND id = $13
 		RETURNING updated_at
 	`
 	err = tx.QueryRow(ctx, queryUpdate,
-		d.Name, d.Avatar, d.Status, d.Phone, dbVehicleID, d.LicenseNumber, d.LicenseExpiry, d.Salary, d.PendingBalance, d.IsStatusWarning,
+		d.Name, d.Avatar, d.Status, d.Phone, dbVehicleID, d.LicenseNumber, d.LicenseExpiry, d.LicenseIssuance, d.Salary, d.PendingBalance, d.IsStatusWarning,
 		tenantID, id,
 	).Scan(&d.UpdatedAt)
 	if err != nil {
 		return nil, err
+	}
+
+	if oldVehicleID.Valid && (!d.VehicleID.Valid || d.VehicleID.String != oldVehicleID.String) {
+		_, err = tx.Exec(ctx, `UPDATE vehicles SET driver_id = NULL WHERE id = $1 AND driver_id = $2 AND tenant_id = $3`, oldVehicleID.String, d.ID, tenantID)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if d.VehicleID.Valid && (!oldVehicleID.Valid || d.VehicleID.String != oldVehicleID.String) {
+		_, err = tx.Exec(ctx, `UPDATE drivers SET vehicle_id = NULL WHERE vehicle_id = $1 AND id != $2 AND tenant_id = $3`, d.VehicleID.String, d.ID, tenantID)
+		if err != nil {
+			return nil, err
+		}
+		_, err = tx.Exec(ctx, `UPDATE vehicles SET driver_id = NULL WHERE driver_id = $1 AND id != $2 AND tenant_id = $3`, d.ID, d.VehicleID.String, tenantID)
+		if err != nil {
+			return nil, err
+		}
+		_, err = tx.Exec(ctx, `UPDATE vehicles SET driver_id = $1 WHERE id = $2 AND tenant_id = $3`, d.ID, d.VehicleID.String, tenantID)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	if err := tx.Commit(ctx); err != nil {

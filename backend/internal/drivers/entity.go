@@ -16,6 +16,7 @@ type Driver struct {
 	VehicleID       sql.NullString `json:"vehicleId" db:"vehicle_id"`
 	LicenseNumber   string         `json:"licenseNumber" db:"license_number"`
 	LicenseExpiry   time.Time      `json:"licenseExpiry" db:"license_expiry"`
+	LicenseIssuance *time.Time     `json:"licenseIssuance" db:"license_issuance"`
 	Salary          float64        `json:"salary" db:"salary"`
 	PendingBalance  float64        `json:"pendingBalance" db:"pending_balance"`
 	IsStatusWarning bool           `json:"isStatusWarning" db:"is_status_warning"`

@@ -5,6 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/Akshansh-29072005/Deposity/backend/internal/platform/apperror"
 	"github.com/Akshansh-29072005/Deposity/backend/internal/platform/middleware"
 )
 
@@ -20,7 +21,7 @@ func (h *Handler) List(c *gin.Context) {
 	tenantID := middleware.GetTenantID(c)
 	list, err := h.service.GetAll(c.Request.Context(), tenantID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(apperror.Resolve(err))
 		return
 	}
 	c.JSON(http.StatusOK, list)
@@ -32,7 +33,7 @@ func (h *Handler) Get(c *gin.Context) {
 
 	item, err := h.service.GetByID(c.Request.Context(), tenantID, id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		c.JSON(apperror.Resolve(err))
 		return
 	}
 	c.JSON(http.StatusOK, item)
@@ -48,7 +49,7 @@ func (h *Handler) Create(c *gin.Context) {
 
 	item, err := h.service.Create(c.Request.Context(), tenantID, req)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(apperror.Resolve(err))
 		return
 	}
 	c.JSON(http.StatusCreated, item)
@@ -66,7 +67,7 @@ func (h *Handler) Update(c *gin.Context) {
 
 	item, err := h.service.Update(c.Request.Context(), tenantID, id, req)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(apperror.Resolve(err))
 		return
 	}
 	c.JSON(http.StatusOK, item)
@@ -77,7 +78,7 @@ func (h *Handler) Delete(c *gin.Context) {
 	id := c.Param("id")
 
 	if err := h.service.Delete(c.Request.Context(), tenantID, id); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(apperror.Resolve(err))
 		return
 	}
 	c.Status(http.StatusNoContent)
