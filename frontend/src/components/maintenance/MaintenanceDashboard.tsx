@@ -123,16 +123,34 @@ export function parseAxleConfig(configStr: string): AxleConfig[] {
   
   const lower = configStr.toLowerCase().trim();
   
-  // 1. Check for total wheel count mappings first to handle inputs like "10", "12", "6", "10 wheeler" etc.
-  const wheelOnlyMatch = lower.replace(/\s*wheelers?|\s*wheel/g, "").trim();
+  // Helper to dynamically calculate axles for any wheel count
+  const parseWheelCount = (w: number): AxleConfig[] => {
+    if (w <= 2) return [{ left: 1, right: 1 }];
+    if (w <= 4) return [{ left: 1, right: 1 }, { left: 1, right: 1 }];
+    const target = w % 2 === 0 ? w : w + 1;
+    const config: AxleConfig[] = [];
+    if (target % 4 === 0) {
+      config.push({ left: 1, right: 1 });
+      config.push({ left: 1, right: 1 });
+      const driveAxles = (target - 4) / 4;
+      for (let i = 0; i < driveAxles; i++) {
+        config.push({ left: 2, right: 2 });
+      }
+    } else {
+      config.push({ left: 1, right: 1 });
+      const driveAxles = (target - 2) / 4;
+      for (let i = 0; i < driveAxles; i++) {
+        config.push({ left: 2, right: 2 });
+      }
+    }
+    return config;
+  };
+
+  // 1. Check for total wheel count mappings first to handle inputs like "10", "12", "6", "10 wheeler", "20 wheels", etc.
+  const wheelOnlyMatch = lower.replace(/\s*wheelers?|\s*wheels?|\s*wheel/g, "").trim();
   const wheels = parseInt(wheelOnlyMatch);
   if (!isNaN(wheels) && /^\d+$/.test(wheelOnlyMatch)) {
-    if (wheels === 4) return [{ left: 1, right: 1 }, { left: 1, right: 1 }];
-    if (wheels === 6) return [{ left: 1, right: 1 }, { left: 2, right: 2 }];
-    if (wheels === 10) return [{ left: 1, right: 1 }, { left: 2, right: 2 }, { left: 2, right: 2 }];
-    if (wheels === 12) return [{ left: 1, right: 1 }, { left: 1, right: 1 }, { left: 2, right: 2 }, { left: 2, right: 2 }];
-    if (wheels === 14) return [{ left: 1, right: 1 }, { left: 1, right: 1 }, { left: 1, right: 1 }, { left: 2, right: 2 }, { left: 2, right: 2 }];
-    if (wheels === 16) return [{ left: 1, right: 1 }, { left: 1, right: 1 }, { left: 2, right: 2 }, { left: 2, right: 2 }, { left: 2, right: 2 }];
+    return parseWheelCount(wheels);
   }
 
   if (lower.includes("4x2") || lower.includes("6 wheeler")) {
@@ -145,8 +163,8 @@ export function parseAxleConfig(configStr: string): AxleConfig[] {
     return [{ left: 1, right: 1 }, { left: 1, right: 1 }, { left: 2, right: 2 }, { left: 2, right: 2 }];
   }
 
-  // 2. Otherwise parse custom layouts like "1 1, 2 2, 2 2"
-  const segments = configStr.split(/[;,/]/);
+  // 2. Otherwise parse custom layouts like "1 1, 2 2, 2 2" or "1 1, 1 1, 2 2. 2 2"
+  const segments = configStr.split(/[;,/\.\-]/);
   const parsed: AxleConfig[] = [];
   
   for (let seg of segments) {
@@ -157,7 +175,15 @@ export function parseAxleConfig(configStr: string): AxleConfig[] {
       parsed.push({ left: parseInt(numbers[0]), right: parseInt(numbers[1]) });
     } else if (numbers && numbers.length === 1) {
       const val = parseInt(numbers[0]);
-      parsed.push({ left: val, right: val });
+      if (val === 2) {
+        parsed.push({ left: 1, right: 1 });
+      } else if (val === 4) {
+        parsed.push({ left: 2, right: 2 });
+      } else {
+        const left = Math.ceil(val / 2);
+        const right = Math.floor(val / 2);
+        parsed.push({ left, right });
+      }
     }
   }
   

@@ -334,21 +334,18 @@ export default function Home() {
   };
 
   const handleVehicleSubmit = async (data: VehicleRecord) => {
-    try {
-      const response = await authenticatedFetch("/vehicles", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data)
-      });
-      if (response.ok) {
-        setRefreshKey((prev) => prev + 1);
-      } else {
-        setVehicles((prev) => [data, ...prev]);
-      }
-    } catch {
-      setVehicles((prev) => [data, ...prev]);
+    const response = await authenticatedFetch("/vehicles", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data)
+    });
+    if (response.ok) {
+      setRefreshKey((prev) => prev + 1);
+      setIsVehicleWizardOpen(false);
+    } else {
+      const errData = await response.json().catch(() => ({}));
+      throw new Error(errData.error || "Unknown server error");
     }
-    setIsVehicleWizardOpen(false);
   };
 
   const handleMaintenanceSubmit = async (data: MaintenanceRecord) => {

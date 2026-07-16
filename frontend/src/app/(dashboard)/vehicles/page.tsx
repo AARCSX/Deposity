@@ -13,6 +13,7 @@ export default function VehiclesPage() {
   const router = useRouter();
   const [vehicles, setVehicles] = useState<VehicleRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   useEffect(() => {
@@ -26,13 +27,14 @@ export default function VehiclesPage() {
 
   const loadVehicles = async () => {
     setIsLoading(true);
+    setFetchError(null);
     try {
       const response = await authenticatedFetch("/vehicles");
-      if (!response.ok) throw new Error("API unreachable");
+      if (!response.ok) throw new Error(`Server responded with ${response.status}`);
       const data = await response.json();
       setVehicles(Array.isArray(data) ? data : []);
-    } catch {
-      setVehicles([]);
+    } catch (err: any) {
+      setFetchError(err.message || "Failed to load vehicles");
     } finally {
       setIsLoading(false);
     }
@@ -43,22 +45,18 @@ export default function VehiclesPage() {
   }, []);
 
   const handleCreateSubmit = async (data: VehicleRecord) => {
-    try {
-      const response = await authenticatedFetch("/vehicles", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data)
-      });
-      if (response.ok) {
-        loadVehicles(); // Refetch
-      } else {
-        const errData = await response.json().catch(() => ({}));
-        alert(`Failed to save vehicle: ${errData.error || "Unknown server error"}`);
-      }
-    } catch (err: any) {
-      alert(`Failed to save vehicle: ${err.message || "Network error"}`);
+    const response = await authenticatedFetch("/vehicles", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data)
+    });
+    if (response.ok) {
+      loadVehicles(); // Refetch
+      setIsCreateModalOpen(false);
+    } else {
+      const errData = await response.json().catch(() => ({}));
+      throw new Error(errData.error || "Unknown server error");
     }
-    setIsCreateModalOpen(false);
   };
 
   // Helper to map robust data to the simpler VehicleCard props
@@ -140,6 +138,18 @@ export default function VehiclesPage() {
           {isLoading ? (
             <div className="col-span-full py-12 flex justify-center text-on-surface-variant font-medium">
               Loading vehicles...
+            </div>
+          ) : fetchError ? (
+            <div className="col-span-full py-16 flex flex-col items-center justify-center text-center rounded-2xl border border-dashed border-error/30 bg-error/5">
+              <span className="material-symbols-outlined text-4xl text-error mb-3">cloud_off</span>
+              <p className="text-sm font-semibold text-error">{fetchError}</p>
+              <p className="text-xs text-on-surface-variant mt-1 max-w-xs">Your session may have expired. Try refreshing.</p>
+              <button
+                onClick={loadVehicles}
+                className="mt-4 px-5 py-2 bg-primary text-white rounded-full text-sm font-bold hover:opacity-90 transition-opacity"
+              >
+                Retry
+              </button>
             </div>
           ) : vehicles.length === 0 ? (
             <div className="col-span-full py-16 flex flex-col items-center justify-center text-center rounded-2xl border border-dashed border-outline-variant/20 bg-surface-container-lowest">

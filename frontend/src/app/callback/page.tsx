@@ -3,7 +3,7 @@
 import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2, ShieldAlert } from "lucide-react";
-import { setAuthToken } from "@/lib/api";
+import { setAuthToken, setRefreshToken } from "@/lib/api";
 
 function CallbackHandler() {
   const router = useRouter();
@@ -60,8 +60,11 @@ function CallbackHandler() {
           throw new Error("No access token returned from backend.");
         }
 
-        // Save token
+        // Save tokens
         setAuthToken(data.access_token);
+        if (data.refresh_token) {
+          setRefreshToken(data.refresh_token);
+        }
 
         // Auto-initialize profile & send welcome email by pinging settings endpoint
         try {

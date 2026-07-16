@@ -3,6 +3,7 @@
 import Image from "next/image";
 
 interface DriverCardProps {
+  id?: string;
   name: string;
   avatar: string;
   status: "Active" | "Inactive" | "On Break";
@@ -10,12 +11,16 @@ interface DriverCardProps {
   vehicle: string;
   licenseNumber: string;
   licenseExpiry: string;
+  licenseIssuance?: string;
   salary: string;
   pendingBalance: string;
   isStatusWarning?: boolean;
+  onEdit?: () => void;
+  onDelete?: () => void;
 }
 
 export default function DriverCard({
+  id,
   name,
   avatar,
   status,
@@ -26,11 +31,19 @@ export default function DriverCard({
   salary,
   pendingBalance,
   isStatusWarning,
+  onEdit,
+  onDelete,
 }: DriverCardProps) {
   const statusColors = {
     Active: "bg-tertiary-fixed text-on-tertiary-fixed",
     Inactive: "bg-surface-container-highest text-on-surface-variant",
     "On Break": "bg-warning-container text-on-warning-container",
+  };
+
+  const getNumericBalance = (val: string) => {
+    if (!val) return 0;
+    const cleaned = val.replace(/[^0-9.]/g, "");
+    return parseFloat(cleaned) || 0;
   };
 
   return (
@@ -60,9 +73,9 @@ export default function DriverCard({
         <div className="flex-grow grid grid-cols-1 md:grid-cols-3 gap-4 py-2 w-full">
           {/* Identity & Status */}
           <div className="md:col-span-1 text-center md:text-left">
-            <div className="flex items-center justify-center md:justify-start gap-2">
+            <div className="flex items-center justify-center md:justify-start gap-2 flex-wrap">
               <h3 className="text-lg font-bold text-on-surface tracking-tight">{name}</h3>
-              <span className={`px-2 py-0.5 text-[10px] font-black uppercase tracking-tighter rounded-md ${statusColors[status]}`}>
+              <span className={`px-2 py-0.5 text-[10px] font-black uppercase tracking-tighter rounded-md ${statusColors[status] || "bg-outline-variant"}`}>
                 {status}
               </span>
             </div>
@@ -72,7 +85,7 @@ export default function DriverCard({
             </p>
             <div className="mt-3 inline-flex items-center gap-2 px-3 py-1 bg-secondary-container/30 rounded-full border border-secondary-container/50">
               <span className="material-symbols-outlined text-sm text-secondary">local_shipping</span>
-              <span className="text-xs font-bold text-on-secondary-container uppercase tracking-tight">{vehicle}</span>
+              <span className="text-xs font-bold text-on-secondary-container uppercase tracking-tight">{vehicle || "Unassigned"}</span>
             </div>
           </div>
 
@@ -80,12 +93,12 @@ export default function DriverCard({
           <div className="flex flex-col justify-center space-y-2 text-center md:text-left">
             <div>
               <p className="text-[10px] uppercase font-bold text-outline tracking-wider">License Number</p>
-              <p className="text-sm font-bold text-on-surface-variant">{licenseNumber}</p>
+              <p className="text-sm font-bold text-on-surface-variant">{licenseNumber || "N/A"}</p>
             </div>
             <div>
               <p className="text-[10px] uppercase font-bold text-outline tracking-wider">Expiry Date</p>
               <p className={`text-sm font-bold tabular-nums ${isStatusWarning ? "text-error" : "text-tertiary"}`}>
-                {licenseExpiry}
+                {licenseExpiry || "N/A"}
               </p>
             </div>
           </div>
@@ -98,17 +111,42 @@ export default function DriverCard({
             </div>
             <div className="mt-1">
               <p className="text-[10px] uppercase font-bold text-outline tracking-wider">Pending Balance</p>
-              <p className={`text-sm font-bold tabular-nums ${parseFloat(pendingBalance.replace(/[^0-9.]/g, "")) > 0 ? "text-error" : "text-on-surface-variant"}`}>
+              <p className={`text-sm font-bold tabular-nums ${getNumericBalance(pendingBalance) > 0 ? "text-error" : "text-on-surface-variant"}`}>
                 {pendingBalance}
               </p>
             </div>
           </div>
         </div>
 
-        {/* Action */}
-        <button className="mr-4 p-2 text-outline hover:text-primary hover:bg-primary/10 rounded-full transition-all group-hover:translate-x-1">
-          <span className="material-symbols-outlined">chevron_right</span>
-        </button>
+        {/* Action Buttons */}
+        <div className="flex md:flex-col gap-2 mr-2 flex-shrink-0">
+          {onEdit && (
+            <button 
+              onClick={(e) => {
+                e.stopPropagation();
+                onEdit();
+              }}
+              className="p-2 text-outline hover:text-primary hover:bg-primary/10 rounded-full transition-all"
+              title="Edit Driver"
+            >
+              <span className="material-symbols-outlined text-lg">edit</span>
+            </button>
+          )}
+          {onDelete && (
+            <button 
+              onClick={(e) => {
+                e.stopPropagation();
+                if (confirm(`Are you sure you want to delete ${name}?`)) {
+                  onDelete();
+                }
+              }}
+              className="p-2 text-outline hover:text-error hover:bg-error/10 rounded-full transition-all"
+              title="Delete Driver"
+            >
+              <span className="material-symbols-outlined text-lg">delete</span>
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

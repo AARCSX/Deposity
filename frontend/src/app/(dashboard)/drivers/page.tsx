@@ -10,7 +10,10 @@ export default function DriversPage() {
   const router = useRouter();
   const [drivers, setDrivers] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [driverToEdit, setDriverToEdit] = useState<any | null>(null);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -23,13 +26,14 @@ export default function DriversPage() {
 
   const loadDrivers = async () => {
     setIsLoading(true);
+    setFetchError(null);
     try {
       const response = await authenticatedFetch("/drivers");
-      if (!response.ok) throw new Error("API unreachable");
+      if (!response.ok) throw new Error(`Server responded with ${response.status}`);
       const data = await response.json();
       setDrivers(Array.isArray(data) ? data : []);
-    } catch {
-      setDrivers([]);
+    } catch (err: any) {
+      setFetchError(err.message || "Failed to load drivers");
     } finally {
       setIsLoading(false);
     }
@@ -40,23 +44,51 @@ export default function DriversPage() {
   }, []);
 
   const handleCreateSubmit = async (data: any) => {
+    const response = await authenticatedFetch("/drivers", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data)
+    });
+    if (response.ok) {
+      loadDrivers(); // Refetch
+      setIsCreateModalOpen(false);
+    } else {
+      const errData = await response.json().catch(() => ({}));
+      throw new Error(errData.error || "Failed to create driver");
+    }
+  };
+
+  const handleEditSubmit = async (data: any) => {
+    if (!driverToEdit) return;
+    const response = await authenticatedFetch(`/drivers/${driverToEdit.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data)
+    });
+    if (response.ok) {
+      loadDrivers(); // Refetch
+      setIsEditModalOpen(false);
+      setDriverToEdit(null);
+    } else {
+      const errData = await response.json().catch(() => ({}));
+      throw new Error(errData.error || "Failed to update driver");
+    }
+  };
+
+  const handleDelete = async (driverId: string) => {
     try {
-      const response = await authenticatedFetch("/drivers", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data)
+      const response = await authenticatedFetch(`/drivers/${driverId}`, {
+        method: "DELETE"
       });
       if (response.ok) {
         loadDrivers(); // Refetch
       } else {
-        // Optimistic UI fallback
-        setDrivers(prev => [...prev, { ...data, id: `D-${Math.floor(100 + Math.random() * 900)}` }]);
+        alert("Failed to delete driver");
       }
-    } catch {
-      // Optimistic UI fallback
-      setDrivers(prev => [...prev, { ...data, id: `D-${Math.floor(100 + Math.random() * 900)}` }]);
+    } catch (err) {
+      console.error(err);
+      alert("Error deleting driver");
     }
-    setIsCreateModalOpen(false);
   };
 
   // Metrics calculations
@@ -84,7 +116,7 @@ export default function DriversPage() {
 
   return (
     <>
-      <div className="space-y-8">
+      <div className="space-y-8 animate-in fade-in duration-300">
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-end md:items-center gap-6">
           <div>
@@ -134,6 +166,18 @@ export default function DriversPage() {
             <div className="col-span-full py-12 flex justify-center text-on-surface-variant font-medium">
               Loading drivers...
             </div>
+          ) : fetchError ? (
+            <div className="col-span-full py-16 flex flex-col items-center justify-center text-center rounded-2xl border border-dashed border-error/30 bg-error/5">
+              <span className="material-symbols-outlined text-4xl text-error mb-3">cloud_off</span>
+              <p className="text-sm font-semibold text-error">{fetchError}</p>
+              <p className="text-xs text-on-surface-variant mt-1 max-w-xs">Your session may have expired. Try refreshing.</p>
+              <button
+                onClick={loadDrivers}
+                className="mt-4 px-5 py-2 bg-primary text-white rounded-full text-sm font-bold hover:opacity-90 transition-opacity"
+              >
+                Retry
+              </button>
+            </div>
           ) : drivers.length === 0 ? (
             <div className="col-span-full py-16 flex flex-col items-center justify-center text-center rounded-2xl border border-dashed border-outline-variant/20 bg-surface-container-lowest">
               <span className="material-symbols-outlined text-4xl text-outline mb-3">badge</span>
@@ -142,7 +186,15 @@ export default function DriversPage() {
             </div>
           ) : (
             drivers.map((driver) => (
-              <DriverCard key={driver.phone} {...driver} />
+              <DriverCard 
+                key={driver.id || driver.phone} 
+                {...driver} 
+                onEdit={() => {
+                  setDriverToEdit(driver);
+                  setIsEditModalOpen(true);
+                }}
+                onDelete={() => handleDelete(driver.id)}
+              />
             ))
           )}
         </div>
@@ -152,6 +204,16 @@ export default function DriversPage() {
           isOpen={isCreateModalOpen}
           onClose={() => setIsCreateModalOpen(false)}
           onSubmit={handleCreateSubmit}
+        />
+
+        <CreateDriverWizard
+          isOpen={isEditModalOpen}
+          onClose={() => {
+            setIsEditModalOpen(false);
+            setDriverToEdit(null);
+          }}
+          onSubmit={handleEditSubmit}
+          driverToEdit={driverToEdit}
         />
       </div>
     </>

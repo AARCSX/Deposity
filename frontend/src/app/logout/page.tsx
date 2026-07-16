@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
-import { setAuthToken, authenticatedFetch } from "@/lib/api";
+import { clearSession, authenticatedFetch } from "@/lib/api";
 
 export default function LogoutPage() {
   const router = useRouter();
@@ -19,10 +19,7 @@ export default function LogoutPage() {
       } catch (err) {
         console.error("Failed to notify backend of logout:", err);
       } finally {
-        setAuthToken(null);
-        localStorage.removeItem("deposity_token");
-        localStorage.removeItem("oauth_code_verifier");
-        localStorage.removeItem("oauth_state");
+        clearSession();
         router.push("/");
       }
     }

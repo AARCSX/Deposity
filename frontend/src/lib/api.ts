@@ -2,6 +2,7 @@
 
 const apiBase = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 
+// ─── Token Management ───────────────────────────────────────────
 export function getAuthToken(): string | null {
   if (typeof window !== "undefined") {
     return localStorage.getItem("deposity_token");
@@ -19,30 +20,111 @@ export function setAuthToken(token: string | null) {
   }
 }
 
+export function getRefreshToken(): string | null {
+  if (typeof window !== "undefined") {
+    return localStorage.getItem("deposity_refresh_token");
+  }
+  return null;
+}
+
+export function setRefreshToken(token: string | null) {
+  if (typeof window !== "undefined") {
+    if (token) {
+      localStorage.setItem("deposity_refresh_token", token);
+    } else {
+      localStorage.removeItem("deposity_refresh_token");
+    }
+  }
+}
+
+// ─── Session Cleanup ─────────────────────────────────────────────
+export function clearSession() {
+  setAuthToken(null);
+  setRefreshToken(null);
+  if (typeof window !== "undefined") {
+    localStorage.removeItem("oauth_code_verifier");
+    localStorage.removeItem("oauth_state");
+  }
+}
+
+// ─── Token Refresh ───────────────────────────────────────────────
+let refreshPromise: Promise<boolean> | null = null;
+
+async function attemptTokenRefresh(): Promise<boolean> {
+  // Deduplicate concurrent refresh attempts
+  if (refreshPromise) return refreshPromise;
+
+  refreshPromise = (async () => {
+    const refreshToken = getRefreshToken();
+    if (!refreshToken) return false;
+
+    try {
+      const response = await fetch(`${apiBase}/auth/refresh`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ refresh_token: refreshToken }),
+      });
+
+      if (!response.ok) return false;
+
+      const data = await response.json();
+      if (data.access_token) {
+        setAuthToken(data.access_token);
+        if (data.refresh_token) {
+          setRefreshToken(data.refresh_token);
+        }
+        return true;
+      }
+      return false;
+    } catch {
+      return false;
+    } finally {
+      refreshPromise = null;
+    }
+  })();
+
+  return refreshPromise;
+}
+
+// ─── Authenticated Fetch with Auto-Refresh ──────────────────────
 export async function authenticatedFetch(path: string, options: RequestInit = {}): Promise<Response> {
   const token = getAuthToken();
-  
+
   const headers = new Headers(options.headers || {});
   if (token) {
     headers.set("Authorization", `Bearer ${token}`);
   }
-  
+
   const url = path.startsWith("http") ? path : `${apiBase}${path.startsWith("/") ? "" : "/"}${path}`;
   const response = await fetch(url, {
     ...options,
     headers,
   });
-  
+
+  // On 401, attempt silent token refresh and retry once
   if (response.status === 401) {
-    setAuthToken(null);
+    const refreshed = await attemptTokenRefresh();
+    if (refreshed) {
+      // Retry the original request with the new token
+      const newToken = getAuthToken();
+      const retryHeaders = new Headers(options.headers || {});
+      if (newToken) {
+        retryHeaders.set("Authorization", `Bearer ${newToken}`);
+      }
+      return fetch(url, { ...options, headers: retryHeaders });
+    }
+
+    // Refresh failed — session is dead, force re-login
+    clearSession();
     if (typeof window !== "undefined") {
       window.location.href = "/";
     }
   }
-  
+
   return response;
 }
 
+// ─── Org Name from Token ─────────────────────────────────────────
 export function getOrgNameFromToken(): string {
   if (typeof window !== "undefined") {
     const overridden = localStorage.getItem("deposity_org_name");
@@ -66,4 +148,3 @@ export function getOrgNameFromToken(): string {
     return "OnWay";
   }
 }
-
