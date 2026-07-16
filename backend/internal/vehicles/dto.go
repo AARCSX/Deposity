@@ -15,11 +15,15 @@ type CoreSpecifications struct {
 }
 
 type ComplianceDocuments struct {
-	RCExpiry        time.Time `json:"rcExpiry" binding:"required"`
-	InsuranceExpiry time.Time `json:"insuranceExpiry" binding:"required"`
-	PUCExpiry       time.Time `json:"pucExpiry" binding:"required"`
-	FitnessExpiry   time.Time `json:"fitnessExpiry" binding:"required"`
-	PermitDetails   string    `json:"permitDetails"`
+	RCExpiry          time.Time  `json:"rcExpiry" binding:"required"`
+	RCIssuance        *time.Time `json:"rcIssuance"`
+	InsuranceExpiry   time.Time  `json:"insuranceExpiry" binding:"required"`
+	InsuranceIssuance *time.Time `json:"insuranceIssuance"`
+	PUCExpiry         time.Time  `json:"pucExpiry" binding:"required"`
+	PUCIssuance       *time.Time `json:"pucIssuance"`
+	FitnessExpiry     time.Time  `json:"fitnessExpiry" binding:"required"`
+	FitnessIssuance   *time.Time `json:"fitnessIssuance"`
+	PermitDetails     string     `json:"permitDetails"`
 }
 
 type OwnershipStatus struct {

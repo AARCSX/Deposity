@@ -17,6 +17,7 @@ func RegisterRoutes(rg *gin.RouterGroup, pool *pgxpool.Pool, authMiddleware gin.
 		rg.GET("/:id", handler.Get)
 		rg.POST("", handler.Create)
 		rg.PATCH("/:id", handler.Update)
+		rg.PUT("/:id", handler.Update)
 		rg.DELETE("/:id", handler.Delete)
 	}
 }

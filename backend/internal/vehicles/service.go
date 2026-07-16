@@ -64,9 +64,13 @@ func (s *Service) Create(ctx context.Context, tenantID string, req CreateVehicle
 		FuelCapacity:       req.Core.FuelCapacity,
 		AverageMileage:     req.Core.AverageMileage,
 		RCExpiry:           req.Compliance.RCExpiry,
+		RCIssuance:         req.Compliance.RCIssuance,
 		InsuranceExpiry:    req.Compliance.InsuranceExpiry,
+		InsuranceIssuance:  req.Compliance.InsuranceIssuance,
 		PUCExpiry:          req.Compliance.PUCExpiry,
+		PUCIssuance:        req.Compliance.PUCIssuance,
 		FitnessExpiry:      req.Compliance.FitnessExpiry,
+		FitnessIssuance:    req.Compliance.FitnessIssuance,
 		PermitDetails:      req.Compliance.PermitDetails,
 		OwnershipType:      req.Ownership.OwnershipType,
 		DriverID:           driverID,
@@ -78,7 +82,7 @@ func (s *Service) Create(ctx context.Context, tenantID string, req CreateVehicle
 	}
 
 	if err := s.repo.Create(ctx, tenantID, v); err != nil {
-		return nil, err
+		return nil, apperror.FromDBError(err)
 	}
 
 	resp := MapToResponse(*v)
@@ -100,9 +104,13 @@ func (s *Service) Update(ctx context.Context, tenantID, id string, req UpdateVeh
 		}
 		if req.Compliance != nil {
 			v.RCExpiry = req.Compliance.RCExpiry
+			v.RCIssuance = req.Compliance.RCIssuance
 			v.InsuranceExpiry = req.Compliance.InsuranceExpiry
+			v.InsuranceIssuance = req.Compliance.InsuranceIssuance
 			v.PUCExpiry = req.Compliance.PUCExpiry
+			v.PUCIssuance = req.Compliance.PUCIssuance
 			v.FitnessExpiry = req.Compliance.FitnessExpiry
+			v.FitnessIssuance = req.Compliance.FitnessIssuance
 			v.PermitDetails = req.Compliance.PermitDetails
 		}
 		if req.Ownership != nil {
@@ -127,7 +135,7 @@ func (s *Service) Update(ctx context.Context, tenantID, id string, req UpdateVeh
 	})
 
 	if err != nil {
-		return nil, err
+		return nil, apperror.FromDBError(err)
 	}
 	if v == nil {
 		return nil, apperror.NotFound("vehicle not found")
@@ -169,11 +177,15 @@ func MapToResponse(v Vehicle) VehicleResponse {
 			AverageMileage:     v.AverageMileage,
 		},
 		Compliance: ComplianceDocuments{
-			RCExpiry:        v.RCExpiry,
-			InsuranceExpiry: v.InsuranceExpiry,
-			PUCExpiry:       v.PUCExpiry,
-			FitnessExpiry:   v.FitnessExpiry,
-			PermitDetails:   v.PermitDetails,
+			RCExpiry:          v.RCExpiry,
+			RCIssuance:        v.RCIssuance,
+			InsuranceExpiry:   v.InsuranceExpiry,
+			InsuranceIssuance: v.InsuranceIssuance,
+			PUCExpiry:         v.PUCExpiry,
+			PUCIssuance:       v.PUCIssuance,
+			FitnessExpiry:     v.FitnessExpiry,
+			FitnessIssuance:   v.FitnessIssuance,
+			PermitDetails:     v.PermitDetails,
 		},
 		Ownership: OwnershipStatus{
 			OwnershipType: v.OwnershipType,

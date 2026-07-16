@@ -19,9 +19,13 @@ type Vehicle struct {
 	FuelCapacity       float64        `json:"fuelCapacity" db:"fuel_capacity"`
 	AverageMileage     float64        `json:"averageMileage" db:"average_mileage"`
 	RCExpiry           time.Time      `json:"rcExpiry" db:"rc_expiry"`
+	RCIssuance         *time.Time     `json:"rcIssuance" db:"rc_issuance"`
 	InsuranceExpiry    time.Time      `json:"insuranceExpiry" db:"insurance_expiry"`
+	InsuranceIssuance  *time.Time     `json:"insuranceIssuance" db:"insurance_issuance"`
 	PUCExpiry          time.Time      `json:"pucExpiry" db:"puc_expiry"`
+	PUCIssuance        *time.Time     `json:"pucIssuance" db:"puc_issuance"`
 	FitnessExpiry      time.Time      `json:"fitnessExpiry" db:"fitness_expiry"`
+	FitnessIssuance    *time.Time     `json:"fitnessIssuance" db:"fitness_issuance"`
 	PermitDetails      string         `json:"permitDetails" db:"permit_details"`
 	OwnershipType      string         `json:"ownershipType" db:"ownership_type"`
 	DriverID           sql.NullString `json:"driverId" db:"driver_id"`

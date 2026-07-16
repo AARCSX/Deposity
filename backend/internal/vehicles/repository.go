@@ -21,7 +21,7 @@ func NewRepository(pool *pgxpool.Pool) *Repository {
 func (r *Repository) GetAll(ctx context.Context, tenantID string) ([]Vehicle, error) {
 	query := `
 		SELECT id, tenant_id, registration_number, make, model, year, body_type, axle_config, tonnage_capacity, fuel_capacity, average_mileage,
-		       rc_expiry, insurance_expiry, puc_expiry, fitness_expiry, permit_details,
+		       rc_expiry, rc_issuance, insurance_expiry, insurance_issuance, puc_expiry, puc_issuance, fitness_expiry, fitness_issuance, permit_details,
 		       ownership_type, driver_id, home_branch, gps_device_id,
 		       current_odometer, last_serviced_date, status, created_at, updated_at
 		FROM vehicles
@@ -40,7 +40,7 @@ func (r *Repository) GetAll(ctx context.Context, tenantID string) ([]Vehicle, er
 		var driverID sql.NullString
 		err := rows.Scan(
 			&v.ID, &v.TenantID, &v.RegistrationNumber, &v.Make, &v.Model, &v.Year, &v.BodyType, &v.AxleConfig, &v.TonnageCapacity, &v.FuelCapacity, &v.AverageMileage,
-			&v.RCExpiry, &v.InsuranceExpiry, &v.PUCExpiry, &v.FitnessExpiry, &v.PermitDetails,
+			&v.RCExpiry, &v.RCIssuance, &v.InsuranceExpiry, &v.InsuranceIssuance, &v.PUCExpiry, &v.PUCIssuance, &v.FitnessExpiry, &v.FitnessIssuance, &v.PermitDetails,
 			&v.OwnershipType, &driverID, &v.HomeBranch, &v.GPSDeviceID,
 			&v.CurrentOdometer, &v.LastServicedDate, &v.Status, &v.CreatedAt, &v.UpdatedAt,
 		)
@@ -58,7 +58,7 @@ func (r *Repository) GetAll(ctx context.Context, tenantID string) ([]Vehicle, er
 func (r *Repository) GetByID(ctx context.Context, tenantID, id string) (*Vehicle, error) {
 	query := `
 		SELECT id, tenant_id, registration_number, make, model, year, body_type, axle_config, tonnage_capacity, fuel_capacity, average_mileage,
-		       rc_expiry, insurance_expiry, puc_expiry, fitness_expiry, permit_details,
+		       rc_expiry, rc_issuance, insurance_expiry, insurance_issuance, puc_expiry, puc_issuance, fitness_expiry, fitness_issuance, permit_details,
 		       ownership_type, driver_id, home_branch, gps_device_id,
 		       current_odometer, last_serviced_date, status, created_at, updated_at
 		FROM vehicles
@@ -68,7 +68,7 @@ func (r *Repository) GetByID(ctx context.Context, tenantID, id string) (*Vehicle
 	var driverID sql.NullString
 	err := r.pool.QueryRow(ctx, query, tenantID, id).Scan(
 		&v.ID, &v.TenantID, &v.RegistrationNumber, &v.Make, &v.Model, &v.Year, &v.BodyType, &v.AxleConfig, &v.TonnageCapacity, &v.FuelCapacity, &v.AverageMileage,
-		&v.RCExpiry, &v.InsuranceExpiry, &v.PUCExpiry, &v.FitnessExpiry, &v.PermitDetails,
+		&v.RCExpiry, &v.RCIssuance, &v.InsuranceExpiry, &v.InsuranceIssuance, &v.PUCExpiry, &v.PUCIssuance, &v.FitnessExpiry, &v.FitnessIssuance, &v.PermitDetails,
 		&v.OwnershipType, &driverID, &v.HomeBranch, &v.GPSDeviceID,
 		&v.CurrentOdometer, &v.LastServicedDate, &v.Status, &v.CreatedAt, &v.UpdatedAt,
 	)
@@ -85,13 +85,19 @@ func (r *Repository) GetByID(ctx context.Context, tenantID, id string) (*Vehicle
 
 // Create inserts a new vehicle.
 func (r *Repository) Create(ctx context.Context, tenantID string, v *Vehicle) error {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
 	query := `
 		INSERT INTO vehicles (
 			tenant_id, registration_number, make, model, year, body_type, axle_config, tonnage_capacity, fuel_capacity, average_mileage,
-			rc_expiry, insurance_expiry, puc_expiry, fitness_expiry, permit_details,
+			rc_expiry, rc_issuance, insurance_expiry, insurance_issuance, puc_expiry, puc_issuance, fitness_expiry, fitness_issuance, permit_details,
 			ownership_type, driver_id, home_branch, gps_device_id,
 			current_odometer, last_serviced_date, status
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26)
 		RETURNING id, created_at, updated_at
 	`
 	var driverID interface{}
@@ -101,12 +107,28 @@ func (r *Repository) Create(ctx context.Context, tenantID string, v *Vehicle) er
 		driverID = nil
 	}
 
-	return r.pool.QueryRow(ctx, query,
+	err = tx.QueryRow(ctx, query,
 		tenantID, v.RegistrationNumber, v.Make, v.Model, v.Year, v.BodyType, v.AxleConfig, v.TonnageCapacity, v.FuelCapacity, v.AverageMileage,
-		v.RCExpiry, v.InsuranceExpiry, v.PUCExpiry, v.FitnessExpiry, v.PermitDetails,
+		v.RCExpiry, v.RCIssuance, v.InsuranceExpiry, v.InsuranceIssuance, v.PUCExpiry, v.PUCIssuance, v.FitnessExpiry, v.FitnessIssuance, v.PermitDetails,
 		v.OwnershipType, driverID, v.HomeBranch, v.GPSDeviceID,
 		v.CurrentOdometer, v.LastServicedDate, v.Status,
 	).Scan(&v.ID, &v.CreatedAt, &v.UpdatedAt)
+	if err != nil {
+		return err
+	}
+
+	if v.DriverID.Valid {
+		_, err = tx.Exec(ctx, `UPDATE vehicles SET driver_id = NULL WHERE driver_id = $1 AND id != $2 AND tenant_id = $3`, v.DriverID.String, v.ID, tenantID)
+		if err != nil {
+			return err
+		}
+		_, err = tx.Exec(ctx, `UPDATE drivers SET vehicle_id = $1 WHERE id = $2 AND tenant_id = $3`, v.ID, v.DriverID.String, tenantID)
+		if err != nil {
+			return err
+		}
+	}
+
+	return tx.Commit(ctx)
 }
 
 // Update updates an existing vehicle within a transaction.
@@ -119,18 +141,18 @@ func (r *Repository) Update(ctx context.Context, tenantID, id string, updateFn f
 
 	querySelect := `
 		SELECT id, tenant_id, registration_number, make, model, year, body_type, axle_config, tonnage_capacity, fuel_capacity, average_mileage,
-		       rc_expiry, insurance_expiry, puc_expiry, fitness_expiry, permit_details,
+		       rc_expiry, rc_issuance, insurance_expiry, insurance_issuance, puc_expiry, puc_issuance, fitness_expiry, fitness_issuance, permit_details,
 		       ownership_type, driver_id, home_branch, gps_device_id,
 		       current_odometer, last_serviced_date, status, created_at, updated_at
 		FROM vehicles
 		WHERE tenant_id = $1 AND id = $2
 	`
 	var v Vehicle
-	var driverID sql.NullString
+	var oldDriverID sql.NullString
 	err = tx.QueryRow(ctx, querySelect, tenantID, id).Scan(
 		&v.ID, &v.TenantID, &v.RegistrationNumber, &v.Make, &v.Model, &v.Year, &v.BodyType, &v.AxleConfig, &v.TonnageCapacity, &v.FuelCapacity, &v.AverageMileage,
-		&v.RCExpiry, &v.InsuranceExpiry, &v.PUCExpiry, &v.FitnessExpiry, &v.PermitDetails,
-		&v.OwnershipType, &driverID, &v.HomeBranch, &v.GPSDeviceID,
+		&v.RCExpiry, &v.RCIssuance, &v.InsuranceExpiry, &v.InsuranceIssuance, &v.PUCExpiry, &v.PUCIssuance, &v.FitnessExpiry, &v.FitnessIssuance, &v.PermitDetails,
+		&v.OwnershipType, &oldDriverID, &v.HomeBranch, &v.GPSDeviceID,
 		&v.CurrentOdometer, &v.LastServicedDate, &v.Status, &v.CreatedAt, &v.UpdatedAt,
 	)
 	if err != nil {
@@ -139,7 +161,7 @@ func (r *Repository) Update(ctx context.Context, tenantID, id string, updateFn f
 		}
 		return nil, err
 	}
-	v.DriverID = driverID
+	v.DriverID = oldDriverID
 
 	if err := updateFn(&v); err != nil {
 		return nil, err
@@ -155,21 +177,42 @@ func (r *Repository) Update(ctx context.Context, tenantID, id string, updateFn f
 	queryUpdate := `
 		UPDATE vehicles
 		SET registration_number = $1, make = $2, model = $3, year = $4, body_type = $5, axle_config = $6, tonnage_capacity = $7, fuel_capacity = $8, average_mileage = $9,
-		    rc_expiry = $10, insurance_expiry = $11, puc_expiry = $12, fitness_expiry = $13, permit_details = $14,
-		    ownership_type = $15, driver_id = $16, home_branch = $17, gps_device_id = $18,
-		    current_odometer = $19, last_serviced_date = $20, status = $21, updated_at = NOW()
-		WHERE tenant_id = $22 AND id = $23
+		    rc_expiry = $10, rc_issuance = $11, insurance_expiry = $12, insurance_issuance = $13, puc_expiry = $14, puc_issuance = $15, fitness_expiry = $16, fitness_issuance = $17, permit_details = $18,
+		    ownership_type = $19, driver_id = $20, home_branch = $21, gps_device_id = $22,
+		    current_odometer = $23, last_serviced_date = $24, status = $25, updated_at = NOW()
+		WHERE tenant_id = $26 AND id = $27
 		RETURNING updated_at
 	`
 	err = tx.QueryRow(ctx, queryUpdate,
 		v.RegistrationNumber, v.Make, v.Model, v.Year, v.BodyType, v.AxleConfig, v.TonnageCapacity, v.FuelCapacity, v.AverageMileage,
-		v.RCExpiry, v.InsuranceExpiry, v.PUCExpiry, v.FitnessExpiry, v.PermitDetails,
+		v.RCExpiry, v.RCIssuance, v.InsuranceExpiry, v.InsuranceIssuance, v.PUCExpiry, v.PUCIssuance, v.FitnessExpiry, v.FitnessIssuance, v.PermitDetails,
 		v.OwnershipType, dbDriverID, v.HomeBranch, v.GPSDeviceID,
 		v.CurrentOdometer, v.LastServicedDate, v.Status,
 		tenantID, id,
 	).Scan(&v.UpdatedAt)
 	if err != nil {
 		return nil, err
+	}
+
+	if oldDriverID.Valid && (!v.DriverID.Valid || v.DriverID.String != oldDriverID.String) {
+		_, err = tx.Exec(ctx, `UPDATE drivers SET vehicle_id = NULL WHERE id = $1 AND vehicle_id = $2 AND tenant_id = $3`, oldDriverID.String, v.ID, tenantID)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if v.DriverID.Valid && (!oldDriverID.Valid || v.DriverID.String != oldDriverID.String) {
+		_, err = tx.Exec(ctx, `UPDATE vehicles SET driver_id = NULL WHERE driver_id = $1 AND id != $2 AND tenant_id = $3`, v.DriverID.String, v.ID, tenantID)
+		if err != nil {
+			return nil, err
+		}
+		_, err = tx.Exec(ctx, `UPDATE drivers SET vehicle_id = NULL WHERE vehicle_id = $1 AND id != $2 AND tenant_id = $3`, v.ID, v.DriverID.String, tenantID)
+		if err != nil {
+			return nil, err
+		}
+		_, err = tx.Exec(ctx, `UPDATE drivers SET vehicle_id = $1 WHERE id = $2 AND tenant_id = $3`, v.ID, v.DriverID.String, tenantID)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	if err := tx.Commit(ctx); err != nil {
