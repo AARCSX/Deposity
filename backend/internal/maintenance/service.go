@@ -2,9 +2,11 @@ package maintenance
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/Akshansh-29072005/Deposity/backend/internal/platform/apperror"
+	"github.com/Akshansh-29072005/Deposity/backend/internal/platform/cache"
 )
 
 type Service struct {
@@ -16,28 +18,44 @@ func NewService(repo *Repository) *Service {
 }
 
 func (s *Service) GetAll(ctx context.Context, tenantID string) ([]MaintenanceResponse, error) {
-	list, err := s.repo.GetAll(ctx, tenantID)
+	var resp []MaintenanceResponse
+	cacheKey := fmt.Sprintf("tenant:%s:maintenance:all", tenantID)
+	err := cache.Fetch(ctx, cacheKey, 5*time.Minute, &resp, func() (*[]MaintenanceResponse, error) {
+		list, err := s.repo.GetAll(ctx, tenantID)
+		if err != nil {
+			return nil, err
+		}
+
+		res := make([]MaintenanceResponse, len(list))
+		for i, m := range list {
+			res[i] = MapToResponse(m)
+		}
+		return &res, nil
+	})
 	if err != nil {
 		return nil, err
 	}
-
-	res := make([]MaintenanceResponse, len(list))
-	for i, m := range list {
-		res[i] = MapToResponse(m)
-	}
-	return res, nil
+	return resp, nil
 }
 
 func (s *Service) GetByID(ctx context.Context, tenantID, id string) (*MaintenanceResponse, error) {
-	m, err := s.repo.GetByID(ctx, tenantID, id)
+	var resp MaintenanceResponse
+	cacheKey := fmt.Sprintf("tenant:%s:maintenance:%s", tenantID, id)
+	err := cache.Fetch(ctx, cacheKey, 5*time.Minute, &resp, func() (*MaintenanceResponse, error) {
+		m, err := s.repo.GetByID(ctx, tenantID, id)
+		if err != nil {
+			return nil, err
+		}
+		if m == nil {
+			return nil, apperror.NotFound("maintenance record not found")
+		}
+
+		r := MapToResponse(*m)
+		return &r, nil
+	})
 	if err != nil {
 		return nil, err
 	}
-	if m == nil {
-		return nil, apperror.NotFound("maintenance record not found")
-	}
-
-	resp := MapToResponse(*m)
 	return &resp, nil
 }
 
@@ -72,6 +90,9 @@ func (s *Service) Create(ctx context.Context, tenantID string, req CreateMainten
 	if err := s.repo.Create(ctx, tenantID, m); err != nil {
 		return nil, err
 	}
+
+	// Invalidate maintenance list cache.
+	cache.Invalidate(ctx, fmt.Sprintf("tenant:%s:maintenance:all", tenantID))
 
 	resp := MapToResponse(*m)
 	return &resp, nil
@@ -141,6 +162,12 @@ func (s *Service) Update(ctx context.Context, tenantID, id string, req UpdateMai
 		return nil, apperror.NotFound("maintenance record not found")
 	}
 
+	// Invalidate maintenance cache and maintenance list cache.
+	cache.Invalidate(ctx, 
+		fmt.Sprintf("tenant:%s:maintenance:%s", tenantID, id),
+		fmt.Sprintf("tenant:%s:maintenance:all", tenantID),
+	)
+
 	resp := MapToResponse(*m)
 	return &resp, nil
 }
@@ -153,6 +180,13 @@ func (s *Service) Delete(ctx context.Context, tenantID, id string) error {
 	if !deleted {
 		return apperror.NotFound("maintenance record not found")
 	}
+
+	// Invalidate maintenance cache and maintenance list cache.
+	cache.Invalidate(ctx, 
+		fmt.Sprintf("tenant:%s:maintenance:%s", tenantID, id),
+		fmt.Sprintf("tenant:%s:maintenance:all", tenantID),
+	)
+
 	return nil
 }
 

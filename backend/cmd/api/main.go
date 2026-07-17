@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/Akshansh-29072005/Deposity/backend/internal/auth"
 	"github.com/Akshansh-29072005/Deposity/backend/internal/companies"
@@ -15,6 +14,7 @@ import (
 	"github.com/Akshansh-29072005/Deposity/backend/internal/dashboard"
 	"github.com/Akshansh-29072005/Deposity/backend/internal/drivers"
 	"github.com/Akshansh-29072005/Deposity/backend/internal/maintenance"
+	"github.com/Akshansh-29072005/Deposity/backend/internal/platform/cache"
 	"github.com/Akshansh-29072005/Deposity/backend/internal/platform/database"
 	"github.com/Akshansh-29072005/Deposity/backend/internal/platform/middleware"
 	"github.com/Akshansh-29072005/Deposity/backend/internal/settings"
@@ -26,8 +26,9 @@ func main() {
 	// 1. Load application configuration
 	cfg := config.Load()
 
-	// Initialize Redis Blacklist if URL is provided
+	// Initialize cache and Redis Blacklist if URL is provided
 	if cfg.RedisURL != "" {
+		cache.Initialize(cfg.RedisURL)
 		middleware.InitializeRedisBlacklist(cfg.RedisURL)
 	}
 
@@ -35,17 +36,11 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	pool, err := pgxpool.New(ctx, cfg.DatabaseURL)
+	pool, err := database.Connect(ctx, cfg.DatabaseURL)
 	if err != nil {
 		log.Fatalf("[main] FATAL: Failed to connect to database: %v", err)
 	}
 	defer pool.Close()
-
-	// Simple check-connection
-	if err := pool.Ping(ctx); err != nil {
-		log.Fatalf("[main] FATAL: Database is unreachable: %v", err)
-	}
-	log.Println("[main] Connected to database successfully")
 
 	// Run auto-migrations
 	if err := database.RunMigrations(ctx, pool, "migrations"); err != nil {

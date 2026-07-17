@@ -19,11 +19,11 @@ func Connect(ctx context.Context, dsn string) (*pgxpool.Pool, error) {
 	}
 
 	// Pool tuning for Neon serverless + Cloud Run.
-	// Neon pooling endpoints typically support up to 10-15 concurrent connections.
-	poolConfig.MaxConns = 10
+	// Keep pool limits small to avoid locking up serverless Postgres on autoscaling.
+	poolConfig.MaxConns = 4
 	poolConfig.MinConns = 2
-	poolConfig.MaxConnLifetime = 30 * time.Minute
-	poolConfig.MaxConnIdleTime = 5 * time.Minute
+	poolConfig.MaxConnLifetime = 5 * time.Minute
+	poolConfig.MaxConnIdleTime = 2 * time.Minute
 	poolConfig.HealthCheckPeriod = 1 * time.Minute
 
 	pool, err := pgxpool.NewWithConfig(ctx, poolConfig)

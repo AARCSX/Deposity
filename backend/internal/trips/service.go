@@ -3,9 +3,11 @@ package trips
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"time"
 
 	"github.com/Akshansh-29072005/Deposity/backend/internal/platform/apperror"
+	"github.com/Akshansh-29072005/Deposity/backend/internal/platform/cache"
 )
 
 type Service struct {
@@ -18,32 +20,48 @@ func NewService(repo *Repository) *Service {
 
 // GetAll returns all trips formatted for the frontend.
 func (s *Service) GetAll(ctx context.Context, tenantID string) ([]TripResponse, error) {
-	list, err := s.repo.GetAll(ctx, tenantID)
-	if err != nil {
-		return nil, err
-	}
-
-	res := make([]TripResponse, len(list))
-	for i, t := range list {
-		res[i], err = s.MapToResponse(ctx, t)
+	var resp []TripResponse
+	cacheKey := fmt.Sprintf("tenant:%s:trips:all", tenantID)
+	err := cache.Fetch(ctx, cacheKey, 5*time.Minute, &resp, func() (*[]TripResponse, error) {
+		list, err := s.repo.GetAll(ctx, tenantID)
 		if err != nil {
 			return nil, err
 		}
+
+		res := make([]TripResponse, len(list))
+		for i, t := range list {
+			res[i], err = s.MapToResponse(ctx, t)
+			if err != nil {
+				return nil, err
+			}
+		}
+		return &res, nil
+	})
+	if err != nil {
+		return nil, err
 	}
-	return res, nil
+	return resp, nil
 }
 
 // GetByID returns a single trip formatted for the frontend.
 func (s *Service) GetByID(ctx context.Context, tenantID, id string) (*TripResponse, error) {
-	t, err := s.repo.GetByID(ctx, tenantID, id)
-	if err != nil {
-		return nil, err
-	}
-	if t == nil {
-		return nil, apperror.NotFound("trip not found")
-	}
+	var resp TripResponse
+	cacheKey := fmt.Sprintf("tenant:%s:trip:%s", tenantID, id)
+	err := cache.Fetch(ctx, cacheKey, 5*time.Minute, &resp, func() (*TripResponse, error) {
+		t, err := s.repo.GetByID(ctx, tenantID, id)
+		if err != nil {
+			return nil, err
+		}
+		if t == nil {
+			return nil, apperror.NotFound("trip not found")
+		}
 
-	resp, err := s.MapToResponse(ctx, *t)
+		r, err := s.MapToResponse(ctx, *t)
+		if err != nil {
+			return nil, err
+		}
+		return &r, nil
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -102,6 +120,9 @@ func (s *Service) Create(ctx context.Context, tenantID string, req CreateTripReq
 	if err := s.repo.Create(ctx, tenantID, t); err != nil {
 		return nil, err
 	}
+
+	// Invalidate trips list cache
+	cache.Invalidate(ctx, fmt.Sprintf("tenant:%s:trips:all", tenantID))
 
 	resp, err := s.MapToResponse(ctx, *t)
 	if err != nil {
@@ -162,6 +183,12 @@ func (s *Service) Update(ctx context.Context, tenantID, id string, req UpdateTri
 		return nil, apperror.NotFound("trip not found")
 	}
 
+	// Invalidate trip cache and trip list cache.
+	cache.Invalidate(ctx, 
+		fmt.Sprintf("tenant:%s:trip:%s", tenantID, id),
+		fmt.Sprintf("tenant:%s:trips:all", tenantID),
+	)
+
 	resp, err := s.MapToResponse(ctx, *t)
 	if err != nil {
 		return nil, err
@@ -177,6 +204,13 @@ func (s *Service) Delete(ctx context.Context, tenantID, id string) error {
 	if !deleted {
 		return apperror.NotFound("trip not found")
 	}
+
+	// Invalidate trip cache and trip list cache.
+	cache.Invalidate(ctx, 
+		fmt.Sprintf("tenant:%s:trip:%s", tenantID, id),
+		fmt.Sprintf("tenant:%s:trips:all", tenantID),
+	)
+
 	return nil
 }
 

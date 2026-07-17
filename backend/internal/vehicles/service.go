@@ -3,8 +3,11 @@ package vehicles
 import (
 	"context"
 	"database/sql"
+	"fmt"
+	"time"
 
 	"github.com/Akshansh-29072005/Deposity/backend/internal/platform/apperror"
+	"github.com/Akshansh-29072005/Deposity/backend/internal/platform/cache"
 )
 
 type Service struct {
@@ -16,28 +19,43 @@ func NewService(repo *Repository) *Service {
 }
 
 func (s *Service) GetAll(ctx context.Context, tenantID string) ([]VehicleResponse, error) {
-	list, err := s.repo.GetAll(ctx, tenantID)
+	var resp []VehicleResponse
+	cacheKey := fmt.Sprintf("tenant:%s:vehicles:all", tenantID)
+	err := cache.Fetch(ctx, cacheKey, 5*time.Minute, &resp, func() (*[]VehicleResponse, error) {
+		list, err := s.repo.GetAll(ctx, tenantID)
+		if err != nil {
+			return nil, err
+		}
+
+		res := make([]VehicleResponse, len(list))
+		for i, v := range list {
+			res[i] = MapToResponse(v)
+		}
+		return &res, nil
+	})
 	if err != nil {
 		return nil, err
 	}
-
-	res := make([]VehicleResponse, len(list))
-	for i, v := range list {
-		res[i] = MapToResponse(v)
-	}
-	return res, nil
+	return resp, nil
 }
 
 func (s *Service) GetByID(ctx context.Context, tenantID, id string) (*VehicleResponse, error) {
-	v, err := s.repo.GetByID(ctx, tenantID, id)
+	var resp VehicleResponse
+	cacheKey := fmt.Sprintf("tenant:%s:vehicle:%s", tenantID, id)
+	err := cache.Fetch(ctx, cacheKey, 5*time.Minute, &resp, func() (*VehicleResponse, error) {
+		v, err := s.repo.GetByID(ctx, tenantID, id)
+		if err != nil {
+			return nil, err
+		}
+		if v == nil {
+			return nil, apperror.NotFound("vehicle not found")
+		}
+		r := MapToResponse(*v)
+		return &r, nil
+	})
 	if err != nil {
 		return nil, err
 	}
-	if v == nil {
-		return nil, apperror.NotFound("vehicle not found")
-	}
-	
-	resp := MapToResponse(*v)
 	return &resp, nil
 }
 
@@ -85,11 +103,27 @@ func (s *Service) Create(ctx context.Context, tenantID string, req CreateVehicle
 		return nil, apperror.FromDBError(err)
 	}
 
+	// Invalidate vehicle list cache.
+	cache.Invalidate(ctx, fmt.Sprintf("tenant:%s:vehicles:all", tenantID))
+
+	// Invalidate driver cache if bidirectionally linked.
+	if v.DriverID.Valid {
+		cache.Invalidate(ctx, 
+			fmt.Sprintf("tenant:%s:driver:%s", tenantID, v.DriverID.String),
+			fmt.Sprintf("tenant:%s:drivers:all", tenantID),
+		)
+	}
+
 	resp := MapToResponse(*v)
 	return &resp, nil
 }
 
 func (s *Service) Update(ctx context.Context, tenantID, id string, req UpdateVehicleRequest) (*VehicleResponse, error) {
+	var oldDriverID sql.NullString
+	if vOld, err := s.repo.GetByID(ctx, tenantID, id); err == nil && vOld != nil {
+		oldDriverID = vOld.DriverID
+	}
+
 	v, err := s.repo.Update(ctx, tenantID, id, func(v *Vehicle) error {
 		if req.Core != nil {
 			v.RegistrationNumber = req.Core.RegistrationNumber
@@ -141,11 +175,37 @@ func (s *Service) Update(ctx context.Context, tenantID, id string, req UpdateVeh
 		return nil, apperror.NotFound("vehicle not found")
 	}
 
+	// Invalidate vehicle cache and vehicle list cache.
+	cache.Invalidate(ctx, 
+		fmt.Sprintf("tenant:%s:vehicle:%s", tenantID, id),
+		fmt.Sprintf("tenant:%s:vehicles:all", tenantID),
+	)
+
+	// Invalidate old driver cache.
+	if oldDriverID.Valid {
+		cache.Invalidate(ctx, 
+			fmt.Sprintf("tenant:%s:driver:%s", tenantID, oldDriverID.String),
+			fmt.Sprintf("tenant:%s:drivers:all", tenantID),
+		)
+	}
+	// Invalidate new driver cache.
+	if v.DriverID.Valid {
+		cache.Invalidate(ctx, 
+			fmt.Sprintf("tenant:%s:driver:%s", tenantID, v.DriverID.String),
+			fmt.Sprintf("tenant:%s:drivers:all", tenantID),
+		)
+	}
+
 	resp := MapToResponse(*v)
 	return &resp, nil
 }
 
 func (s *Service) Delete(ctx context.Context, tenantID, id string) error {
+	var driverID sql.NullString
+	if vOld, err := s.repo.GetByID(ctx, tenantID, id); err == nil && vOld != nil {
+		driverID = vOld.DriverID
+	}
+
 	deleted, err := s.repo.Delete(ctx, tenantID, id)
 	if err != nil {
 		return err
@@ -153,6 +213,19 @@ func (s *Service) Delete(ctx context.Context, tenantID, id string) error {
 	if !deleted {
 		return apperror.NotFound("vehicle not found")
 	}
+
+	// Invalidate caches.
+	cache.Invalidate(ctx, 
+		fmt.Sprintf("tenant:%s:vehicle:%s", tenantID, id),
+		fmt.Sprintf("tenant:%s:vehicles:all", tenantID),
+	)
+	if driverID.Valid {
+		cache.Invalidate(ctx, 
+			fmt.Sprintf("tenant:%s:driver:%s", tenantID, driverID.String),
+			fmt.Sprintf("tenant:%s:drivers:all", tenantID),
+		)
+	}
+
 	return nil
 }
 
