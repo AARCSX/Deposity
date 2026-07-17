@@ -38,6 +38,8 @@ export interface ComplianceDocuments {
 export interface OwnershipStatus {
   ownershipType: "Own" | "Market";
   driverId: string;
+  driverName?: string;
+  driverPhone?: string;
   homeBranch: string;
   gpsDeviceId: string;
 }

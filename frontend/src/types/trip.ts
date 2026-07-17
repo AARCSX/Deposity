@@ -9,6 +9,7 @@ export interface RouteDetails {
 export interface CargoDetails {
   material: string;
   weight: number;
+  ratePerTon: number;
   company: string;
 }
 

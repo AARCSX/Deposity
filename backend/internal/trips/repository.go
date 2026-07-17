@@ -21,7 +21,7 @@ func NewRepository(pool *pgxpool.Pool) *Repository {
 func (r *Repository) GetAll(ctx context.Context, tenantID string) ([]Trip, error) {
 	query := `
 		SELECT id, tenant_id, status, origin_name, origin_date, destination_name, destination_date, is_estimated,
-		       material, weight, company_id, vehicle_id, driver_id, total_freight, advance_paid, created_at, updated_at
+		       material, weight, company_id, vehicle_id, driver_id, total_freight, advance_paid, rate_per_ton, created_at, updated_at
 		FROM trips
 		WHERE tenant_id = $1
 		ORDER BY created_at DESC
@@ -38,7 +38,7 @@ func (r *Repository) GetAll(ctx context.Context, tenantID string) ([]Trip, error
 		var companyID, vehicleID, driverID sql.NullString
 		err := rows.Scan(
 			&t.ID, &t.TenantID, &t.Status, &t.OriginName, &t.OriginDate, &t.DestinationName, &t.DestinationDate, &t.IsEstimated,
-			&t.Material, &t.Weight, &companyID, &vehicleID, &driverID, &t.TotalFreight, &t.AdvancePaid, &t.CreatedAt, &t.UpdatedAt,
+			&t.Material, &t.Weight, &companyID, &vehicleID, &driverID, &t.TotalFreight, &t.AdvancePaid, &t.RatePerTon, &t.CreatedAt, &t.UpdatedAt,
 		)
 		if err != nil {
 			return nil, err
@@ -56,7 +56,7 @@ func (r *Repository) GetAll(ctx context.Context, tenantID string) ([]Trip, error
 func (r *Repository) GetByID(ctx context.Context, tenantID, id string) (*Trip, error) {
 	query := `
 		SELECT id, tenant_id, status, origin_name, origin_date, destination_name, destination_date, is_estimated,
-		       material, weight, company_id, vehicle_id, driver_id, total_freight, advance_paid, created_at, updated_at
+		       material, weight, company_id, vehicle_id, driver_id, total_freight, advance_paid, rate_per_ton, created_at, updated_at
 		FROM trips
 		WHERE tenant_id = $1 AND id = $2
 	`
@@ -64,7 +64,7 @@ func (r *Repository) GetByID(ctx context.Context, tenantID, id string) (*Trip, e
 	var companyID, vehicleID, driverID sql.NullString
 	err := r.pool.QueryRow(ctx, query, tenantID, id).Scan(
 		&t.ID, &t.TenantID, &t.Status, &t.OriginName, &t.OriginDate, &t.DestinationName, &t.DestinationDate, &t.IsEstimated,
-		&t.Material, &t.Weight, &companyID, &vehicleID, &driverID, &t.TotalFreight, &t.AdvancePaid, &t.CreatedAt, &t.UpdatedAt,
+		&t.Material, &t.Weight, &companyID, &vehicleID, &driverID, &t.TotalFreight, &t.AdvancePaid, &t.RatePerTon, &t.CreatedAt, &t.UpdatedAt,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -84,8 +84,8 @@ func (r *Repository) Create(ctx context.Context, tenantID string, t *Trip) error
 	query := `
 		INSERT INTO trips (
 			tenant_id, status, origin_name, origin_date, destination_name, destination_date, is_estimated,
-			material, weight, company_id, vehicle_id, driver_id, total_freight, advance_paid
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+			material, weight, company_id, vehicle_id, driver_id, total_freight, advance_paid, rate_per_ton
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
 		RETURNING id, created_at, updated_at
 	`
 	var companyID, vehicleID, driverID interface{}
@@ -101,7 +101,7 @@ func (r *Repository) Create(ctx context.Context, tenantID string, t *Trip) error
 
 	return r.pool.QueryRow(ctx, query,
 		tenantID, t.Status, t.OriginName, t.OriginDate, t.DestinationName, t.DestinationDate, t.IsEstimated,
-		t.Material, t.Weight, companyID, vehicleID, driverID, t.TotalFreight, t.AdvancePaid,
+		t.Material, t.Weight, companyID, vehicleID, driverID, t.TotalFreight, t.AdvancePaid, t.RatePerTon,
 	).Scan(&t.ID, &t.CreatedAt, &t.UpdatedAt)
 }
 
@@ -115,7 +115,7 @@ func (r *Repository) Update(ctx context.Context, tenantID, id string, updateFn f
 
 	querySelect := `
 		SELECT id, tenant_id, status, origin_name, origin_date, destination_name, destination_date, is_estimated,
-		       material, weight, company_id, vehicle_id, driver_id, total_freight, advance_paid, created_at, updated_at
+		       material, weight, company_id, vehicle_id, driver_id, total_freight, advance_paid, rate_per_ton, created_at, updated_at
 		FROM trips
 		WHERE tenant_id = $1 AND id = $2
 	`
@@ -123,7 +123,7 @@ func (r *Repository) Update(ctx context.Context, tenantID, id string, updateFn f
 	var companyID, vehicleID, driverID sql.NullString
 	err = tx.QueryRow(ctx, querySelect, tenantID, id).Scan(
 		&t.ID, &t.TenantID, &t.Status, &t.OriginName, &t.OriginDate, &t.DestinationName, &t.DestinationDate, &t.IsEstimated,
-		&t.Material, &t.Weight, &companyID, &vehicleID, &driverID, &t.TotalFreight, &t.AdvancePaid, &t.CreatedAt, &t.UpdatedAt,
+		&t.Material, &t.Weight, &companyID, &vehicleID, &driverID, &t.TotalFreight, &t.AdvancePaid, &t.RatePerTon, &t.CreatedAt, &t.UpdatedAt,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -153,13 +153,13 @@ func (r *Repository) Update(ctx context.Context, tenantID, id string, updateFn f
 	queryUpdate := `
 		UPDATE trips
 		SET status = $1, origin_name = $2, origin_date = $3, destination_name = $4, destination_date = $5, is_estimated = $6,
-		    material = $7, weight = $8, company_id = $9, vehicle_id = $10, driver_id = $11, total_freight = $12, advance_paid = $13, updated_at = NOW()
-		WHERE tenant_id = $14 AND id = $15
+		    material = $7, weight = $8, company_id = $9, vehicle_id = $10, driver_id = $11, total_freight = $12, advance_paid = $13, rate_per_ton = $14, updated_at = NOW()
+		WHERE tenant_id = $15 AND id = $16
 		RETURNING updated_at
 	`
 	err = tx.QueryRow(ctx, queryUpdate,
 		t.Status, t.OriginName, t.OriginDate, t.DestinationName, t.DestinationDate, t.IsEstimated,
-		t.Material, t.Weight, dbCompanyID, dbVehicleID, dbDriverID, t.TotalFreight, t.AdvancePaid,
+		t.Material, t.Weight, dbCompanyID, dbVehicleID, dbDriverID, t.TotalFreight, t.AdvancePaid, t.RatePerTon,
 		tenantID, id,
 	).Scan(&t.UpdatedAt)
 	if err != nil {

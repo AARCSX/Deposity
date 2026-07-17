@@ -29,6 +29,8 @@ type ComplianceDocuments struct {
 type OwnershipStatus struct {
 	OwnershipType string  `json:"ownershipType" binding:"required"` // E.g., Own, Market
 	DriverID      *string `json:"driverId"`                      // Optional driver assignment
+	DriverName    string  `json:"driverName,omitempty"`           // Resolved driver name
+	DriverPhone   string  `json:"driverPhone,omitempty"`          // Resolved driver phone
 	HomeBranch    string  `json:"homeBranch"`
 	GPSDeviceID   string  `json:"gpsDeviceId"`
 }

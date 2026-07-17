@@ -22,6 +22,7 @@ type Trip struct {
 	DriverID        sql.NullString `json:"driverId" db:"driver_id"`
 	TotalFreight    float64        `json:"totalFreight" db:"total_freight"`
 	AdvancePaid     float64        `json:"advancePaid" db:"advance_paid"`
+	RatePerTon      float64        `json:"ratePerTon" db:"rate_per_ton"`
 	CreatedAt       time.Time      `json:"createdAt" db:"created_at"`
 	UpdatedAt       time.Time      `json:"updatedAt" db:"updated_at"`
 }

@@ -263,6 +263,8 @@ func MapToResponse(v Vehicle) VehicleResponse {
 		Ownership: OwnershipStatus{
 			OwnershipType: v.OwnershipType,
 			DriverID:      &driverID,
+			DriverName:    v.DriverName,
+			DriverPhone:   v.DriverPhone,
 			HomeBranch:    v.HomeBranch,
 			GPSDeviceID:   v.GPSDeviceID,
 		},

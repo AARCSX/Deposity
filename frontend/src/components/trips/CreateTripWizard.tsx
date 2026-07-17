@@ -22,6 +22,7 @@ const initialData: TripRecord = {
   cargo: {
     material: "",
     weight: 0,
+    ratePerTon: 0,
     company: "",
   },
   assignment: {
@@ -106,12 +107,17 @@ export default function CreateTripWizard({ isOpen, onClose, onSubmit }: CreateTr
       destDate = new Date().toISOString();
     }
 
+    const calculatedTotalFreight = formData.cargo.weight * formData.cargo.ratePerTon;
     const payload = {
       ...formData,
       route: {
         ...formData.route,
         originDate,
         destinationDate: destDate,
+      },
+      financials: {
+        ...formData.financials,
+        totalFreight: calculatedTotalFreight,
       }
     };
 
@@ -221,6 +227,7 @@ export default function CreateTripWizard({ isOpen, onClose, onSubmit }: CreateTr
               </div>
               <Input label="Material Type" placeholder="e.g. Steel Coils, Cotton" value={formData.cargo.material} onChange={(v: string) => setFormData(f => ({...f, cargo: {...f.cargo, material: v}}))} />
               <Input label="Total Weight (MT)" type="number" placeholder="15" value={formData.cargo.weight.toString()} onChange={(v: string) => setFormData(f => ({...f, cargo: {...f.cargo, weight: Number(v)}}))} />
+              <Input label="Rate per Ton (₹)" type="number" placeholder="3000" value={formData.cargo.ratePerTon.toString()} onChange={(v: string) => setFormData(f => ({...f, cargo: {...f.cargo, ratePerTon: Number(v)}}))} />
             </div>
           )}
 
@@ -231,7 +238,22 @@ export default function CreateTripWizard({ isOpen, onClose, onSubmit }: CreateTr
                 <label className="text-xs font-bold text-outline">Assigned Vehicle</label>
                 <select 
                   value={formData.assignment.vehicleId}
-                  onChange={(e) => setFormData(f => ({...f, assignment: {...f.assignment, vehicleId: e.target.value}}))}
+                  onChange={(e) => {
+                    const selectedRegNum = e.target.value;
+                    const matchedVehicle = vehicles.find(v => v.core.registrationNumber === selectedRegNum);
+                    let driverId = formData.assignment.driverId;
+                    if (matchedVehicle && matchedVehicle.ownership?.driverName) {
+                      driverId = matchedVehicle.ownership.driverName;
+                    }
+                    setFormData(f => ({
+                      ...f,
+                      assignment: {
+                        ...f.assignment,
+                        vehicleId: selectedRegNum,
+                        driverId,
+                      }
+                    }));
+                  }}
                   className="w-full bg-surface-container-highest border border-outline-variant/20 rounded-xl px-4 py-2.5 text-sm text-on-surface outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all font-medium"
                 >
                   <option value="">Select Vehicle</option>
@@ -256,6 +278,19 @@ export default function CreateTripWizard({ isOpen, onClose, onSubmit }: CreateTr
                     </option>
                   ))}
                 </select>
+                {(() => {
+                  const matchedVehicle = vehicles.find(v => v.core.registrationNumber === formData.assignment.vehicleId);
+                  const isAutoAssigned = matchedVehicle && matchedVehicle.ownership?.driverName && formData.assignment.driverId === matchedVehicle.ownership.driverName;
+                  if (isAutoAssigned) {
+                    return (
+                      <span className="text-[10px] text-primary font-bold flex items-center gap-1 mt-1">
+                        <span className="material-symbols-outlined text-[12px]">info</span>
+                        Auto-assigned driver from vehicle
+                      </span>
+                    );
+                  }
+                  return null;
+                })()}
               </div>
             </div>
           )}
@@ -263,12 +298,20 @@ export default function CreateTripWizard({ isOpen, onClose, onSubmit }: CreateTr
           {currentStep === 3 && (
             <div className="grid grid-cols-1 gap-5 animate-in slide-in-from-right-4 duration-300 max-w-md">
               <div className="text-sm text-on-surface-variant mb-2">Financial agreements for the trip.</div>
-              <Input label="Total Freight Amount (₹)" type="number" placeholder="45000" value={formData.financials.totalFreight.toString()} onChange={(v: string) => setFormData(f => ({...f, financials: {...f.financials, totalFreight: Number(v)}}))} />
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-outline">Total Freight Amount (₹)</label>
+                <div className="w-full bg-surface-container-high border border-outline-variant/15 rounded-xl px-4 py-2.5 text-sm text-on-surface-variant font-bold">
+                  ₹{(formData.cargo.weight * formData.cargo.ratePerTon).toLocaleString()}
+                  <span className="text-[10px] text-outline font-medium block mt-0.5">
+                    (Computed: {formData.cargo.weight} MT × ₹{formData.cargo.ratePerTon}/ton)
+                  </span>
+                </div>
+              </div>
               <Input label="Advance Paid (₹)" type="number" placeholder="20000" value={formData.financials.advancePaid.toString()} onChange={(v: string) => setFormData(f => ({...f, financials: {...f.financials, advancePaid: Number(v)}}))} />
               <div className="p-4 bg-surface-container-high rounded-xl flex justify-between items-center mt-4">
                 <span className="font-bold text-on-surface-variant">Remaining Balance</span>
                 <span className="font-bold text-lg text-error">
-                  ₹{(formData.financials.totalFreight - formData.financials.advancePaid).toLocaleString()}
+                  ₹{((formData.cargo.weight * formData.cargo.ratePerTon) - formData.financials.advancePaid).toLocaleString()}
                 </span>
               </div>
             </div>

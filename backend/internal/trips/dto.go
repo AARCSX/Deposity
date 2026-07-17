@@ -9,9 +9,10 @@ type RouteDetails struct {
 }
 
 type CargoDetails struct {
-	Material string  `json:"material" binding:"required"`
-	Weight   float64 `json:"weight" binding:"required"`
-	Company  string  `json:"company" binding:"required"` // Company Name
+	Material   string  `json:"material" binding:"required"`
+	Weight     float64 `json:"weight" binding:"required"`
+	RatePerTon float64 `json:"ratePerTon"`
+	Company    string  `json:"company" binding:"required"` // Company Name
 }
 
 type AssignmentDetails struct {

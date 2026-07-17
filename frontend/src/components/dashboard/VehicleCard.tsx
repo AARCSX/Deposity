@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 export interface VehicleCardProps {
+  id: string;
   plateNumber: string;
   vehicleType: string;
   status: "all-good" | "expiring-soon" | "expired-docs";
@@ -18,9 +19,11 @@ export interface VehicleCardProps {
   gpsActive: boolean;
   emiDate?: string;
   locationState?: "online" | "offline";
+  onEdit?: (id: string) => void;
 }
 
 export default function VehicleCard({
+  id,
   plateNumber,
   vehicleType,
   status,
@@ -29,6 +32,7 @@ export default function VehicleCard({
   gpsActive,
   emiDate,
   locationState = "online",
+  onEdit,
 }: VehicleCardProps) {
   const statusConfig = {
     "all-good": {
@@ -154,11 +158,14 @@ export default function VehicleCard({
           {emiDate && <span className="text-[10px] text-on-surface-variant ml-2">EMI: {emiDate}</span>}
         </div>
         <div className="flex gap-2">
-          <button className="w-8 h-8 rounded-lg bg-surface flex items-center justify-center text-on-surface-variant hover:text-primary hover:bg-primary-fixed transition-colors border border-outline-variant/15">
+          <button 
+            onClick={() => onEdit?.(id)}
+            className="w-8 h-8 rounded-lg bg-surface flex items-center justify-center text-on-surface-variant hover:text-primary hover:bg-primary-fixed transition-colors border border-outline-variant/15"
+          >
             <span className="material-symbols-outlined text-[1.1rem]">edit</span>
           </button>
           <Link 
-            href={`/vehicles/${plateNumber.toLowerCase().replace(/\s+/g, "-")}`}
+            href={`/vehicles/${id}`}
             className="px-4 py-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary hover:text-white font-bold text-sm transition-colors"
           >
             Details

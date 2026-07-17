@@ -15,6 +15,7 @@ export default function VehiclesPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [editingVehicle, setEditingVehicle] = useState<VehicleRecord | null>(null);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -44,15 +45,20 @@ export default function VehiclesPage() {
     loadVehicles();
   }, []);
 
-  const handleCreateSubmit = async (data: VehicleRecord) => {
-    const response = await authenticatedFetch("/vehicles", {
-      method: "POST",
+  const handleWizardSubmit = async (data: VehicleRecord) => {
+    const isEdit = !!editingVehicle;
+    const url = isEdit ? `/vehicles/${editingVehicle?.id}` : "/vehicles";
+    const method = isEdit ? "PUT" : "POST";
+    
+    const response = await authenticatedFetch(url, {
+      method,
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data)
     });
     if (response.ok) {
       loadVehicles(); // Refetch
       setIsCreateModalOpen(false);
+      setEditingVehicle(null);
     } else {
       const errData = await response.json().catch(() => ({}));
       throw new Error(errData.error || "Unknown server error");
@@ -61,25 +67,30 @@ export default function VehiclesPage() {
 
   // Helper to map robust data to the simpler VehicleCard props
   const mapToCardProps = (v: VehicleRecord) => {
-    // Simple mock driver data since we only have driverId
-    const driverMock = v.ownership.driverId ? {
-      name: `Driver ${v.ownership.driverId}`,
-      phone: "+91 99999 99999",
+    // Real driver data returned by the backend LEFT JOIN
+    const driverData = v.ownership.driverId && v.ownership.driverName ? {
+      name: v.ownership.driverName,
+      phone: v.ownership.driverPhone || "+91 99999 99999",
       avatar: "https://lh3.googleusercontent.com/aida-public/AB6AXuAM6UaUvN7X6syLgqiZ63hpuzb5UrKkYWEhKSRzCkx4cFSiGSdWp-BQC0xH3xe9IJZ3QYqmf7MhacYWYDYy0r9T_g9hqQX2HhK9S9e3SyWNc8JHWuWw8C0zPAfwUFJKdfPtZ6JHguHHm_zEnMi1CBuUSNlG5L1AMHvOc8C4Bd1ujCgpsuDLes5E1HzLs0Uvwk_P8bcCpBrJtNVGHcJAeQvPTtQ9bLJMazChiYm11WGZQxvkFN97GUU7wDJiqQUZ4yVSNYpMSzlbuDgG"
     } : null;
 
     return {
+      id: v.id || "",
       plateNumber: v.core.registrationNumber || "UNKNOWN",
       vehicleType: v.core.bodyType || "Truck",
       status: v.status === "maintenance" ? "all-good" : v.status, 
-      driver: driverMock,
+      driver: driverData,
       docs: {
         fit: "valid" as const,
         perm: "valid" as const,
         ins: "valid" as const,
         puc: "valid" as const
       },
-      gpsActive: !!v.ownership.gpsDeviceId
+      gpsActive: !!v.ownership.gpsDeviceId,
+      onEdit: () => {
+        setEditingVehicle(v);
+        setIsCreateModalOpen(true);
+      }
     };
   };
 
@@ -96,7 +107,10 @@ export default function VehiclesPage() {
           </div>
           <div className="flex items-center gap-3">
             <button 
-              onClick={() => setIsCreateModalOpen(true)}
+              onClick={() => {
+                setEditingVehicle(null);
+                setIsCreateModalOpen(true);
+              }}
               className="flex items-center gap-2 bg-gradient-to-br from-primary to-primary-container text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-primary/20 hover:shadow-xl transition-all active:scale-[0.98]"
             >
               <span className="material-symbols-outlined text-[1.25rem]">add</span>
@@ -167,8 +181,12 @@ export default function VehiclesPage() {
         {/* Modals */}
         <CreateVehicleWizard 
           isOpen={isCreateModalOpen} 
-          onClose={() => setIsCreateModalOpen(false)} 
-          onSubmit={handleCreateSubmit} 
+          onClose={() => {
+            setIsCreateModalOpen(false);
+            setEditingVehicle(null);
+          }} 
+          onSubmit={handleWizardSubmit} 
+          vehicleToEdit={editingVehicle}
         />
       </div>
     </>

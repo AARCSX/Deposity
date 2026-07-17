@@ -17,16 +17,18 @@ func NewRepository(pool *pgxpool.Pool) *Repository {
 	return &Repository{pool: pool}
 }
 
-// GetAll returns all vehicles for the given tenant.
+// GetAll returns all vehicles for the given tenant with resolved driver info.
 func (r *Repository) GetAll(ctx context.Context, tenantID string) ([]Vehicle, error) {
 	query := `
-		SELECT id, tenant_id, registration_number, make, model, year, body_type, axle_config, tonnage_capacity, fuel_capacity, average_mileage,
-		       rc_expiry, rc_issuance, insurance_expiry, insurance_issuance, puc_expiry, puc_issuance, fitness_expiry, fitness_issuance, permit_details,
-		       ownership_type, driver_id, home_branch, gps_device_id,
-		       current_odometer, last_serviced_date, status, created_at, updated_at
-		FROM vehicles
-		WHERE tenant_id = $1
-		ORDER BY created_at DESC
+		SELECT v.id, v.tenant_id, v.registration_number, v.make, v.model, v.year, v.body_type, v.axle_config, v.tonnage_capacity, v.fuel_capacity, v.average_mileage,
+		       v.rc_expiry, v.rc_issuance, v.insurance_expiry, v.insurance_issuance, v.puc_expiry, v.puc_issuance, v.fitness_expiry, v.fitness_issuance, v.permit_details,
+		       v.ownership_type, v.driver_id, v.home_branch, v.gps_device_id,
+		       v.current_odometer, v.last_serviced_date, v.status, v.created_at, v.updated_at,
+		       COALESCE(d.name, '') AS driver_name, COALESCE(d.phone, '') AS driver_phone
+		FROM vehicles v
+		LEFT JOIN drivers d ON v.driver_id = d.id
+		WHERE v.tenant_id = $1
+		ORDER BY v.created_at DESC
 	`
 	rows, err := r.pool.Query(ctx, query, tenantID)
 	if err != nil {
@@ -43,6 +45,7 @@ func (r *Repository) GetAll(ctx context.Context, tenantID string) ([]Vehicle, er
 			&v.RCExpiry, &v.RCIssuance, &v.InsuranceExpiry, &v.InsuranceIssuance, &v.PUCExpiry, &v.PUCIssuance, &v.FitnessExpiry, &v.FitnessIssuance, &v.PermitDetails,
 			&v.OwnershipType, &driverID, &v.HomeBranch, &v.GPSDeviceID,
 			&v.CurrentOdometer, &v.LastServicedDate, &v.Status, &v.CreatedAt, &v.UpdatedAt,
+			&v.DriverName, &v.DriverPhone,
 		)
 		if err != nil {
 			return nil, err
@@ -54,15 +57,17 @@ func (r *Repository) GetAll(ctx context.Context, tenantID string) ([]Vehicle, er
 	return list, nil
 }
 
-// GetByID returns a single vehicle by ID, scoped to the tenant.
+// GetByID returns a single vehicle by ID, scoped to the tenant, with resolved driver info.
 func (r *Repository) GetByID(ctx context.Context, tenantID, id string) (*Vehicle, error) {
 	query := `
-		SELECT id, tenant_id, registration_number, make, model, year, body_type, axle_config, tonnage_capacity, fuel_capacity, average_mileage,
-		       rc_expiry, rc_issuance, insurance_expiry, insurance_issuance, puc_expiry, puc_issuance, fitness_expiry, fitness_issuance, permit_details,
-		       ownership_type, driver_id, home_branch, gps_device_id,
-		       current_odometer, last_serviced_date, status, created_at, updated_at
-		FROM vehicles
-		WHERE tenant_id = $1 AND id = $2
+		SELECT v.id, v.tenant_id, v.registration_number, v.make, v.model, v.year, v.body_type, v.axle_config, v.tonnage_capacity, v.fuel_capacity, v.average_mileage,
+		       v.rc_expiry, v.rc_issuance, v.insurance_expiry, v.insurance_issuance, v.puc_expiry, v.puc_issuance, v.fitness_expiry, v.fitness_issuance, v.permit_details,
+		       v.ownership_type, v.driver_id, v.home_branch, v.gps_device_id,
+		       v.current_odometer, v.last_serviced_date, v.status, v.created_at, v.updated_at,
+		       COALESCE(d.name, '') AS driver_name, COALESCE(d.phone, '') AS driver_phone
+		FROM vehicles v
+		LEFT JOIN drivers d ON v.driver_id = d.id
+		WHERE v.tenant_id = $1 AND v.id = $2
 	`
 	var v Vehicle
 	var driverID sql.NullString
@@ -71,6 +76,7 @@ func (r *Repository) GetByID(ctx context.Context, tenantID, id string) (*Vehicle
 		&v.RCExpiry, &v.RCIssuance, &v.InsuranceExpiry, &v.InsuranceIssuance, &v.PUCExpiry, &v.PUCIssuance, &v.FitnessExpiry, &v.FitnessIssuance, &v.PermitDetails,
 		&v.OwnershipType, &driverID, &v.HomeBranch, &v.GPSDeviceID,
 		&v.CurrentOdometer, &v.LastServicedDate, &v.Status, &v.CreatedAt, &v.UpdatedAt,
+		&v.DriverName, &v.DriverPhone,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

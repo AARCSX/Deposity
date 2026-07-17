@@ -110,10 +110,11 @@ func (s *Service) Create(ctx context.Context, tenantID string, req CreateTripReq
 		IsEstimated:     req.Route.IsEstimated,
 		Material:        req.Cargo.Material,
 		Weight:          req.Cargo.Weight,
+		RatePerTon:      req.Cargo.RatePerTon,
 		CompanyID:       sql.NullString{String: companyIDVal, Valid: companyIDVal != ""},
 		VehicleID:       sql.NullString{String: vehicleIDVal, Valid: vehicleIDVal != ""},
 		DriverID:        sql.NullString{String: driverIDVal, Valid: driverIDVal != ""},
-		TotalFreight:    req.Financials.TotalFreight,
+		TotalFreight:    req.Cargo.Weight * req.Cargo.RatePerTon,
 		AdvancePaid:     req.Financials.AdvancePaid,
 	}
 
@@ -147,6 +148,8 @@ func (s *Service) Update(ctx context.Context, tenantID, id string, req UpdateTri
 		if req.Cargo != nil {
 			t.Material = req.Cargo.Material
 			t.Weight = req.Cargo.Weight
+			t.RatePerTon = req.Cargo.RatePerTon
+			t.TotalFreight = t.Weight * t.RatePerTon
 			if req.Cargo.Company != "" {
 				companyIDVal, err := s.repo.LookupCompanyID(ctx, tenantID, req.Cargo.Company)
 				if err == nil && companyIDVal != "" {
@@ -170,7 +173,7 @@ func (s *Service) Update(ctx context.Context, tenantID, id string, req UpdateTri
 			}
 		}
 		if req.Financials != nil {
-			t.TotalFreight = req.Financials.TotalFreight
+			// AdvancePaid can still be updated manually
 			t.AdvancePaid = req.Financials.AdvancePaid
 		}
 		return nil
@@ -246,9 +249,10 @@ func (s *Service) MapToResponse(ctx context.Context, t Trip) (TripResponse, erro
 			IsEstimated:     t.IsEstimated,
 		},
 		Cargo: CargoDetails{
-			Material: t.Material,
-			Weight:   t.Weight,
-			Company:  companyName,
+			Material:   t.Material,
+			Weight:     t.Weight,
+			RatePerTon: t.RatePerTon,
+			Company:    companyName,
 		},
 		Assignment: AssignmentDetails{
 			VehicleID: vehicleRegNum,

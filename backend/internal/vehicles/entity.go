@@ -36,4 +36,8 @@ type Vehicle struct {
 	Status             string         `json:"status" db:"status"`
 	CreatedAt          time.Time      `json:"createdAt" db:"created_at"`
 	UpdatedAt          time.Time      `json:"updatedAt" db:"updated_at"`
+
+	// Transient fields populated via JOIN, not stored in DB.
+	DriverName  string `json:"-" db:"-"`
+	DriverPhone string `json:"-" db:"-"`
 }
