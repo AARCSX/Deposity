@@ -504,6 +504,35 @@ export default function VehicleDetailPage() {
                 <TimelineNode date={formatDateForDisplay(vehicle.compliance.insuranceExpiry)} title="Insurance Expiry" theme={getDocTheme(vehicle.compliance.insuranceExpiry)} />
                 <TimelineNode date={formatDateForDisplay(vehicle.compliance.pucExpiry)} title="PUC Expiry" theme={getDocTheme(vehicle.compliance.pucExpiry)} />
                 <TimelineNode date={formatDateForDisplay(vehicle.compliance.fitnessExpiry)} title="Fitness Expiry" theme={getDocTheme(vehicle.compliance.fitnessExpiry)} />
+                {(() => {
+                  const permit = parsePermitDetails(vehicle.compliance.permitDetails);
+                  const nodes: React.ReactNode[] = [];
+                  if (permit.hasNational && permit.nationalExpiry) {
+                    nodes.push(
+                      <TimelineNode
+                        key="timeline-np"
+                        date={formatDateForDisplay(permit.nationalExpiry)}
+                        title="National Permit Expiry"
+                        theme={getDocTheme(permit.nationalExpiry)}
+                      />
+                    );
+                  }
+                  if (permit.hasState && permit.statePermits) {
+                    permit.statePermits.forEach((sp) => {
+                      if (sp.expiry) {
+                        nodes.push(
+                          <TimelineNode
+                            key={`timeline-sp-${sp.name}`}
+                            date={formatDateForDisplay(sp.expiry)}
+                            title={`State Permit (${sp.name}) Expiry`}
+                            theme={getDocTheme(sp.expiry)}
+                          />
+                        );
+                      }
+                    });
+                  }
+                  return nodes;
+                })()}
               </div>
             </div>
 
@@ -545,32 +574,36 @@ export default function VehicleDetailPage() {
               {/* Permit Cards */}
               {(() => {
                 const permit = parsePermitDetails(vehicle.compliance.permitDetails);
-                if (permit.type === "National" && (permit.issuance || permit.expiry)) {
-                  return (
+                const cards: React.ReactNode[] = [];
+                if (permit.hasNational && (permit.nationalIssuance || permit.nationalExpiry)) {
+                  cards.push(
                     <DocCard
+                      key="national-permit-card"
                       title="National Permit"
                       sub="All India"
-                      status={getDocStatus(permit.expiry)}
-                      issued={formatDateForDisplay(permit.issuance)}
-                      expires={formatDateForDisplay(permit.expiry)}
-                      theme={getDocTheme(permit.expiry)}
+                      status={getDocStatus(permit.nationalExpiry)}
+                      issued={formatDateForDisplay(permit.nationalIssuance)}
+                      expires={formatDateForDisplay(permit.nationalExpiry)}
+                      theme={getDocTheme(permit.nationalExpiry)}
                     />
                   );
                 }
-                if (permit.type === "State" && permit.states.length > 0) {
-                  return permit.states.map((sp) => (
-                    <DocCard
-                      key={sp.name}
-                      title={`State Permit`}
-                      sub={sp.name}
-                      status={getDocStatus(sp.expiry)}
-                      issued={formatDateForDisplay(sp.issuance)}
-                      expires={formatDateForDisplay(sp.expiry)}
-                      theme={getDocTheme(sp.expiry)}
-                    />
-                  ));
+                if (permit.hasState && permit.statePermits && permit.statePermits.length > 0) {
+                  permit.statePermits.forEach((sp) => {
+                    cards.push(
+                      <DocCard
+                        key={`state-permit-${sp.name}`}
+                        title="State Permit"
+                        sub={sp.name}
+                        status={getDocStatus(sp.expiry)}
+                        issued={formatDateForDisplay(sp.issuance)}
+                        expires={formatDateForDisplay(sp.expiry)}
+                        theme={getDocTheme(sp.expiry)}
+                      />
+                    );
+                  });
                 }
-                return null;
+                return cards;
               })()}
             </div>
           </div>

@@ -17,10 +17,11 @@ export interface PermitState {
 }
 
 export interface PermitData {
-  type: "National" | "State";
-  issuance: string;
-  expiry: string;
-  states: PermitState[];
+  hasNational: boolean;
+  nationalIssuance: string;
+  nationalExpiry: string;
+  hasState: boolean;
+  statePermits: PermitState[];
 }
 
 export interface ComplianceDocuments {
@@ -73,24 +74,39 @@ export const INDIAN_STATES = [
 ];
 
 export const DEFAULT_PERMIT_DATA: PermitData = {
-  type: "National",
-  issuance: "",
-  expiry: "",
-  states: [],
+  hasNational: false,
+  nationalIssuance: "",
+  nationalExpiry: "",
+  hasState: false,
+  statePermits: [],
 };
 
 export function parsePermitDetails(raw: string): PermitData {
   if (!raw || raw.trim() === "") return { ...DEFAULT_PERMIT_DATA };
   try {
     const parsed = JSON.parse(raw);
+    
+    // Check if it is the old schema
+    if (parsed.type === "National" || parsed.type === "State") {
+      return {
+        hasNational: parsed.type === "National",
+        nationalIssuance: parsed.type === "National" ? parsed.issuance || "" : "",
+        nationalExpiry: parsed.type === "National" ? parsed.expiry || "" : "",
+        hasState: parsed.type === "State",
+        statePermits: parsed.type === "State" ? (Array.isArray(parsed.states) ? parsed.states : []) : [],
+      };
+    }
+
+    // New schema
     return {
-      type: parsed.type === "State" ? "State" : "National",
-      issuance: parsed.issuance || "",
-      expiry: parsed.expiry || "",
-      states: Array.isArray(parsed.states) ? parsed.states : [],
+      hasNational: !!parsed.hasNational,
+      nationalIssuance: parsed.nationalIssuance || "",
+      nationalExpiry: parsed.nationalExpiry || "",
+      hasState: !!parsed.hasState,
+      statePermits: Array.isArray(parsed.statePermits) ? parsed.statePermits : [],
     };
   } catch {
-    // Legacy plain-text value — treat as national permit note
+    // Legacy plain-text value
     return { ...DEFAULT_PERMIT_DATA };
   }
 }

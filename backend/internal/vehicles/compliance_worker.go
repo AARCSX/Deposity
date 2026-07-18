@@ -2,6 +2,8 @@ package vehicles
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"log"
 	"math"
 	"time"
@@ -10,6 +12,38 @@ import (
 
 	"github.com/Akshansh-29072005/Deposity/backend/internal/platform/mail"
 )
+
+type StatePermit struct {
+	Name     string `json:"name"`
+	Issuance string `json:"issuance"`
+	Expiry   string `json:"expiry"`
+}
+
+type PermitDetails struct {
+	Type             string        `json:"type"`             // legacy
+	Issuance         string        `json:"issuance"`         // legacy
+	Expiry           string        `json:"expiry"`           // legacy
+	States           []StatePermit `json:"states"`           // legacy
+	HasNational      *bool         `json:"hasNational"`      // new
+	NationalIssuance string        `json:"nationalIssuance"` // new
+	NationalExpiry   string        `json:"nationalExpiry"`   // new
+	HasState         *bool         `json:"hasState"`         // new
+	StatePermits     []StatePermit `json:"statePermits"`     // new
+}
+
+func parsePermitDate(dateStr string) time.Time {
+	if dateStr == "" {
+		return time.Time{}
+	}
+	t, err := time.Parse("2006-01-02", dateStr)
+	if err != nil {
+		t, err = time.Parse(time.RFC3339, dateStr)
+		if err != nil {
+			return time.Time{}
+		}
+	}
+	return t
+}
 
 // StartComplianceWorker starts a background worker that checks for compliance doc expirations every 24 hours.
 func StartComplianceWorker(ctx context.Context, db *pgxpool.Pool, mailClient *mail.Client) {
@@ -42,7 +76,7 @@ func runComplianceChecks(ctx context.Context, db *pgxpool.Pool, mailClient *mail
 
 	// 1. Query all vehicles
 	query := `
-		SELECT id, tenant_id, registration_number, rc_expiry, insurance_expiry, puc_expiry, fitness_expiry
+		SELECT id, tenant_id, registration_number, rc_expiry, insurance_expiry, puc_expiry, fitness_expiry, permit_details
 		FROM vehicles
 	`
 	rows, err := db.Query(ctx, query)
@@ -60,15 +94,20 @@ func runComplianceChecks(ctx context.Context, db *pgxpool.Pool, mailClient *mail
 		InsuranceExpiry    time.Time
 		PUCExpiry          time.Time
 		FitnessExpiry      time.Time
+		PermitDetails      string
 	}
 
 	var list []vehicleCheck
 	for rows.Next() {
 		var vc vehicleCheck
-		err := rows.Scan(&vc.ID, &vc.TenantID, &vc.RegistrationNumber, &vc.RCExpiry, &vc.InsuranceExpiry, &vc.PUCExpiry, &vc.FitnessExpiry)
+		var permitDetailsPtr *string
+		err := rows.Scan(&vc.ID, &vc.TenantID, &vc.RegistrationNumber, &vc.RCExpiry, &vc.InsuranceExpiry, &vc.PUCExpiry, &vc.FitnessExpiry, &permitDetailsPtr)
 		if err != nil {
 			log.Printf("[compliance-worker] ERROR scanning vehicle row: %v", err)
 			continue
+		}
+		if permitDetailsPtr != nil {
+			vc.PermitDetails = *permitDetailsPtr
 		}
 		list = append(list, vc)
 	}
@@ -88,6 +127,44 @@ func runComplianceChecks(ctx context.Context, db *pgxpool.Pool, mailClient *mail
 		checkDoc(toEmail, toName, v.RegistrationNumber, "Insurance Certificate", v.InsuranceExpiry, now, mailClient)
 		checkDoc(toEmail, toName, v.RegistrationNumber, "PUC Certificate", v.PUCExpiry, now, mailClient)
 		checkDoc(toEmail, toName, v.RegistrationNumber, "Fitness Certificate", v.FitnessExpiry, now, mailClient)
+
+		// Parse and check permits
+		if v.PermitDetails != "" {
+			var pd PermitDetails
+			if err := json.Unmarshal([]byte(v.PermitDetails), &pd); err == nil {
+				// National permit
+				hasNational := false
+				var nationalExpiry time.Time
+				if pd.HasNational != nil {
+					hasNational = *pd.HasNational
+					nationalExpiry = parsePermitDate(pd.NationalExpiry)
+				} else if pd.Type == "National" {
+					hasNational = true
+					nationalExpiry = parsePermitDate(pd.Expiry)
+				}
+
+				if hasNational && !nationalExpiry.IsZero() {
+					checkDoc(toEmail, toName, v.RegistrationNumber, "National Permit", nationalExpiry, now, mailClient)
+				}
+
+				// State permits
+				var statePermits []StatePermit
+				if pd.HasState != nil {
+					if *pd.HasState {
+						statePermits = pd.StatePermits
+					}
+				} else if pd.Type == "State" {
+					statePermits = pd.States
+				}
+
+				for _, sp := range statePermits {
+					spExpiry := parsePermitDate(sp.Expiry)
+					if sp.Name != "" && !spExpiry.IsZero() {
+						checkDoc(toEmail, toName, v.RegistrationNumber, fmt.Sprintf("State Permit (%s)", sp.Name), spExpiry, now, mailClient)
+					}
+				}
+			}
+		}
 	}
 	log.Println("[compliance-worker] Compliance checks completed.")
 }

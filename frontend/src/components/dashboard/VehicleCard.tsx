@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { parsePermitDetails } from "@/types/vehicle";
 
 export interface VehicleCardProps {
   id: string;
@@ -59,6 +60,14 @@ export default function VehicleCard({
   const insDays = getDaysRemaining(compliance.insuranceExpiry);
   const pucDays = getDaysRemaining(compliance.pucExpiry);
 
+  const permitData = parsePermitDetails(compliance.permitDetails);
+  const npDays = permitData.hasNational ? getDaysRemaining(permitData.nationalExpiry) : 999;
+  
+  let spDays = 999;
+  if (permitData.hasState && permitData.statePermits && permitData.statePermits.length > 0) {
+    spDays = Math.min(...permitData.statePermits.map(sp => getDaysRemaining(sp.expiry)));
+  }
+
   const getDocState = (days: number): "valid" | "expiring" | "invalid" => {
     if (days < 15) return "invalid";
     if (days <= 30) return "expiring";
@@ -70,9 +79,11 @@ export default function VehicleCard({
     rc: getDocState(rcDays),
     ins: getDocState(insDays),
     puc: getDocState(pucDays),
+    np: permitData.hasNational ? getDocState(npDays) : ("inactive" as const),
+    sp: permitData.hasState && permitData.statePermits.length > 0 ? getDocState(spDays) : ("inactive" as const),
   };
 
-  const docConfig = (state: "valid" | "expiring" | "invalid") => {
+  const docConfig = (state: "valid" | "expiring" | "invalid" | "inactive") => {
     switch (state) {
       case "valid":
         return "bg-[#34a853]";
@@ -80,8 +91,9 @@ export default function VehicleCard({
         return "bg-[#f59e0b]";
       case "invalid":
         return "bg-[#ef4444]";
+      case "inactive":
       default:
-        return "bg-outline";
+        return "bg-slate-300";
     }
   };
 
@@ -102,6 +114,15 @@ export default function VehicleCard({
   checkDocAlert("Registration Certificate (RC)", rcDays);
   checkDocAlert("Insurance", insDays);
   checkDocAlert("PUC", pucDays);
+  if (permitData.hasNational) {
+    checkDocAlert("National Permit", npDays);
+  }
+  if (permitData.hasState && permitData.statePermits.length > 0) {
+    permitData.statePermits.forEach(sp => {
+      const days = getDaysRemaining(sp.expiry);
+      checkDocAlert(`State Permit (${sp.name})`, days);
+    });
+  }
 
   let overallStatus: "all-good" | "expiring-soon" | "expired-docs" = "all-good";
   let tooltipText = "All documents are up-to-date (expiry > 30 days)";
@@ -200,13 +221,15 @@ export default function VehicleCard({
 
       {/* Documents Status */}
       <div className="mb-5">
-        <p className="text-[0.7rem] text-on-surface-variant font-bold uppercase tracking-wider mb-2">Documents</p>
-        <div className="flex justify-between items-center px-1">
+        <p className="text-[0.7rem] text-on-surface-variant font-bold uppercase tracking-wider mb-2">Documents & Permits</p>
+        <div className="flex justify-between items-center px-1 gap-1">
           {[
             { label: "Fit", key: "fit" as const, icon: "verified" },
             { label: "RC", key: "rc" as const, icon: "app_registration" },
             { label: "Ins", key: "ins" as const, icon: "health_and_safety" },
             { label: "PUC", key: "puc" as const, icon: "cloud" },
+            { label: "NP", key: "np" as const, icon: "public" },
+            { label: "SP", key: "sp" as const, icon: "map" },
           ].map((doc) => (
             <div key={doc.key} className="flex flex-col items-center gap-1">
               <div className="relative w-8 h-8 rounded-full bg-surface flex items-center justify-center border border-outline-variant/15 text-on-surface-variant">

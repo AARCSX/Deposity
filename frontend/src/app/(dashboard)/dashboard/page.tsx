@@ -9,7 +9,7 @@ import CreateTripWizard from "@/components/trips/CreateTripWizard";
 import CreateVehicleWizard from "@/components/vehicles/CreateVehicleWizard";
 import CreateMaintenanceWizard, { MaintenanceRecord } from "@/components/maintenance/CreateMaintenanceWizard";
 import { TripRecord } from "@/types/trip";
-import { VehicleRecord } from "@/types/vehicle";
+import { VehicleRecord, parsePermitDetails } from "@/types/vehicle";
 import { authenticatedFetch } from "@/lib/api";
 
 // Local fallbacks if backend is completely empty or down
@@ -241,6 +241,16 @@ export default function Home() {
         { name: "PUC Certificate", expiry: v.compliance?.pucExpiry },
         { name: "Fitness Certificate", expiry: v.compliance?.fitnessExpiry },
       ];
+
+      const permit = parsePermitDetails(v.compliance?.permitDetails || "");
+      if (permit.hasNational) {
+        docs.push({ name: "National Permit", expiry: permit.nationalExpiry });
+      }
+      if (permit.hasState && permit.statePermits) {
+        permit.statePermits.forEach((sp) => {
+          docs.push({ name: `State Permit (${sp.name})`, expiry: sp.expiry });
+        });
+      }
 
       docs.forEach((doc) => {
         const info = checkDocStatus(doc.expiry);

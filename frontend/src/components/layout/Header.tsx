@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { getOrgNameFromToken, authenticatedFetch } from "@/lib/api";
+import { parsePermitDetails } from "@/types/vehicle";
 
 export default function Header({ onMenuClick }: { onMenuClick: () => void }) {
   const [orgName, setOrgName] = useState("OnWay");
@@ -36,6 +37,16 @@ export default function Header({ onMenuClick }: { onMenuClick: () => void }) {
             { name: "PUC", fullName: "PUC Certificate", expiry: v.compliance.pucExpiry },
             { name: "Fitness", fullName: "Fitness Certificate", expiry: v.compliance.fitnessExpiry },
           ];
+          
+          const permit = parsePermitDetails(v.compliance.permitDetails || "");
+          if (permit.hasNational) {
+            docs.push({ name: "NP", fullName: "National Permit", expiry: permit.nationalExpiry });
+          }
+          if (permit.hasState && permit.statePermits) {
+            permit.statePermits.forEach((sp: any) => {
+              docs.push({ name: `SP-${sp.name}`, fullName: `State Permit (${sp.name})`, expiry: sp.expiry });
+            });
+          }
           
           docs.forEach((doc) => {
             if (doc.expiry) {
