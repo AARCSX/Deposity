@@ -205,24 +205,15 @@ export default function Home() {
     const thirtyDaysFromNow = new Date();
     thirtyDaysFromNow.setDate(today.getDate() + 30);
 
-    const checkDate = (dateStr?: string) => {
-      if (!dateStr) return false;
-      const d = new Date(dateStr);
-      return d >= today && d <= thirtyDaysFromNow;
+    const checkDocStatus = (expiryStr?: string) => {
+      if (!expiryStr) return null;
+      const exp = new Date(expiryStr);
+      const now = new Date();
+      if (exp < now) return { status: "Expired", daysLeft: 0 };
+      const diffDays = Math.ceil((exp.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+      if (diffDays <= 30) return { status: "Expiring", daysLeft: diffDays };
+      return null;
     };
-
-    // 1. Expirations
-    const expiringVehicles: string[] = [];
-    vehicles.forEach((v) => {
-      if (
-        checkDate(v.compliance?.fitnessExpiry) ||
-        checkDate(v.compliance?.insuranceExpiry) ||
-        checkDate(v.compliance?.pucExpiry) ||
-        checkDate(v.compliance?.rcExpiry)
-      ) {
-        expiringVehicles.push(v.core.registrationNumber);
-      }
-    });
 
     // 2. Pending Payments
     const pendingPaymentTrips = trips.filter(
@@ -240,15 +231,41 @@ export default function Home() {
 
     const generatedAlerts: any[] = [];
 
-    if (expiringVehicles.length > 0) {
-      generatedAlerts.push({
-        title: "Documents Expiring Soon",
-        description: `${expiringVehicles.length} Vehicle(s) have compliance certificates expiring in less than 30 days.`,
-        type: "warning" as const,
-        tags: expiringVehicles.slice(0, 3),
-        actionLabel: "Review",
+    // Compliance alerts (individual per expiring/expired doc)
+    let hasComplianceAlerts = false;
+    vehicles.forEach((v) => {
+      const reg = v.core.registrationNumber.toUpperCase();
+      const docs = [
+        { name: "Registration Certificate (RC)", expiry: v.compliance?.rcExpiry },
+        { name: "Insurance Policy", expiry: v.compliance?.insuranceExpiry },
+        { name: "PUC Certificate", expiry: v.compliance?.pucExpiry },
+        { name: "Fitness Certificate", expiry: v.compliance?.fitnessExpiry },
+      ];
+
+      docs.forEach((doc) => {
+        const info = checkDocStatus(doc.expiry);
+        if (info) {
+          hasComplianceAlerts = true;
+          if (info.status === "Expired") {
+            generatedAlerts.push({
+              title: `${doc.name} Expired`,
+              description: `Critical document for vehicle ${reg} has expired. Immediate renewal required.`,
+              type: "error" as const,
+              actionLabel: "Renew",
+            });
+          } else {
+            generatedAlerts.push({
+              title: `${doc.name} Expiring`,
+              description: `Document for vehicle ${reg} expires in ${info.daysLeft} day(s).`,
+              type: "warning" as const,
+              actionLabel: "Renew",
+            });
+          }
+        }
       });
-    } else {
+    });
+
+    if (!hasComplianceAlerts) {
       generatedAlerts.push({
         title: "All Compliance Intact",
         description: "No vehicle documents or permits are due for renewal in the next 30 days.",

@@ -78,14 +78,8 @@ export default function VehiclesPage() {
       id: v.id || "",
       plateNumber: v.core.registrationNumber || "UNKNOWN",
       vehicleType: v.core.bodyType || "Truck",
-      status: v.status === "maintenance" ? "all-good" : v.status, 
       driver: driverData,
-      docs: {
-        fit: "valid" as const,
-        perm: "valid" as const,
-        ins: "valid" as const,
-        puc: "valid" as const
-      },
+      compliance: v.compliance,
       gpsActive: !!v.ownership.gpsDeviceId,
       onEdit: () => {
         setEditingVehicle(v);

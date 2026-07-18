@@ -1,20 +1,27 @@
+"use client";
+
 import Link from "next/link";
+import { useState } from "react";
 
 export interface VehicleCardProps {
   id: string;
   plateNumber: string;
   vehicleType: string;
-  status: "all-good" | "expiring-soon" | "expired-docs";
   driver: {
     name: string;
     phone: string;
     avatar: string;
   } | null;
-  docs: {
-    fit: "valid" | "expiring" | "invalid";
-    perm: "valid" | "expiring" | "invalid";
-    ins: "valid" | "expiring" | "invalid";
-    puc: "valid" | "expiring" | "invalid";
+  compliance: {
+    rcExpiry: string;
+    rcIssuance?: string;
+    insuranceExpiry: string;
+    insuranceIssuance?: string;
+    pucExpiry: string;
+    pucIssuance?: string;
+    fitnessExpiry: string;
+    fitnessIssuance?: string;
+    permitDetails: string;
   };
   gpsActive: boolean;
   emiDate?: string;
@@ -26,52 +33,122 @@ export default function VehicleCard({
   id,
   plateNumber,
   vehicleType,
-  status,
   driver,
-  docs,
+  compliance,
   gpsActive,
   emiDate,
   locationState = "online",
   onEdit,
 }: VehicleCardProps) {
-  const statusConfig = {
-    "all-good": {
-      label: "All Good",
-      color: "bg-tertiary-fixed text-on-tertiary-fixed-variant",
-      icon: "check_circle",
-    },
-    "expiring-soon": {
-      label: "Expiring Soon",
-      color: "bg-amber-100 text-amber-800",
-      icon: "warning",
-    },
-    "expired-docs": {
-      label: "Expired Docs",
-      color: "bg-error-container text-on-error-container",
-      icon: "error",
-    },
+  const [hovering, setHovering] = useState(false);
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+
+  const getDaysRemaining = (expiryStr?: string): number => {
+    if (!expiryStr) return 999;
+    const expiry = new Date(expiryStr);
+    if (isNaN(expiry.getTime())) return 999;
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    expiry.setHours(0, 0, 0, 0);
+    const diffTime = expiry.getTime() - now.getTime();
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  };
+
+  const fitDays = getDaysRemaining(compliance.fitnessExpiry);
+  const rcDays = getDaysRemaining(compliance.rcExpiry);
+  const insDays = getDaysRemaining(compliance.insuranceExpiry);
+  const pucDays = getDaysRemaining(compliance.pucExpiry);
+
+  const getDocState = (days: number): "valid" | "expiring" | "invalid" => {
+    if (days < 15) return "invalid";
+    if (days <= 30) return "expiring";
+    return "valid";
+  };
+
+  const docs = {
+    fit: getDocState(fitDays),
+    rc: getDocState(rcDays),
+    ins: getDocState(insDays),
+    puc: getDocState(pucDays),
   };
 
   const docConfig = (state: "valid" | "expiring" | "invalid") => {
     switch (state) {
       case "valid":
-        return "bg-tertiary";
+        return "bg-[#34a853]";
       case "expiring":
-        return "bg-warning";
+        return "bg-[#f59e0b]";
       case "invalid":
-        return "bg-error";
+        return "bg-[#ef4444]";
       default:
         return "bg-outline";
     }
   };
 
-  const { label, color, icon } = statusConfig[status];
+  const expiredDocsList: string[] = [];
+  const expiringDocsList: string[] = [];
+
+  const checkDocAlert = (name: string, days: number) => {
+    if (days < 0) {
+      expiredDocsList.push(`${name} expired ${Math.abs(days)} day(s) ago`);
+    } else if (days < 15) {
+      expiredDocsList.push(`${name} expiring in ${days} day(s)`);
+    } else if (days <= 30) {
+      expiringDocsList.push(`${name} expiring in ${days} day(s)`);
+    }
+  };
+
+  checkDocAlert("Fitness Certificate", fitDays);
+  checkDocAlert("Registration Certificate (RC)", rcDays);
+  checkDocAlert("Insurance", insDays);
+  checkDocAlert("PUC", pucDays);
+
+  let overallStatus: "all-good" | "expiring-soon" | "expired-docs" = "all-good";
+  let tooltipText = "All documents are up-to-date (expiry > 30 days)";
+
+  if (expiredDocsList.length > 0) {
+    overallStatus = "expired-docs";
+    tooltipText = `Critical: ${expiredDocsList.join(", ")}`;
+  } else if (expiringDocsList.length > 0) {
+    overallStatus = "expiring-soon";
+    tooltipText = `Warning: ${expiringDocsList.join(", ")}`;
+  }
+
+  const cardStyleConfig = {
+    "all-good": {
+      cardBg: "bg-[#f4fbf7] hover:bg-[#ebf8f0]",
+      cardBorder: "border-[#d8ecd8]/70",
+      leftBorder: "border-l-4 border-l-[#34a853]",
+      badgeBg: "bg-[#e6f6ec] text-[#137333]",
+      label: "All Good",
+      icon: "check_circle",
+    },
+    "expiring-soon": {
+      cardBg: "bg-[#fffbf0] hover:bg-[#fff7e0]",
+      cardBorder: "border-[#fde68a]/50",
+      leftBorder: "border-l-4 border-l-[#f59e0b]",
+      badgeBg: "bg-[#fef3c7] text-[#b45309]",
+      label: "Expiring Soon",
+      icon: "warning",
+    },
+    "expired-docs": {
+      cardBg: "bg-[#fff5f5] hover:bg-[#ffebeb]",
+      cardBorder: "border-[#fecaca]/50",
+      leftBorder: "border-l-4 border-l-[#ef4444]",
+      badgeBg: "bg-[#fee2e2] text-[#b91c1c]",
+      label: "Expired Docs",
+      icon: "error",
+    },
+  };
+
+  const { cardBg, cardBorder, leftBorder, badgeBg, label, icon } = cardStyleConfig[overallStatus];
 
   return (
     <div
-      className={`group bg-surface-container-lowest rounded-xl p-5 shadow-[0px_20px_40px_rgba(23,28,31,0.06)] border border-outline-variant/15 relative overflow-hidden transition-all hover:shadow-[0px_30px_50px_rgba(23,28,31,0.1)] ${
-        status === "expired-docs" ? "border-l-4 border-l-error" : ""
-      }`}
+      onMouseEnter={() => setHovering(true)}
+      onMouseLeave={() => setHovering(false)}
+      onMouseMove={(e) => setMousePos({ x: e.clientX, y: e.clientY })}
+      className={`group ${cardBg} ${cardBorder} ${leftBorder} rounded-xl p-5 shadow-[0px_20px_40px_rgba(23,28,31,0.06)] border relative overflow-hidden transition-all duration-300 hover:shadow-[0px_30px_50px_rgba(23,28,31,0.1)]`}
     >
       {/* Header */}
       <div className="flex justify-between items-start mb-4">
@@ -82,7 +159,7 @@ export default function VehicleCard({
               {vehicleType}
             </span>
           </div>
-          <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full ${color}`}>
+          <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full ${badgeBg}`}>
             <span className="material-symbols-outlined text-[1rem]" style={{ fontVariationSettings: "'FILL' 1" }}>
               {icon}
             </span>
@@ -127,7 +204,7 @@ export default function VehicleCard({
         <div className="flex justify-between items-center px-1">
           {[
             { label: "Fit", key: "fit" as const, icon: "verified" },
-            { label: "Perm", key: "perm" as const, icon: "description" },
+            { label: "RC", key: "rc" as const, icon: "app_registration" },
             { label: "Ins", key: "ins" as const, icon: "health_and_safety" },
             { label: "PUC", key: "puc" as const, icon: "cloud" },
           ].map((doc) => (
@@ -172,6 +249,28 @@ export default function VehicleCard({
           </Link>
         </div>
       </div>
+
+      {/* Dynamic Cursor Tooltip */}
+      {hovering && (
+        <div
+          className="fixed pointer-events-none z-50 px-3 py-2 bg-slate-900/95 backdrop-blur-md text-white text-[11px] font-semibold rounded-lg shadow-xl border border-white/10 max-w-[260px] flex items-center gap-1.5 transition-all duration-100 ease-out"
+          style={{
+            left: `${mousePos.x + 12}px`,
+            top: `${mousePos.y - 36}px`,
+          }}
+        >
+          {overallStatus === "all-good" && (
+            <span className="material-symbols-outlined text-[1rem] text-[#34a853]">check_circle</span>
+          )}
+          {overallStatus === "expiring-soon" && (
+            <span className="material-symbols-outlined text-[1rem] text-[#f59e0b]">warning</span>
+          )}
+          {overallStatus === "expired-docs" && (
+            <span className="material-symbols-outlined text-[1rem] text-[#ef4444]">error</span>
+          )}
+          <span className="leading-tight">{tooltipText}</span>
+        </div>
+      )}
     </div>
   );
 }
