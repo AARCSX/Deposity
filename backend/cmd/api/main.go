@@ -16,6 +16,7 @@ import (
 	"github.com/Akshansh-29072005/Deposity/backend/internal/maintenance"
 	"github.com/Akshansh-29072005/Deposity/backend/internal/platform/cache"
 	"github.com/Akshansh-29072005/Deposity/backend/internal/platform/database"
+	"github.com/Akshansh-29072005/Deposity/backend/internal/platform/mail"
 	"github.com/Akshansh-29072005/Deposity/backend/internal/platform/middleware"
 	"github.com/Akshansh-29072005/Deposity/backend/internal/settings"
 	"github.com/Akshansh-29072005/Deposity/backend/internal/trips"
@@ -45,6 +46,12 @@ func main() {
 	// Run auto-migrations
 	if err := database.RunMigrations(ctx, pool, "migrations"); err != nil {
 		log.Fatalf("[main] FATAL: Database migrations failed: %v", err)
+	}
+
+	// Start compliance background worker
+	if cfg.BrevoAPIKey != "" {
+		mailClient := mail.NewClient(cfg.BrevoAPIKey, cfg.EmailDeposityWelcomeFrom)
+		vehicles.StartComplianceWorker(context.Background(), pool, mailClient)
 	}
 
 	// 3. Initialize Gin engine

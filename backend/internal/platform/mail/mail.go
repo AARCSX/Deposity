@@ -216,3 +216,203 @@ func (c *Client) SendWelcomeEmail(toEmail, toName, orgName, orgSlug, tenantID st
 
 	return nil
 }
+
+func (c *Client) SendExpiryReminderEmail(toEmail, toName, vehicleRegNum, docName string, expiryDate time.Time, daysLeft int) error {
+	if c.apiKey == "" {
+		return fmt.Errorf("brevo API key is not configured")
+	}
+
+	accentColor := "#f59e0b" // amber
+	if daysLeft <= 1 {
+		accentColor = "#ef4444" // red
+	}
+
+	dateStr := expiryDate.Format("02 Jan 2006")
+
+	htmlContent := fmt.Sprintf(`<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Document Expiration Warning</title>
+  <style>
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background-color: #030712;
+      color: #f3f4f6;
+      margin: 0;
+      padding: 40px 20px;
+    }
+    .card {
+      max-width: 580px;
+      margin: 0 auto;
+      background: #0f172a;
+      border: 1px solid rgba(245, 158, 11, 0.15);
+      border-radius: 24px;
+      padding: 40px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+    }
+    .logo {
+      color: #6366f1;
+      font-size: 24px;
+      font-weight: 700;
+      letter-spacing: 0.15em;
+      margin-bottom: 30px;
+      text-transform: uppercase;
+      text-align: center;
+    }
+    .warning-badge {
+      display: inline-block;
+      background-color: %s20;
+      color: %s;
+      border: 1px solid %s40;
+      padding: 6px 16px;
+      border-radius: 9999px;
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 24px;
+    }
+    h1 {
+      color: #f3f4f6;
+      font-size: 26px;
+      font-weight: 600;
+      margin-top: 0;
+      margin-bottom: 16px;
+    }
+    p {
+      color: #94a3b8;
+      line-height: 1.7;
+      font-size: 15px;
+      margin-top: 0;
+      margin-bottom: 24px;
+    }
+    .details-box {
+      background: #090d16;
+      border: 1px solid rgba(245, 158, 11, 0.2);
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 30px;
+    }
+    .row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      font-size: 14px;
+    }
+    .row:last-child {
+      margin-bottom: 0;
+    }
+    .label {
+      color: #64748b;
+    }
+    .value {
+      color: #e2e8f0;
+      font-weight: 600;
+    }
+    .btn {
+      display: block;
+      background: #6366f1;
+      color: #ffffff !important;
+      text-align: center;
+      padding: 14px 24px;
+      border-radius: 12px;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 15px;
+      transition: background 0.2s ease;
+      margin-top: 30px;
+    }
+    .btn:hover {
+      background: #4f46e5;
+    }
+    .footer {
+      text-align: center;
+      color: #475569;
+      font-size: 12px;
+      margin-top: 30px;
+    }
+  </style>
+</head>
+<body>
+  <div class="card" style="border-color: %s30;">
+    <div class="logo">Deposity</div>
+    <div style="text-align: center;">
+      <span class="warning-badge">%d Days Remaining</span>
+    </div>
+    <h1 style="text-align: center;">Compliance Expiry Warning</h1>
+    <p>Hello %s,</p>
+    <p>This is an automated notification to alert you that a critical compliance document for your vehicle is set to expire soon. Please take immediate action to renew this document and remain compliant.</p>
+    
+    <div class="details-box" style="border-color: %s30;">
+      <div class="row">
+        <span class="label">Vehicle:</span>
+        <span class="value" style="font-family: monospace;">%s</span>
+      </div>
+      <div class="row">
+        <span class="label">Document:</span>
+        <span class="value" style="color: %s;">%s</span>
+      </div>
+      <div class="row">
+        <span class="label">Expiry Date:</span>
+        <span class="value">%s</span>
+      </div>
+      <div class="row">
+        <span class="label">Time Remaining:</span>
+        <span class="value" style="color: %s;">%d day(s)</span>
+      </div>
+    </div>
+
+    <p>Failure to maintain active compliance certificates may result in state penalties and operational disruptions for your fleet.</p>
+
+    <a href="https://deposity.aarcsx.com/vehicles" class="btn">Update Vehicle Documents</a>
+    
+    <div class="footer">
+      &copy; 2026 Deposity. All rights reserved.
+    </div>
+  </div>
+</body>
+</html>`, accentColor, accentColor, accentColor, accentColor, daysLeft, toName, accentColor, vehicleRegNum, accentColor, docName, dateStr, accentColor, daysLeft)
+
+	payload := brevoPayload{
+		Sender: brevoSender{
+			Name:  "Deposity Security",
+			Email: "security@deposity.aarcsx.com",
+		},
+		To: []brevoRecipient{
+			{
+				Email: toEmail,
+				Name:  toName,
+			},
+		},
+		Subject:     fmt.Sprintf("URGENT: %s for %s expires in %d days", docName, vehicleRegNum, daysLeft),
+		HTMLContent: htmlContent,
+	}
+
+	bodyBytes, err := json.Marshal(payload)
+	if err != nil {
+		return fmt.Errorf("failed to marshal payload: %w", err)
+	}
+
+	req, err := http.NewRequest("POST", "https://api.brevo.com/v3/smtp/email", bytes.NewBuffer(bodyBytes))
+	if err != nil {
+		return fmt.Errorf("failed to create http request: %w", err)
+	}
+
+	req.Header.Set("accept", "application/json")
+	req.Header.Set("api-key", c.apiKey)
+	req.Header.Set("content-type", "application/json")
+
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to send post request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return fmt.Errorf("unexpected status code from Brevo API: %d", resp.StatusCode)
+	}
+
+	return nil
+}
