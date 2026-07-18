@@ -8,6 +8,7 @@ export interface TripCardProps {
   material: string;
   driver: { name: string; avatar: string };
   financials: { total: string; advance: string; balance: string };
+  onUpdateStatus?: () => void;
 }
 
 export default function TripCard({
@@ -20,6 +21,7 @@ export default function TripCard({
   material,
   driver,
   financials,
+  onUpdateStatus,
 }: TripCardProps) {
   const statusColors = {
     "in-transit": "bg-secondary-container text-on-secondary-container",
@@ -135,14 +137,12 @@ export default function TripCard({
               Record Payment
             </button>
           ) : (
-            <>
-              <button className="flex-1 py-2 text-sm font-bold rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors active:scale-[0.98]">
-                Update Status
-              </button>
-              <button className="flex-1 py-2 text-sm font-bold rounded-lg border border-outline-variant/30 text-on-surface hover:bg-surface-container-high transition-colors active:scale-[0.98]">
-                Details
-              </button>
-            </>
+            <button 
+              onClick={onUpdateStatus}
+              className="flex-1 py-2 text-sm font-bold rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors active:scale-[0.98]"
+            >
+              Update Status
+            </button>
           )}
         </div>
       </div>

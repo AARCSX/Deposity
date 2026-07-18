@@ -8,6 +8,7 @@ interface CreateTripWizardProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (data: TripRecord) => Promise<void>;
+  tripToEdit?: TripRecord | null;
 }
 
 const initialData: TripRecord = {
@@ -42,7 +43,7 @@ const STEPS = [
   { id: 3, title: "Financials", subtitle: "Freight & Advance" },
 ];
 
-export default function CreateTripWizard({ isOpen, onClose, onSubmit }: CreateTripWizardProps) {
+export default function CreateTripWizard({ isOpen, onClose, onSubmit, tripToEdit }: CreateTripWizardProps) {
   const [currentStep, setCurrentStep] = useState(0);
   const [formData, setFormData] = useState<TripRecord>(initialData);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -71,8 +72,40 @@ export default function CreateTripWizard({ isOpen, onClose, onSubmit }: CreateTr
         .then((res) => (res.ok ? res.json() : []))
         .then((data) => setDrivers(Array.isArray(data) ? data : []))
         .catch(() => setDrivers([]));
+
+      if (tripToEdit) {
+        // Format ISO dates from db back to datetime-local friendly format (YYYY-MM-DDTHH:MM)
+        const formatForInput = (isoStr?: string) => {
+          if (!isoStr) return "";
+          try {
+            const d = new Date(isoStr);
+            if (isNaN(d.getTime())) return "";
+            const pad = (num: number) => String(num).padStart(2, '0');
+            const year = d.getFullYear();
+            const month = pad(d.getMonth() + 1);
+            const date = pad(d.getDate());
+            const hours = pad(d.getHours());
+            const minutes = pad(d.getMinutes());
+            return `${year}-${month}-${date}T${hours}:${minutes}`;
+          } catch {
+            return "";
+          }
+        };
+
+        setFormData({
+          ...tripToEdit,
+          route: {
+            ...tripToEdit.route,
+            originDate: formatForInput(tripToEdit.route.originDate),
+            destinationDate: formatForInput(tripToEdit.route.destinationDate),
+          }
+        });
+      } else {
+        setFormData(initialData);
+      }
+      setCurrentStep(0);
     }
-  }, [isOpen]);
+  }, [isOpen, tripToEdit]);
 
   if (!isOpen) return null;
 
@@ -144,7 +177,9 @@ export default function CreateTripWizard({ isOpen, onClose, onSubmit }: CreateTr
         {/* Header & Progress */}
         <div className="bg-surface px-6 py-4 border-b border-outline-variant/15 flex justify-between items-center">
           <div>
-            <h2 className="text-xl font-bold text-on-surface">Create New Trip</h2>
+            <h2 className="text-xl font-bold text-on-surface">
+              {tripToEdit ? "Update Trip Status & Details" : "Create New Trip"}
+            </h2>
             <p className="text-sm text-on-surface-variant font-medium">Step {currentStep + 1} of {STEPS.length}: {STEPS[currentStep].title}</p>
           </div>
           <button onClick={onClose} className="p-2 rounded-full hover:bg-surface-container-high text-on-surface-variant transition-colors">
@@ -174,6 +209,20 @@ export default function CreateTripWizard({ isOpen, onClose, onSubmit }: CreateTr
           {currentStep === 0 && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5 animate-in slide-in-from-right-4 duration-300">
               <div className="md:col-span-2 text-sm text-on-surface-variant mb-2">Define the trip route and timeline.</div>
+              
+              <div className="md:col-span-2 space-y-1.5">
+                <label className="text-xs font-bold text-outline">Trip Status</label>
+                <select 
+                  value={formData.status}
+                  onChange={(e) => setFormData(f => ({...f, status: e.target.value as any}))}
+                  className="w-full bg-surface-container-highest border border-outline-variant/20 rounded-xl px-4 py-2.5 text-sm text-on-surface outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all font-medium"
+                >
+                  <option value="pending">Pending</option>
+                  <option value="in-transit">In Transit</option>
+                  <option value="delivered">Delivered</option>
+                </select>
+              </div>
+
               <Input label="Origin City/Location" placeholder="e.g. Mumbai, MH" value={formData.route.originName} onChange={(v: string) => setFormData(f => ({...f, route: {...f.route, originName: v}}))} />
               <div className="grid grid-cols-2 gap-3">
                 <Input 
@@ -334,7 +383,7 @@ export default function CreateTripWizard({ isOpen, onClose, onSubmit }: CreateTr
               disabled={isSubmitting}
               className="px-6 py-2.5 rounded-xl text-sm font-bold bg-primary text-white shadow-lg shadow-primary/20 hover:opacity-90 transition-opacity flex items-center gap-2"
             >
-              {isSubmitting ? "Creating..." : "Create Trip"}
+              {isSubmitting ? (tripToEdit ? "Saving..." : "Creating...") : (tripToEdit ? "Save Changes" : "Create Trip")}
               {!isSubmitting && <span className="material-symbols-outlined text-[18px]">check_circle</span>}
             </button>
           ) : (

@@ -17,6 +17,10 @@ function TripsContent() {
   const [trips, setTrips] = useState<TripRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [editingTrip, setEditingTrip] = useState<TripRecord | null>(null);
+  
+  const ITEMS_PER_PAGE = 5;
+  const [visibleCount, setVisibleCount] = useState(ITEMS_PER_PAGE);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -40,6 +44,7 @@ function TripsContent() {
       if (!response.ok) throw new Error("API unreachable");
       const data = await response.json();
       setTrips(Array.isArray(data) ? data : []);
+      setVisibleCount(ITEMS_PER_PAGE); // Reset pagination on refresh
     } catch {
       setTrips([]);
     } finally {
@@ -52,22 +57,27 @@ function TripsContent() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleCreateSubmit = async (data: TripRecord) => {
+  const handleWizardSubmit = async (data: TripRecord) => {
+    const isEdit = !!editingTrip;
+    const url = isEdit ? `/trips/${editingTrip?.id}` : "/trips";
+    const method = isEdit ? "PUT" : "POST";
+
     try {
-      const response = await authenticatedFetch("/trips", {
-        method: "POST",
+      const response = await authenticatedFetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data)
       });
       if (response.ok) {
         loadTrips(); // Refetch
         setIsCreateModalOpen(false);
+        setEditingTrip(null);
       } else {
         const err = await response.json().catch(() => ({}));
-        alert(`Failed to create trip: ${err.error || response.statusText}`);
+        alert(`Failed to save trip: ${err.error || response.statusText}`);
       }
     } catch (e: any) {
-      alert(`Network error creating trip: ${e.message}`);
+      alert(`Network error saving trip: ${e.message}`);
     }
   };
 
@@ -201,15 +211,25 @@ function TripsContent() {
               <p className="text-sm font-semibold text-on-surface">No trips found</p>
               <p className="text-xs text-on-surface-variant mt-1 max-w-xs">Create your first trip by clicking the &quot;New Trip&quot; button above.</p>
             </div>
-          ) : trips.map((trip) => (
-            <TripCard key={trip.id || trip.route.originName} {...mapToCardProps(trip)} />
+          ) : trips.slice(0, visibleCount).map((trip) => (
+            <TripCard 
+              key={trip.id || trip.route.originName} 
+              {...mapToCardProps(trip)} 
+              onUpdateStatus={() => {
+                setEditingTrip(trip);
+                setIsCreateModalOpen(true);
+              }}
+            />
           ))}
         </div>
 
-        {/* Load More — only show when there are trips */}
-        {trips.length > 0 && (
+        {/* Load More — only show when there are more trips to load */}
+        {trips.length > visibleCount && (
           <div className="py-8 text-center">
-            <button className="text-sm font-bold text-primary hover:text-primary-container transition-colors flex items-center justify-center gap-2 mx-auto group">
+            <button 
+              onClick={() => setVisibleCount(prev => prev + ITEMS_PER_PAGE)}
+              className="text-sm font-bold text-primary hover:text-primary-container transition-colors flex items-center justify-center gap-2 mx-auto group"
+            >
               Load More Trips
               <span className="material-symbols-outlined group-hover:translate-y-0.5 transition-transform">expand_more</span>
             </button>
@@ -221,9 +241,11 @@ function TripsContent() {
           isOpen={isCreateModalOpen} 
           onClose={() => {
             setIsCreateModalOpen(false);
+            setEditingTrip(null);
             router.replace("/trips");
           }} 
-          onSubmit={handleCreateSubmit} 
+          onSubmit={handleWizardSubmit} 
+          tripToEdit={editingTrip}
         />
       </div>
     </>
