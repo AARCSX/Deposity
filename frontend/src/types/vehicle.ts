@@ -33,6 +33,8 @@ export interface ComplianceDocuments {
   pucIssuance?: string;
   fitnessExpiry: string;
   fitnessIssuance?: string;
+  fastagExpiry?: string;
+  fastagIssuance?: string;
   permitDetails: string; // JSON-serialized PermitData
 }
 

@@ -240,6 +240,7 @@ export default function Home() {
         { name: "Insurance Policy", expiry: v.compliance?.insuranceExpiry },
         { name: "PUC Certificate", expiry: v.compliance?.pucExpiry },
         { name: "Fitness Certificate", expiry: v.compliance?.fitnessExpiry },
+        { name: "FASTag Tag Expiry", expiry: v.compliance?.fastagExpiry },
       ];
 
       const permit = parsePermitDetails(v.compliance?.permitDetails || "");

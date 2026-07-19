@@ -36,6 +36,7 @@ export default function Header({ onMenuClick }: { onMenuClick: () => void }) {
             { name: "Insurance", fullName: "Insurance Policy", expiry: v.compliance.insuranceExpiry },
             { name: "PUC", fullName: "PUC Certificate", expiry: v.compliance.pucExpiry },
             { name: "Fitness", fullName: "Fitness Certificate", expiry: v.compliance.fitnessExpiry },
+            { name: "FASTag", fullName: "FASTag Expiry", expiry: v.compliance.fastagExpiry },
           ];
           
           const permit = parsePermitDetails(v.compliance.permitDetails || "");

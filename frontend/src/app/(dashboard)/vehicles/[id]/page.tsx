@@ -38,13 +38,14 @@ export default function VehicleDetailPage() {
   });
 
   const [isFastagModalOpen, setIsFastagModalOpen] = useState(false);
+  const [isFastagSubmitting, setIsFastagSubmitting] = useState(false);
+  const [deletingFastagId, setDeletingFastagId] = useState<string | null>(null);
+  const [fastagError, setFastagError] = useState<string | null>(null);
   const [fastagForm, setFastagForm] = useState({
-    transactionId: "",
-    timestamp: "",
-    tollPlaza: "",
     amount: 0,
-    status: "Debited",
+    timestamp: new Date().toISOString().slice(0, 16),
     balance: 0,
+    referenceNo: "",
   });
 
   const fetchVehicleDetails = async () => {
@@ -260,13 +261,15 @@ export default function VehicleDetailPage() {
   // FASTag Handlers
   const handleFastagSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsFastagSubmitting(true);
+    setFastagError(null);
     try {
       const payload = {
-        transactionId: fastagForm.transactionId,
-        timestamp: new Date(fastagForm.timestamp).toISOString(),
-        tollPlaza: fastagForm.tollPlaza,
+        transactionId: fastagForm.referenceNo.trim() || `RECH-${Date.now()}`,
+        timestamp: fastagForm.timestamp ? new Date(fastagForm.timestamp).toISOString() : new Date().toISOString(),
+        tollPlaza: "FASTag Top-Up",
         amount: Number(fastagForm.amount),
-        status: fastagForm.status,
+        status: "Recharged",
         balance: Number(fastagForm.balance),
       };
 
@@ -278,38 +281,44 @@ export default function VehicleDetailPage() {
 
       if (res.ok) {
         setIsFastagModalOpen(false);
-        // reset form
         setFastagForm({
-          transactionId: "",
-          timestamp: "",
-          tollPlaza: "",
           amount: 0,
-          status: "Debited",
+          timestamp: new Date().toISOString().slice(0, 16),
           balance: 0,
+          referenceNo: "",
         });
         fetchFASTag();
       } else {
         const errData = await res.json().catch(() => ({}));
-        alert(errData.error || "Failed to save transaction");
+        setFastagError(errData.error || errData.message || "Failed to save FASTag recharge. Please check details and try again.");
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      setFastagError(err?.message || "An unexpected error occurred. Please try again.");
+    } finally {
+      setIsFastagSubmitting(false);
     }
   };
 
   const handleDeleteFastag = async (fastagId: string) => {
-    if (!confirm("Are you sure you want to delete this transaction log?")) return;
+    if (!confirm("Are you sure you want to delete this FASTag recharge audit record?")) return;
+    setDeletingFastagId(fastagId);
     try {
       const res = await authenticatedFetch(`/vehicles/${id}/fastag/${fastagId}`, {
         method: "DELETE",
       });
       if (res.ok) {
+        setFastagLogs((prev) => prev.filter((log) => log.id !== fastagId));
         fetchFASTag();
       } else {
-        alert("Failed to delete transaction log");
+        const errData = await res.json().catch(() => ({}));
+        alert(errData.error || errData.message || "Failed to delete transaction log");
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      alert(err?.message || "An error occurred while deleting transaction log");
+    } finally {
+      setDeletingFastagId(null);
     }
   };
 
@@ -689,61 +698,102 @@ export default function VehicleDetailPage() {
 
         {activeTab === "fastag" && (
           <div className="bg-surface-container-lowest rounded-xl p-6 border border-outline-variant/15 shadow-sm">
-            <div className="flex justify-between items-center mb-6">
+            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6">
               <div>
-                <h3 className="font-bold text-lg text-on-surface">FASTag Toll History</h3>
-                <p className="text-xs text-on-surface-variant">Review toll plaza payments, status, and account balance logs.</p>
+                <h3 className="font-bold text-lg text-on-surface flex items-center gap-2">
+                  <span className="material-symbols-outlined text-primary">local_offer</span>
+                  FASTag Balance & Recharge Audit Log
+                </h3>
+                <p className="text-xs text-on-surface-variant">Time-stamped audit log of money loaded into vehicle FASTag balance.</p>
               </div>
               <button 
-                onClick={() => setIsFastagModalOpen(true)}
-                className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-bold text-white shadow-md shadow-primary/20 hover:opacity-90 transition-opacity active:scale-[0.98]"
+                onClick={() => {
+                  setFastagForm({
+                    amount: 0,
+                    timestamp: new Date().toISOString().slice(0, 16),
+                    balance: fastagLogs.length > 0 ? fastagLogs[0].balance : 0,
+                    referenceNo: "",
+                  });
+                  setIsFastagModalOpen(true);
+                }}
+                className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-white shadow-md shadow-primary/20 hover:opacity-90 transition-opacity active:scale-[0.98] shrink-0 self-start sm:self-auto"
               >
                 <span className="material-symbols-outlined text-sm">add</span>
-                Add Transaction
+                Record FASTag Recharge
               </button>
             </div>
 
+            {fastagLogs.length > 0 && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+                <div className="p-4 bg-surface-container-low rounded-xl border border-outline-variant/10 flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-on-surface-variant font-medium uppercase tracking-wider">Latest FASTag Balance</p>
+                    <p className="text-2xl font-bold text-tertiary mt-0.5">₹{fastagLogs[0].balance.toLocaleString()}</p>
+                  </div>
+                  <span className="material-symbols-outlined text-3xl text-tertiary/40">account_balance_wallet</span>
+                </div>
+                <div className="p-4 bg-surface-container-low rounded-xl border border-outline-variant/10 flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-on-surface-variant font-medium uppercase tracking-wider">Total Money Added</p>
+                    <p className="text-2xl font-bold text-on-surface mt-0.5">
+                      ₹{fastagLogs.reduce((sum, l) => sum + (l.amount || 0), 0).toLocaleString()}
+                    </p>
+                  </div>
+                  <span className="material-symbols-outlined text-3xl text-primary/40">payments</span>
+                </div>
+              </div>
+            )}
+
             {fastagLogs.length === 0 ? (
               <div className="py-12 text-center border border-dashed border-outline-variant/20 rounded-xl bg-surface-container-low/30">
-                <span className="material-symbols-outlined text-4xl text-outline mb-2">toll</span>
-                <p className="text-sm font-bold text-on-surface">No FASTag logs found</p>
-                <p className="text-xs text-on-surface-variant mt-1">Add transaction records or load histories for this vehicle.</p>
+                <span className="material-symbols-outlined text-4xl text-outline mb-2">account_balance_wallet</span>
+                <p className="text-sm font-bold text-on-surface">No FASTag recharge entries recorded</p>
+                <p className="text-xs text-on-surface-variant mt-1">Record money put into this vehicle's FASTag to maintain an audit trail.</p>
               </div>
             ) : (
               <div className="overflow-x-auto rounded-xl border border-outline-variant/10">
                 <table className="min-w-full text-left text-sm">
                   <thead className="bg-surface-container-high">
                     <tr>
-                      <th className="px-4 py-3 font-semibold text-on-surface-variant">Transaction ID</th>
-                      <th className="px-4 py-3 font-semibold text-on-surface-variant">Timestamp</th>
-                      <th className="px-4 py-3 font-semibold text-on-surface-variant">Toll Plaza</th>
-                      <th className="px-4 py-3 font-semibold text-on-surface-variant">Amount</th>
-                      <th className="px-4 py-3 font-semibold text-on-surface-variant">Status</th>
-                      <th className="px-4 py-3 font-semibold text-on-surface-variant">Balance</th>
+                      <th className="px-4 py-3 font-semibold text-on-surface-variant">Recharge Date & Time</th>
+                      <th className="px-4 py-3 font-semibold text-on-surface-variant">Amount Put In (₹)</th>
+                      <th className="px-4 py-3 font-semibold text-on-surface-variant">Remaining Balance (₹)</th>
+                      <th className="px-4 py-3 font-semibold text-on-surface-variant">Ref / Txn ID</th>
                       <th className="px-4 py-3 font-semibold text-on-surface-variant text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-outline-variant/10">
                     {fastagLogs.map((log) => (
                       <tr key={log.id} className="hover:bg-primary/5 transition-colors">
-                        <td className="px-4 py-3 font-mono text-on-surface">{log.transactionId}</td>
-                        <td className="px-4 py-3 text-on-surface-variant">{new Date(log.timestamp).toLocaleString("en-GB")}</td>
-                        <td className="px-4 py-3 text-on-surface">{log.tollPlaza}</td>
-                        <td className="px-4 py-3 font-bold text-error">-₹{log.amount.toLocaleString()}</td>
-                        <td className="px-4 py-3">
-                          <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${
-                            log.status === "Debited" ? "bg-tertiary/10 text-tertiary" : "bg-error/10 text-error"
-                          }`}>
-                            {log.status}
-                          </span>
+                        <td className="px-4 py-3 font-medium text-on-surface">
+                          {new Date(log.timestamp).toLocaleString("en-IN", {
+                            day: "2-digit",
+                            month: "short",
+                            year: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
                         </td>
-                        <td className="px-4 py-3 font-semibold text-on-surface">₹{log.balance.toLocaleString()}</td>
+                        <td className="px-4 py-3 font-bold text-tertiary">+₹{log.amount.toLocaleString()}</td>
+                        <td className="px-4 py-3 font-bold text-on-surface">₹{log.balance.toLocaleString()}</td>
+                        <td className="px-4 py-3 font-mono text-xs text-on-surface-variant">{log.transactionId}</td>
                         <td className="px-4 py-3 text-right">
                           <button 
+                            disabled={deletingFastagId === log.id}
                             onClick={() => handleDeleteFastag(log.id)}
-                            className="text-error hover:text-error/85 text-xs font-semibold"
+                            className="inline-flex items-center gap-1.5 text-error hover:text-error/90 hover:bg-error/10 px-2.5 py-1 rounded-lg text-xs font-bold transition-all disabled:opacity-50 cursor-pointer"
                           >
-                            Delete
+                            {deletingFastagId === log.id ? (
+                              <>
+                                <span className="w-3 h-3 border-2 border-error border-t-transparent rounded-full animate-spin"></span>
+                                <span>Deleting...</span>
+                              </>
+                            ) : (
+                              <>
+                                <span className="material-symbols-outlined text-sm">delete</span>
+                                <span>Delete</span>
+                              </>
+                            )}
                           </button>
                         </td>
                       </tr>
@@ -976,12 +1026,18 @@ export default function VehicleDetailPage() {
         </div>
       )}
 
-      {/* FASTag Modal Form */}
+      {/* FASTag Recharge Modal Form */}
       {isFastagModalOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
           <div className="bg-surface-container-lowest border border-outline-variant/15 w-full max-w-md rounded-2xl p-6 shadow-2xl animate-in zoom-in-95 duration-200">
             <div className="flex justify-between items-center mb-6">
-              <h3 className="font-bold text-lg text-on-surface">Add FASTag Transaction</h3>
+              <div>
+                <h3 className="font-bold text-lg text-on-surface flex items-center gap-2">
+                  <span className="material-symbols-outlined text-primary">add_card</span>
+                  Record FASTag Recharge
+                </h3>
+                <p className="text-xs text-on-surface-variant">Log money added to vehicle FASTag for audit trail.</p>
+              </div>
               <button 
                 onClick={() => setIsFastagModalOpen(false)} 
                 className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-surface-container-low transition-colors"
@@ -990,86 +1046,82 @@ export default function VehicleDetailPage() {
               </button>
             </div>
             <form onSubmit={handleFastagSubmit} className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1">Transaction ID</label>
-                <input 
-                  type="text" 
-                  required
-                  placeholder="e.g. FTG1002345"
-                  className="w-full bg-surface border border-outline-variant/20 rounded-xl px-4 py-2.5 text-sm text-on-surface focus:border-primary outline-none font-mono"
-                  value={fastagForm.transactionId}
-                  onChange={(e) => setFastagForm({ ...fastagForm, transactionId: e.target.value })}
-                />
-              </div>
+              {fastagError && (
+                <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-600 text-xs font-semibold flex items-center gap-2 animate-in fade-in duration-200">
+                  <span className="material-symbols-outlined text-base text-red-500">error</span>
+                  <span className="flex-1">{fastagError}</span>
+                </div>
+              )}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1">Amount (₹)</label>
+                  <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1">Amount Put In (₹)</label>
                   <input 
                     type="number" 
                     required
-                    className="w-full bg-surface border border-outline-variant/20 rounded-xl px-4 py-2.5 text-sm text-on-surface focus:border-primary outline-none"
-                    value={fastagForm.amount}
+                    min="1"
+                    placeholder="e.g. 2000"
+                    className="w-full bg-surface border border-outline-variant/20 rounded-xl px-4 py-2.5 text-sm text-on-surface focus:border-primary outline-none font-semibold"
+                    value={fastagForm.amount || ""}
                     onChange={(e) => setFastagForm({ ...fastagForm, amount: parseFloat(e.target.value) || 0 })}
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1">Status</label>
-                  <select 
-                    className="w-full bg-surface border border-outline-variant/20 rounded-xl px-4 py-2.5 text-sm text-on-surface focus:border-primary outline-none"
-                    value={fastagForm.status}
-                    onChange={(e) => setFastagForm({ ...fastagForm, status: e.target.value })}
-                  >
-                    <option value="Debited">Debited</option>
-                    <option value="Failed">Failed</option>
-                  </select>
-                </div>
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1">Toll Plaza</label>
-                <input 
-                  type="text" 
-                  required
-                  placeholder="e.g. Khed Shivapur Plaza"
-                  className="w-full bg-surface border border-outline-variant/20 rounded-xl px-4 py-2.5 text-sm text-on-surface focus:border-primary outline-none"
-                  value={fastagForm.tollPlaza}
-                  onChange={(e) => setFastagForm({ ...fastagForm, tollPlaza: e.target.value })}
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1">Remaining Balance</label>
+                  <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1">Remaining Balance (₹)</label>
                   <input 
                     type="number" 
                     required
-                    className="w-full bg-surface border border-outline-variant/20 rounded-xl px-4 py-2.5 text-sm text-on-surface focus:border-primary outline-none"
-                    value={fastagForm.balance}
+                    placeholder="e.g. 3500"
+                    className="w-full bg-surface border border-outline-variant/20 rounded-xl px-4 py-2.5 text-sm text-on-surface focus:border-primary outline-none font-semibold"
+                    value={fastagForm.balance || ""}
                     onChange={(e) => setFastagForm({ ...fastagForm, balance: parseFloat(e.target.value) || 0 })}
                   />
                 </div>
-                <div>
-                  <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1">Timestamp</label>
-                  <input 
-                    type="datetime-local" 
-                    required
-                    className="w-full bg-surface border border-outline-variant/20 rounded-xl px-4 py-2.5 text-sm text-on-surface focus:border-primary outline-none"
-                    value={fastagForm.timestamp}
-                    onChange={(e) => setFastagForm({ ...fastagForm, timestamp: e.target.value })}
-                  />
-                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1">Recharge Date & Time</label>
+                <input 
+                  type="datetime-local" 
+                  required
+                  className="w-full bg-surface border border-outline-variant/20 rounded-xl px-4 py-2.5 text-sm text-on-surface focus:border-primary outline-none"
+                  value={fastagForm.timestamp}
+                  onChange={(e) => setFastagForm({ ...fastagForm, timestamp: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1">Reference / Txn ID (Optional)</label>
+                <input 
+                  type="text" 
+                  placeholder="e.g. BANK-TXN-908123"
+                  className="w-full bg-surface border border-outline-variant/20 rounded-xl px-4 py-2.5 text-sm text-on-surface focus:border-primary outline-none font-mono"
+                  value={fastagForm.referenceNo}
+                  onChange={(e) => setFastagForm({ ...fastagForm, referenceNo: e.target.value })}
+                />
               </div>
               <div className="flex gap-3 justify-end pt-4">
                 <button 
                   type="button" 
+                  disabled={isFastagSubmitting}
                   onClick={() => setIsFastagModalOpen(false)}
-                  className="px-4 py-2 border border-outline-variant/20 rounded-xl text-sm font-semibold hover:bg-surface-container-low transition-colors"
+                  className="px-4 py-2 border border-outline-variant/20 rounded-xl text-sm font-semibold hover:bg-surface-container-low transition-colors disabled:opacity-50"
                 >
                   Cancel
                 </button>
                 <button 
                   type="submit"
-                  className="px-5 py-2 bg-primary text-white rounded-xl text-sm font-bold shadow-md shadow-primary/10 hover:opacity-90 transition-opacity"
+                  disabled={isFastagSubmitting}
+                  className="px-5 py-2 bg-primary text-white rounded-xl text-sm font-bold shadow-md shadow-primary/10 hover:opacity-90 active:scale-95 disabled:opacity-50 transition-all flex items-center gap-2 cursor-pointer"
                 >
-                  Save
+                  {isFastagSubmitting ? (
+                    <>
+                      <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                      <span>Saving...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="material-symbols-outlined text-sm">check</span>
+                      <span>Save Recharge</span>
+                    </>
+                  )}
                 </button>
               </div>
             </form>

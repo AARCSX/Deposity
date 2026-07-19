@@ -22,6 +22,8 @@ export interface VehicleCardProps {
     pucIssuance?: string;
     fitnessExpiry: string;
     fitnessIssuance?: string;
+    fastagExpiry?: string;
+    fastagIssuance?: string;
     permitDetails: string;
   };
   gpsActive: boolean;
@@ -59,6 +61,7 @@ export default function VehicleCard({
   const rcDays = getDaysRemaining(compliance.rcExpiry);
   const insDays = getDaysRemaining(compliance.insuranceExpiry);
   const pucDays = getDaysRemaining(compliance.pucExpiry);
+  const ftDays = compliance.fastagExpiry ? getDaysRemaining(compliance.fastagExpiry) : 999;
 
   const permitData = parsePermitDetails(compliance.permitDetails);
   const npDays = permitData.hasNational ? getDaysRemaining(permitData.nationalExpiry) : 999;
@@ -79,6 +82,7 @@ export default function VehicleCard({
     rc: getDocState(rcDays),
     ins: getDocState(insDays),
     puc: getDocState(pucDays),
+    ft: compliance.fastagExpiry ? getDocState(ftDays) : ("inactive" as const),
     np: permitData.hasNational ? getDocState(npDays) : ("inactive" as const),
     sp: permitData.hasState && permitData.statePermits.length > 0 ? getDocState(spDays) : ("inactive" as const),
   };
@@ -114,6 +118,9 @@ export default function VehicleCard({
   checkDocAlert("Registration Certificate (RC)", rcDays);
   checkDocAlert("Insurance", insDays);
   checkDocAlert("PUC", pucDays);
+  if (compliance.fastagExpiry) {
+    checkDocAlert("FASTag Expiry", ftDays);
+  }
   if (permitData.hasNational) {
     checkDocAlert("National Permit", npDays);
   }
@@ -228,6 +235,7 @@ export default function VehicleCard({
             { label: "RC", key: "rc" as const, icon: "app_registration" },
             { label: "Ins", key: "ins" as const, icon: "health_and_safety" },
             { label: "PUC", key: "puc" as const, icon: "cloud" },
+            { label: "FT", key: "ft" as const, icon: "local_offer" },
             { label: "NP", key: "np" as const, icon: "public" },
             { label: "SP", key: "sp" as const, icon: "map" },
           ].map((doc) => (

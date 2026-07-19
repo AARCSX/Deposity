@@ -32,6 +32,8 @@ const initialData: VehicleRecord = {
     pucIssuance: "",
     fitnessExpiry: "",
     fitnessIssuance: "",
+    fastagExpiry: "",
+    fastagIssuance: "",
     permitDetails: "",
   },
   ownership: {
@@ -85,6 +87,8 @@ export default function CreateVehicleWizard({ isOpen, onClose, onSubmit, vehicle
             pucIssuance: formatDate(vehicleToEdit.compliance.pucIssuance),
             fitnessExpiry: formatDate(vehicleToEdit.compliance.fitnessExpiry),
             fitnessIssuance: formatDate(vehicleToEdit.compliance.fitnessIssuance),
+            fastagExpiry: formatDate(vehicleToEdit.compliance.fastagExpiry),
+            fastagIssuance: formatDate(vehicleToEdit.compliance.fastagIssuance),
           },
           ownership: {
             ...vehicleToEdit.ownership,
@@ -165,6 +169,8 @@ export default function CreateVehicleWizard({ isOpen, onClose, onSubmit, vehicle
         pucExpiry: formData.compliance.pucExpiry ? new Date(formData.compliance.pucExpiry).toISOString() : new Date().toISOString(),
         fitnessIssuance: formData.compliance.fitnessIssuance ? new Date(formData.compliance.fitnessIssuance).toISOString() : null,
         fitnessExpiry: formData.compliance.fitnessExpiry ? new Date(formData.compliance.fitnessExpiry).toISOString() : new Date().toISOString(),
+        fastagIssuance: formData.compliance.fastagIssuance ? new Date(formData.compliance.fastagIssuance).toISOString() : null,
+        fastagExpiry: formData.compliance.fastagExpiry ? new Date(formData.compliance.fastagExpiry).toISOString() : new Date().toISOString(),
         permitDetails: serializePermitDetails(permitData),
       },
       ownership: {
@@ -266,6 +272,8 @@ export default function CreateVehicleWizard({ isOpen, onClose, onSubmit, vehicle
                 <Input label="PUC Expiry Date" type="date" value={formData.compliance.pucExpiry} onChange={(v) => setFormData(f => ({...f, compliance: {...f.compliance, pucExpiry: v}}))} />
                 <Input label="Fitness Issuance Date" type="date" value={formData.compliance.fitnessIssuance || ""} onChange={(v) => setFormData(f => ({...f, compliance: {...f.compliance, fitnessIssuance: v}}))} />
                 <Input label="Fitness Expiry Date" type="date" value={formData.compliance.fitnessExpiry} onChange={(v) => setFormData(f => ({...f, compliance: {...f.compliance, fitnessExpiry: v}}))} />
+                <Input label="FASTag Issuance Date" type="date" value={formData.compliance.fastagIssuance || ""} onChange={(v) => setFormData(f => ({...f, compliance: {...f.compliance, fastagIssuance: v}}))} />
+                <Input label="FASTag Expiry Date" type="date" value={formData.compliance.fastagExpiry || ""} onChange={(v) => setFormData(f => ({...f, compliance: {...f.compliance, fastagExpiry: v}}))} />
               </div>
 
               {/* Permit Section */}
