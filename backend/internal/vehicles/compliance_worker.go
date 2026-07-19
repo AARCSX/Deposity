@@ -2,6 +2,7 @@ package vehicles
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -76,7 +77,7 @@ func runComplianceChecks(ctx context.Context, db *pgxpool.Pool, mailClient *mail
 
 	// 1. Query all vehicles
 	query := `
-		SELECT id, tenant_id, registration_number, rc_expiry, insurance_expiry, puc_expiry, fitness_expiry, permit_details
+		SELECT id, tenant_id, registration_number, rc_expiry, insurance_expiry, puc_expiry, fitness_expiry, fastag_expiry, permit_details
 		FROM vehicles
 	`
 	rows, err := db.Query(ctx, query)
@@ -94,17 +95,22 @@ func runComplianceChecks(ctx context.Context, db *pgxpool.Pool, mailClient *mail
 		InsuranceExpiry    time.Time
 		PUCExpiry          time.Time
 		FitnessExpiry      time.Time
+		FASTagExpiry       time.Time
 		PermitDetails      string
 	}
 
 	var list []vehicleCheck
 	for rows.Next() {
 		var vc vehicleCheck
+		var fastagExpiry sql.NullTime
 		var permitDetailsPtr *string
-		err := rows.Scan(&vc.ID, &vc.TenantID, &vc.RegistrationNumber, &vc.RCExpiry, &vc.InsuranceExpiry, &vc.PUCExpiry, &vc.FitnessExpiry, &permitDetailsPtr)
+		err := rows.Scan(&vc.ID, &vc.TenantID, &vc.RegistrationNumber, &vc.RCExpiry, &vc.InsuranceExpiry, &vc.PUCExpiry, &vc.FitnessExpiry, &fastagExpiry, &permitDetailsPtr)
 		if err != nil {
 			log.Printf("[compliance-worker] ERROR scanning vehicle row: %v", err)
 			continue
+		}
+		if fastagExpiry.Valid {
+			vc.FASTagExpiry = fastagExpiry.Time
 		}
 		if permitDetailsPtr != nil {
 			vc.PermitDetails = *permitDetailsPtr
@@ -127,6 +133,7 @@ func runComplianceChecks(ctx context.Context, db *pgxpool.Pool, mailClient *mail
 		checkDoc(toEmail, toName, v.RegistrationNumber, "Insurance Certificate", v.InsuranceExpiry, now, mailClient)
 		checkDoc(toEmail, toName, v.RegistrationNumber, "PUC Certificate", v.PUCExpiry, now, mailClient)
 		checkDoc(toEmail, toName, v.RegistrationNumber, "Fitness Certificate", v.FitnessExpiry, now, mailClient)
+		checkDoc(toEmail, toName, v.RegistrationNumber, "FASTag Expiry", v.FASTagExpiry, now, mailClient)
 
 		// Parse and check permits
 		if v.PermitDetails != "" {

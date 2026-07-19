@@ -26,6 +26,8 @@ type Vehicle struct {
 	PUCIssuance        *time.Time     `json:"pucIssuance" db:"puc_issuance"`
 	FitnessExpiry      time.Time      `json:"fitnessExpiry" db:"fitness_expiry"`
 	FitnessIssuance    *time.Time     `json:"fitnessIssuance" db:"fitness_issuance"`
+	FASTagExpiry       *time.Time     `json:"fastagExpiry" db:"fastag_expiry"`
+	FASTagIssuance     *time.Time     `json:"fastagIssuance" db:"fastag_issuance"`
 	PermitDetails      string         `json:"permitDetails" db:"permit_details"`
 	OwnershipType      string         `json:"ownershipType" db:"ownership_type"`
 	DriverID           sql.NullString `json:"driverId" db:"driver_id"`

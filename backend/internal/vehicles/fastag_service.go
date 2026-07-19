@@ -12,13 +12,19 @@ import (
 func (s *Service) CreateFASTag(ctx context.Context, tenantID, vehicleID string, req CreateFASTagRequest) (*FASTagLog, error) {
 	ts, err := time.Parse(time.RFC3339, req.Timestamp)
 	if err != nil {
-		ts, err = time.Parse("2006-01-02 15:04:05", req.Timestamp)
-		if err != nil {
-			ts, err = time.Parse("2006-01-02", req.Timestamp)
-		}
-		if err != nil {
-			return nil, apperror.BadRequest("invalid timestamp format")
-		}
+		ts, err = time.Parse(time.RFC3339Nano, req.Timestamp)
+	}
+	if err != nil {
+		ts, err = time.Parse("2006-01-02T15:04:05", req.Timestamp)
+	}
+	if err != nil {
+		ts, err = time.Parse("2006-01-02T15:04", req.Timestamp)
+	}
+	if err != nil {
+		ts, err = time.Parse("2006-01-02", req.Timestamp)
+	}
+	if err != nil {
+		return nil, apperror.BadRequest("invalid timestamp format")
 	}
 
 	status := "Debited"

@@ -1,6 +1,7 @@
 package vehicles
 
 import (
+	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -31,12 +32,13 @@ func (h *Handler) CreateFASTag(c *gin.Context) {
 		return
 	}
 
-	log, err := h.service.CreateFASTag(c.Request.Context(), tenantID, vehicleID, req)
+	fastagEntry, err := h.service.CreateFASTag(c.Request.Context(), tenantID, vehicleID, req)
 	if err != nil {
+		log.Printf("[CreateFASTag] ERROR: %v (req: %+v)", err, req)
 		c.JSON(apperror.Resolve(err))
 		return
 	}
-	c.JSON(http.StatusCreated, log)
+	c.JSON(http.StatusCreated, fastagEntry)
 }
 
 func (h *Handler) DeleteFASTag(c *gin.Context) {

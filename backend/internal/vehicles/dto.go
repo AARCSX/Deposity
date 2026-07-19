@@ -23,6 +23,8 @@ type ComplianceDocuments struct {
 	PUCIssuance       *time.Time `json:"pucIssuance"`
 	FitnessExpiry     time.Time  `json:"fitnessExpiry" binding:"required"`
 	FitnessIssuance   *time.Time `json:"fitnessIssuance"`
+	FASTagExpiry      *time.Time `json:"fastagExpiry"`
+	FASTagIssuance    *time.Time `json:"fastagIssuance"`
 	PermitDetails     string     `json:"permitDetails"`
 }
 

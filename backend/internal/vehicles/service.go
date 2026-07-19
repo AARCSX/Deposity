@@ -89,6 +89,8 @@ func (s *Service) Create(ctx context.Context, tenantID string, req CreateVehicle
 		PUCIssuance:        req.Compliance.PUCIssuance,
 		FitnessExpiry:      req.Compliance.FitnessExpiry,
 		FitnessIssuance:    req.Compliance.FitnessIssuance,
+		FASTagExpiry:       req.Compliance.FASTagExpiry,
+		FASTagIssuance:     req.Compliance.FASTagIssuance,
 		PermitDetails:      req.Compliance.PermitDetails,
 		OwnershipType:      req.Ownership.OwnershipType,
 		DriverID:           driverID,
@@ -145,6 +147,8 @@ func (s *Service) Update(ctx context.Context, tenantID, id string, req UpdateVeh
 			v.PUCIssuance = req.Compliance.PUCIssuance
 			v.FitnessExpiry = req.Compliance.FitnessExpiry
 			v.FitnessIssuance = req.Compliance.FitnessIssuance
+			v.FASTagExpiry = req.Compliance.FASTagExpiry
+			v.FASTagIssuance = req.Compliance.FASTagIssuance
 			v.PermitDetails = req.Compliance.PermitDetails
 		}
 		if req.Ownership != nil {
@@ -258,6 +262,8 @@ func MapToResponse(v Vehicle) VehicleResponse {
 			PUCIssuance:       v.PUCIssuance,
 			FitnessExpiry:     v.FitnessExpiry,
 			FitnessIssuance:   v.FitnessIssuance,
+			FASTagExpiry:      v.FASTagExpiry,
+			FASTagIssuance:    v.FASTagIssuance,
 			PermitDetails:     v.PermitDetails,
 		},
 		Ownership: OwnershipStatus{
