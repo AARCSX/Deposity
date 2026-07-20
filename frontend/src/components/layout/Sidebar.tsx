@@ -94,17 +94,24 @@ export default function Sidebar({ isOpen, onClose }: { isOpen?: boolean; onClose
         </div>
 
         <div className="mt-auto flex flex-col gap-1 border-t border-slate-800 pt-4 px-2">
-          {footerItems.map((item) => (
-            <Link
-              key={item.name}
-              href={item.href}
-              className="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-white rounded-xl hover:bg-white/5 transition-all duration-300 hover:translate-x-1"
-              onClick={onClose}
-            >
-              <span className="material-symbols-outlined">{item.icon}</span>
-              {item.name}
-            </Link>
-          ))}
+          {footerItems.map((item) => {
+            const isActive = pathname === item.href;
+            return (
+              <Link
+                key={item.name}
+                href={item.href}
+                className={`flex items-center gap-3 px-4 py-3 rounded-xl mx-2 border-r-4 transition-all duration-300 hover:translate-x-1 ${
+                  isActive
+                    ? "bg-primary/10 text-primary border-primary font-bold"
+                    : "text-slate-400 hover:text-white hover:bg-white/5 border-transparent"
+                }`}
+                onClick={onClose}
+              >
+                <span className="material-symbols-outlined">{item.icon}</span>
+                {item.name}
+              </Link>
+            );
+          })}
         </div>
       </nav>
     </>
