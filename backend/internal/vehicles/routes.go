@@ -31,5 +31,10 @@ func RegisterRoutes(rg *gin.RouterGroup, pool *pgxpool.Pool, authMiddleware gin.
 		rg.GET("/:id/fastag", handler.ListFASTag)
 		rg.POST("/:id/fastag", handler.CreateFASTag)
 		rg.DELETE("/:id/fastag/:fastagId", handler.DeleteFASTag)
+
+		// Fuel logs
+		rg.GET("/:id/fuel", handler.ListFuel)
+		rg.POST("/:id/fuel", handler.CreateFuel)
+		rg.DELETE("/:id/fuel/:fuelId", handler.DeleteFuel)
 	}
 }

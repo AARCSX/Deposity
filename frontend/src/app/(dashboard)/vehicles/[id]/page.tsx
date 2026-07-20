@@ -48,6 +48,21 @@ export default function VehicleDetailPage() {
     referenceNo: "",
   });
 
+  // Fuel states
+  const [fuelLogs, setFuelLogs] = useState<any[]>([]);
+  const [isFuelModalOpen, setIsFuelModalOpen] = useState(false);
+  const [isFuelSubmitting, setIsFuelSubmitting] = useState(false);
+  const [deletingFuelId, setDeletingFuelId] = useState<string | null>(null);
+  const [fuelError, setFuelError] = useState<string | null>(null);
+  const [fuelForm, setFuelForm] = useState({
+    fuelType: "Diesel",
+    timestamp: new Date().toISOString().slice(0, 16),
+    litres: 0,
+    totalPrice: 0,
+    pricePerLitre: 0,
+    stationName: "",
+  });
+
   const fetchVehicleDetails = async () => {
     try {
       setLoading(true);
@@ -116,6 +131,18 @@ export default function VehicleDetailPage() {
     }
   };
 
+  const fetchFuel = async () => {
+    try {
+      const res = await authenticatedFetch(`/vehicles/${id}/fuel`);
+      if (res.ok) {
+        const data = await res.json();
+        setFuelLogs(data || []);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   useEffect(() => {
     if (id) {
       fetchVehicleDetails();
@@ -159,6 +186,8 @@ export default function VehicleDetailPage() {
       fetchTrips();
     } else if (activeTab === "maintenance") {
       fetchMaintenance();
+    } else if (activeTab === "fuel") {
+      fetchFuel();
     }
   }, [activeTab, id, vehicle]);
 
@@ -319,6 +348,82 @@ export default function VehicleDetailPage() {
       alert(err?.message || "An error occurred while deleting transaction log");
     } finally {
       setDeletingFastagId(null);
+    }
+  };
+
+  const handleOpenFuelModal = () => {
+    setFuelError(null);
+    setFuelForm({
+      fuelType: "Diesel",
+      timestamp: new Date().toISOString().slice(0, 16),
+      litres: 0,
+      totalPrice: 0,
+      pricePerLitre: 0,
+      stationName: "",
+    });
+    setIsFuelModalOpen(true);
+  };
+
+  const handleSaveFuel = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setFuelError(null);
+    if (fuelForm.litres <= 0) {
+      setFuelError("Litres filled must be greater than 0.");
+      return;
+    }
+    if (fuelForm.totalPrice <= 0) {
+      setFuelError("Total cost must be greater than 0.");
+      return;
+    }
+    setIsFuelSubmitting(true);
+    try {
+      const calculatedPpl = fuelForm.pricePerLitre || (fuelForm.totalPrice / fuelForm.litres);
+      const res = await authenticatedFetch(`/vehicles/${id}/fuel`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fuelType: fuelForm.fuelType,
+          timestamp: fuelForm.timestamp,
+          litres: Number(fuelForm.litres),
+          totalPrice: Number(fuelForm.totalPrice),
+          pricePerLitre: Number(calculatedPpl),
+          stationName: fuelForm.stationName,
+        }),
+      });
+      if (res.ok) {
+        setIsFuelModalOpen(false);
+        fetchFuel();
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        setFuelError(errData.error || errData.message || "Failed to record fuel entry. Please check details and try again.");
+      }
+    } catch (err: any) {
+      console.error(err);
+      setFuelError(err?.message || "An unexpected error occurred. Please try again.");
+    } finally {
+      setIsFuelSubmitting(false);
+    }
+  };
+
+  const handleDeleteFuel = async (fuelId: string) => {
+    if (!confirm("Are you sure you want to delete this fuel record?")) return;
+    setDeletingFuelId(fuelId);
+    try {
+      const res = await authenticatedFetch(`/vehicles/${id}/fuel/${fuelId}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        setFuelLogs((prev) => prev.filter((log) => log.id !== fuelId));
+        fetchFuel();
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        alert(errData.error || errData.message || "Failed to delete fuel log");
+      }
+    } catch (err: any) {
+      console.error(err);
+      alert(err?.message || "An error occurred while deleting fuel log");
+    } finally {
+      setDeletingFuelId(null);
     }
   };
 
@@ -497,6 +602,8 @@ export default function VehicleDetailPage() {
           <TabButton active={activeTab === "fastag"} onClick={() => setActiveTab("fastag")}>FASTag History</TabButton>
           <TabButton active={activeTab === "trips"} onClick={() => setActiveTab("trips")}>Trip History</TabButton>
           <TabButton active={activeTab === "maintenance"} onClick={() => setActiveTab("maintenance")}>Maintenance</TabButton>
+          <TabButton active={activeTab === "fuel"} onClick={() => setActiveTab("fuel")}>Fuel & Urea</TabButton>
+          <TabButton active={activeTab === "insurance"} onClick={() => setActiveTab("insurance")}>Insurance</TabButton>
         </div>
 
         {/* Tab Contents */}
@@ -919,6 +1026,160 @@ export default function VehicleDetailPage() {
             )}
           </div>
         )}
+
+        {activeTab === "fuel" && (
+          <div className="bg-surface-container-lowest rounded-xl p-6 border border-outline-variant/15 shadow-sm">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+              <div>
+                <h3 className="font-bold text-lg text-on-surface">Fuel & Urea Ledger</h3>
+                <p className="text-xs text-on-surface-variant">Keep records of Diesel and Urea refilling with dates, quantity in litres, and total cost.</p>
+              </div>
+              <button 
+                onClick={handleOpenFuelModal}
+                className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-bold text-white shadow-md shadow-primary/20 hover:opacity-90 transition-opacity active:scale-[0.98] self-start md:self-auto cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-sm">local_gas_station</span>
+                Record Fuel Entry
+              </button>
+            </div>
+
+            {/* Summary Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+              <div className="bg-surface-container-low/50 rounded-xl p-4 border border-outline-variant/10">
+                <p className="text-xs text-on-surface-variant font-medium mb-1 flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-sm text-primary">local_gas_station</span>
+                  Total Diesel Filled
+                </p>
+                <p className="text-xl font-bold text-on-surface">
+                  {fuelLogs.filter(f => f.fuelType === "Diesel").reduce((sum, f) => sum + f.litres, 0).toLocaleString()} <span className="text-xs font-normal text-on-surface-variant">Litres</span>
+                </p>
+                <p className="text-xs text-tertiary font-semibold mt-1">
+                  ₹{fuelLogs.filter(f => f.fuelType === "Diesel").reduce((sum, f) => sum + f.totalPrice, 0).toLocaleString()} Spent
+                </p>
+              </div>
+
+              <div className="bg-surface-container-low/50 rounded-xl p-4 border border-outline-variant/10">
+                <p className="text-xs text-on-surface-variant font-medium mb-1 flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-sm text-cyan-600">water_drop</span>
+                  Total Urea (DEF) Filled
+                </p>
+                <p className="text-xl font-bold text-on-surface">
+                  {fuelLogs.filter(f => f.fuelType === "Urea").reduce((sum, f) => sum + f.litres, 0).toLocaleString()} <span className="text-xs font-normal text-on-surface-variant">Litres</span>
+                </p>
+                <p className="text-xs text-cyan-600 font-semibold mt-1">
+                  ₹{fuelLogs.filter(f => f.fuelType === "Urea").reduce((sum, f) => sum + f.totalPrice, 0).toLocaleString()} Spent
+                </p>
+              </div>
+
+              <div className="bg-surface-container-low/50 rounded-xl p-4 border border-outline-variant/10">
+                <p className="text-xs text-on-surface-variant font-medium mb-1 flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-sm text-amber-500">payments</span>
+                  Avg Diesel Price / Litre
+                </p>
+                <p className="text-xl font-bold text-on-surface">
+                  {(() => {
+                    const dieselLogs = fuelLogs.filter(f => f.fuelType === "Diesel" && f.litres > 0);
+                    if (dieselLogs.length === 0) return "₹0.00";
+                    const totalLitres = dieselLogs.reduce((s, f) => s + f.litres, 0);
+                    const totalPrice = dieselLogs.reduce((s, f) => s + f.totalPrice, 0);
+                    return `₹${(totalPrice / totalLitres).toFixed(2)}`;
+                  })()}
+                </p>
+                <p className="text-xs text-on-surface-variant mt-1">Across {fuelLogs.filter(f => f.fuelType === "Diesel").length} refills</p>
+              </div>
+            </div>
+
+            {/* Fuel Logs Table */}
+            {fuelLogs.length === 0 ? (
+              <div className="py-12 text-center border border-dashed border-outline-variant/20 rounded-xl bg-surface-container-low/30">
+                <span className="material-symbols-outlined text-4xl text-outline mb-2">local_gas_station</span>
+                <p className="text-sm font-bold text-on-surface">No fuel logs recorded</p>
+                <p className="text-xs text-on-surface-variant mt-1">Record your first Diesel or Urea refilling log above.</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto rounded-xl border border-outline-variant/10">
+                <table className="min-w-full text-left text-sm">
+                  <thead className="bg-surface-container-high">
+                    <tr>
+                      <th className="px-4 py-3 font-semibold text-on-surface-variant">Date & Day</th>
+                      <th className="px-4 py-3 font-semibold text-on-surface-variant">Type</th>
+                      <th className="px-4 py-3 font-semibold text-on-surface-variant">Quantity (Litres)</th>
+                      <th className="px-4 py-3 font-semibold text-on-surface-variant">Rate / Litre</th>
+                      <th className="px-4 py-3 font-semibold text-on-surface-variant">Total Cost</th>
+                      <th className="px-4 py-3 font-semibold text-on-surface-variant">Station / Location</th>
+                      <th className="px-4 py-3 font-semibold text-on-surface-variant text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-outline-variant/10">
+                    {fuelLogs.map((log) => (
+                      <tr key={log.id} className="hover:bg-primary/5 transition-colors">
+                        <td className="px-4 py-3 font-medium text-on-surface">
+                          {(() => {
+                            try {
+                              const d = new Date(log.timestamp);
+                              const dayName = d.toLocaleDateString("en-US", { weekday: "short" });
+                              const dateStr = d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+                              const timeStr = d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
+                              return `${dateStr} (${dayName}) • ${timeStr}`;
+                            } catch {
+                              return log.timestamp;
+                            }
+                          })()}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${
+                            log.fuelType === "Urea" ? "bg-cyan-500/10 text-cyan-600 border border-cyan-500/20" : "bg-primary/10 text-primary border border-primary/20"
+                          }`}>
+                            {log.fuelType}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 font-bold text-on-surface">{log.litres.toLocaleString()} L</td>
+                        <td className="px-4 py-3 text-on-surface-variant">₹{log.pricePerLitre?.toFixed(2) || (log.totalPrice / log.litres).toFixed(2)}</td>
+                        <td className="px-4 py-3 font-bold text-tertiary">₹{log.totalPrice.toLocaleString()}</td>
+                        <td className="px-4 py-3 text-xs text-on-surface-variant">{log.stationName || "—"}</td>
+                        <td className="px-4 py-3 text-right">
+                          <button 
+                            disabled={deletingFuelId === log.id}
+                            onClick={() => handleDeleteFuel(log.id)}
+                            className="inline-flex items-center gap-1.5 text-error hover:text-error/90 hover:bg-error/10 px-2.5 py-1 rounded-lg text-xs font-bold transition-all disabled:opacity-50 cursor-pointer"
+                          >
+                            {deletingFuelId === log.id ? (
+                              <>
+                                <span className="w-3 h-3 border-2 border-error border-t-transparent rounded-full animate-spin"></span>
+                                <span>Deleting...</span>
+                              </>
+                            ) : (
+                              <>
+                                <span className="material-symbols-outlined text-sm">delete</span>
+                                <span>Delete</span>
+                              </>
+                            )}
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === "insurance" && (
+          <div className="bg-surface-container-lowest rounded-xl p-12 border border-outline-variant/15 text-center shadow-sm">
+            <div className="w-16 h-16 bg-primary/10 text-primary rounded-2xl flex items-center justify-center mx-auto mb-4 border border-primary/20">
+              <span className="material-symbols-outlined text-3xl">health_and_safety</span>
+            </div>
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-warning/10 text-warning text-xs font-bold uppercase tracking-wider mb-3">
+              <span className="w-2 h-2 rounded-full bg-warning animate-pulse"></span>
+              Coming Soon
+            </div>
+            <h3 className="text-xl font-bold text-on-surface mb-2">Insurance Ledger & Claims Management</h3>
+            <p className="text-sm text-on-surface-variant max-w-md mx-auto leading-relaxed">
+              We are currently architecting the centralized policy vault, premium tracking, and automated claim submission workflow for fleet operators.
+            </p>
+          </div>
+        )}
         
         <div className="h-12"></div>
       </div>
@@ -1138,6 +1399,158 @@ export default function VehicleDetailPage() {
                       <span className="material-symbols-outlined text-sm">check</span>
                       <span>Save Recharge</span>
                     </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Fuel Log Modal */}
+      {isFuelModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+          <div className="bg-surface-container-lowest border border-outline-variant/20 rounded-2xl p-6 w-full max-w-md shadow-2xl relative animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex justify-between items-center mb-4 pb-3 border-b border-outline-variant/15">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+                  <span className="material-symbols-outlined text-lg">local_gas_station</span>
+                </div>
+                <h3 className="font-bold text-lg text-on-surface">Record Fuel Entry</h3>
+              </div>
+              <button
+                onClick={() => setIsFuelModalOpen(false)}
+                className="text-on-surface-variant hover:text-on-surface text-sm p-1 rounded-lg hover:bg-surface-container-high transition-colors cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-xl">close</span>
+              </button>
+            </div>
+
+            {fuelError && (
+              <div className="mb-4 p-3 bg-error/10 border border-error/20 rounded-xl text-error text-xs font-semibold flex items-center gap-2">
+                <span className="material-symbols-outlined text-base shrink-0">error</span>
+                <span>{fuelError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleSaveFuel} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1">Fuel Type</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setFuelForm({ ...fuelForm, fuelType: "Diesel" })}
+                    className={`py-2 px-3 rounded-xl text-xs font-bold border transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                      fuelForm.fuelType === "Diesel"
+                        ? "bg-primary text-white border-primary shadow-sm"
+                        : "bg-surface-container-low text-on-surface-variant border-outline-variant/20 hover:border-primary/50"
+                    }`}
+                  >
+                    <span className="material-symbols-outlined text-sm">local_gas_station</span>
+                    Diesel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFuelForm({ ...fuelForm, fuelType: "Urea" })}
+                    className={`py-2 px-3 rounded-xl text-xs font-bold border transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                      fuelForm.fuelType === "Urea"
+                        ? "bg-cyan-600 text-white border-cyan-600 shadow-sm"
+                        : "bg-surface-container-low text-on-surface-variant border-outline-variant/20 hover:border-cyan-600/50"
+                    }`}
+                  >
+                    <span className="material-symbols-outlined text-sm">water_drop</span>
+                    Urea (AdBlue)
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1">Date & Time</label>
+                <input
+                  type="datetime-local"
+                  required
+                  value={fuelForm.timestamp}
+                  onChange={(e) => setFuelForm({ ...fuelForm, timestamp: e.target.value })}
+                  className="w-full bg-surface border border-outline-variant/20 rounded-xl px-3 py-2 text-sm text-on-surface focus:outline-none focus:border-primary"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1">Quantity (Litres)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0.1"
+                    required
+                    placeholder="e.g. 200"
+                    value={fuelForm.litres || ""}
+                    onChange={(e) => {
+                      const litres = Number(e.target.value);
+                      const pricePerLitre = litres > 0 && fuelForm.totalPrice > 0 ? fuelForm.totalPrice / litres : fuelForm.pricePerLitre;
+                      setFuelForm({ ...fuelForm, litres, pricePerLitre });
+                    }}
+                    className="w-full bg-surface border border-outline-variant/20 rounded-xl px-3 py-2 text-sm text-on-surface focus:outline-none focus:border-primary"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1">Total Cost (₹)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="1"
+                    required
+                    placeholder="e.g. 18000"
+                    value={fuelForm.totalPrice || ""}
+                    onChange={(e) => {
+                      const totalPrice = Number(e.target.value);
+                      const pricePerLitre = fuelForm.litres > 0 && totalPrice > 0 ? totalPrice / fuelForm.litres : fuelForm.pricePerLitre;
+                      setFuelForm({ ...fuelForm, totalPrice, pricePerLitre });
+                    }}
+                    className="w-full bg-surface border border-outline-variant/20 rounded-xl px-3 py-2 text-sm text-on-surface focus:outline-none focus:border-primary"
+                  />
+                </div>
+              </div>
+
+              {fuelForm.litres > 0 && fuelForm.totalPrice > 0 && (
+                <div className="p-2.5 bg-surface-container-low rounded-xl text-xs text-on-surface-variant flex justify-between items-center border border-outline-variant/10">
+                  <span>Rate per Litre:</span>
+                  <span className="font-bold text-primary">₹{(fuelForm.totalPrice / fuelForm.litres).toFixed(2)} / L</span>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1">Fuel Station / Location (Optional)</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Indian Oil, NH-44 Toll Pump"
+                  value={fuelForm.stationName}
+                  onChange={(e) => setFuelForm({ ...fuelForm, stationName: e.target.value })}
+                  className="w-full bg-surface border border-outline-variant/20 rounded-xl px-3 py-2 text-sm text-on-surface focus:outline-none focus:border-primary"
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-3 border-t border-outline-variant/15">
+                <button
+                  type="button"
+                  onClick={() => setIsFuelModalOpen(false)}
+                  className="px-4 py-2 rounded-xl text-sm font-semibold text-on-surface-variant hover:bg-surface-container-high transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isFuelSubmitting}
+                  className="px-5 py-2 rounded-xl text-sm font-bold bg-primary text-white shadow-md hover:opacity-90 transition-opacity active:scale-[0.98] disabled:opacity-50 flex items-center gap-2 cursor-pointer"
+                >
+                  {isFuelSubmitting ? (
+                    <>
+                      <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                      <span>Saving...</span>
+                    </>
+                  ) : (
+                    "Save Record"
                   )}
                 </button>
               </div>
