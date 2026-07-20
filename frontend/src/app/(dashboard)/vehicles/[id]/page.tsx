@@ -513,6 +513,13 @@ export default function VehicleDetailPage() {
                 <TimelineNode date={formatDateForDisplay(vehicle.compliance.insuranceExpiry)} title="Insurance Expiry" theme={getDocTheme(vehicle.compliance.insuranceExpiry)} />
                 <TimelineNode date={formatDateForDisplay(vehicle.compliance.pucExpiry)} title="PUC Expiry" theme={getDocTheme(vehicle.compliance.pucExpiry)} />
                 <TimelineNode date={formatDateForDisplay(vehicle.compliance.fitnessExpiry)} title="Fitness Expiry" theme={getDocTheme(vehicle.compliance.fitnessExpiry)} />
+                {vehicle.compliance.fastagExpiry && (
+                  <TimelineNode
+                    date={formatDateForDisplay(vehicle.compliance.fastagExpiry)}
+                    title="FASTag Tag Expiry"
+                    theme={getDocTheme(vehicle.compliance.fastagExpiry)}
+                  />
+                )}
                 {(() => {
                   const permit = parsePermitDetails(vehicle.compliance.permitDetails);
                   const nodes: React.ReactNode[] = [];
@@ -579,6 +586,16 @@ export default function VehicleDetailPage() {
                 expires={formatDateForDisplay(vehicle.compliance.fitnessExpiry)} 
                 theme={getDocTheme(vehicle.compliance.fitnessExpiry)} 
               />
+              {vehicle.compliance.fastagExpiry && (
+                <DocCard 
+                  title="FASTag Tag" 
+                  sub="Toll Pass Validity" 
+                  status={getDocStatus(vehicle.compliance.fastagExpiry)} 
+                  issued={formatDateForDisplay(vehicle.compliance.fastagIssuance)} 
+                  expires={formatDateForDisplay(vehicle.compliance.fastagExpiry)} 
+                  theme={getDocTheme(vehicle.compliance.fastagExpiry)} 
+                />
+              )}
 
               {/* Permit Cards */}
               {(() => {
