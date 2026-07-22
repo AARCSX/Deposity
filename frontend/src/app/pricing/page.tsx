@@ -122,8 +122,12 @@ export default function PublicPricingPage() {
   };
 
   const openPlanModal = (planName: string) => {
-    setSelectedPlanName(planName);
-    setModalType("plan");
+    if (typeof window !== "undefined") {
+      const targetPlan = planName.toLowerCase();
+      // Redirect to AARCSX Identity Razorpay Custom Product Checkout URL
+      const checkoutUrl = `https://identity.aarcsx.com/checkout/deposity?plan=${targetPlan}&cycle=${billing}`;
+      window.location.href = checkoutUrl;
+    }
   };
 
   const faqs = [
