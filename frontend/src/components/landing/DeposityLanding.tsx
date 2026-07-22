@@ -81,7 +81,7 @@ export default function DeposityLanding() {
             <a href="#metrics" className="hover:text-[#7180B9] transition-colors">
               Metrics
             </a>
-            <a href="#pricing" className="hover:text-[#7180B9] transition-colors">
+            <a href="/pricing" className="hover:text-[#7180B9] transition-colors">
               Pricing
             </a>
           </nav>
@@ -491,7 +491,7 @@ export default function DeposityLanding() {
               <ul className="space-y-3 text-sm text-[#0B132B]/60">
                 <li><a href="#" className="hover:text-[#7180B9] transition-colors">Features</a></li>
                 <li><a href="#" className="hover:text-[#7180B9] transition-colors">Integrations</a></li>
-                <li><a href="#" className="hover:text-[#7180B9] transition-colors">Pricing</a></li>
+                <li><a href="/pricing" className="hover:text-[#7180B9] transition-colors">Pricing</a></li>
                 <li><a href="#" className="hover:text-[#7180B9] transition-colors">Changelog</a></li>
               </ul>
             </div>
