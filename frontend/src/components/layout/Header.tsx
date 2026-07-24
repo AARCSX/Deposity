@@ -125,6 +125,20 @@ export default function Header({ onMenuClick }: { onMenuClick: () => void }) {
             id="global-search"
           />
         </div>
+
+        {/* Depot Branch / Organization Switcher */}
+        <a
+          href="https://identity.aarcsx.com/organizations"
+          title="Switch Depot Branch / Organization in AARCSX Identity"
+          className="hidden sm:flex items-center gap-2 bg-slate-100/90 hover:bg-slate-200/90 border border-slate-300/60 px-3.5 py-1.5 rounded-full transition group"
+        >
+          <span className="material-symbols-outlined text-[18px] text-primary">domain</span>
+          <span className="font-bold text-sm text-[#191C1E]">{orgName}</span>
+          <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-extrabold uppercase group-hover:bg-primary group-hover:text-white transition">
+            Branch
+          </span>
+          <span className="material-symbols-outlined text-[16px] text-slate-400 group-hover:text-slate-600">unfold_more</span>
+        </a>
       </div>
 
       <div className="flex items-center gap-4 relative">
