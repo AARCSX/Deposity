@@ -6,16 +6,19 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/Akshansh-29072005/Deposity/backend/internal/activity"
 	"github.com/Akshansh-29072005/Deposity/backend/internal/platform/middleware"
 )
 
 type Handler struct {
 	service *Service
+	db      *pgxpool.Pool
 }
 
-func NewHandler(service *Service) *Handler {
-	return &Handler{service: service}
+func NewHandler(service *Service, db *pgxpool.Pool) *Handler {
+	return &Handler{service: service, db: db}
 }
 
 func (h *Handler) Get(c *gin.Context) {
@@ -47,6 +50,20 @@ func (h *Handler) Update(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+
+	activity.LogActivity(h.db, activity.LogActivityParams{
+		TenantID:    tenantID,
+		UserID:      middleware.GetUserID(c),
+		UserName:    middleware.GetUserName(c),
+		UserRole:    middleware.GetUserRole(c),
+		Action:      "UPDATE_SETTINGS",
+		Category:    "SETTINGS",
+		EntityType:  "organization",
+		EntityID:    tenantID,
+		Description: "Updated organization profile & system preferences",
+		IPAddress:   c.ClientIP(),
+	})
+
 	c.JSON(http.StatusOK, profile)
 }
 
@@ -56,6 +73,20 @@ func (h *Handler) Delete(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+
+	activity.LogActivity(h.db, activity.LogActivityParams{
+		TenantID:    tenantID,
+		UserID:      middleware.GetUserID(c),
+		UserName:    middleware.GetUserName(c),
+		UserRole:    middleware.GetUserRole(c),
+		Action:      "PURGE_TENANT_DATA",
+		Category:    "SECURITY",
+		EntityType:  "organization",
+		EntityID:    tenantID,
+		Description: "Permanently purged organization data and records",
+		IPAddress:   c.ClientIP(),
+	})
+
 	c.JSON(http.StatusOK, gin.H{"success": true, "message": "All data for the organization has been permanently deleted."})
 }
 

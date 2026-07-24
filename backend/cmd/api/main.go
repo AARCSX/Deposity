@@ -8,6 +8,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/Akshansh-29072005/Deposity/backend/internal/activity"
 	"github.com/Akshansh-29072005/Deposity/backend/internal/auth"
 	"github.com/Akshansh-29072005/Deposity/backend/internal/companies"
 	"github.com/Akshansh-29072005/Deposity/backend/internal/config"
@@ -82,6 +83,7 @@ func main() {
 		maintenance.RegisterRoutes(apiGroup.Group("/maintenance"), pool, authMiddleware)
 		dashboard.RegisterRoutes(apiGroup.Group("/dashboard"), pool, authMiddleware)
 		settings.RegisterRoutes(apiGroup.Group("/settings"), pool, authMiddleware, cfg.BrevoAPIKey, cfg.EmailDeposityWelcomeFrom)
+		activity.RegisterRoutes(apiGroup.Group("/activity-logs"), pool, authMiddleware)
 	}
 
 	// 6. Start server

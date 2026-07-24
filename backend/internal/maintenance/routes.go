@@ -9,7 +9,7 @@ import (
 func RegisterRoutes(rg *gin.RouterGroup, pool *pgxpool.Pool, authMiddleware gin.HandlerFunc) {
 	repo := NewRepository(pool)
 	service := NewService(repo)
-	handler := NewHandler(service)
+	handler := NewHandler(service, pool)
 
 	rg.Use(authMiddleware)
 	{

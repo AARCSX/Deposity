@@ -148,3 +148,34 @@ export function getOrgNameFromToken(): string {
     return "OnWay";
   }
 }
+
+// ─── Activity Logs API ────────────────────────────────────────────────
+export async function fetchActivityLogs(params: {
+  page?: number;
+  limit?: number;
+  category?: string;
+  user_id?: string;
+  search?: string;
+  start_date?: string;
+  end_date?: string;
+}) {
+  const query = new URLSearchParams();
+  if (params.page) query.set("page", params.page.toString());
+  if (params.limit) query.set("limit", params.limit.toString());
+  if (params.category && params.category !== "ALL") query.set("category", params.category);
+  if (params.user_id) query.set("user_id", params.user_id);
+  if (params.search) query.set("search", params.search);
+  if (params.start_date) query.set("start_date", params.start_date);
+  if (params.end_date) query.set("end_date", params.end_date);
+
+  const res = await authenticatedFetch(`/activity-logs?${query.toString()}`);
+  if (!res.ok) throw new Error("Failed to fetch activity logs");
+  return res.json();
+}
+
+export async function fetchActivityStats() {
+  const res = await authenticatedFetch("/activity-logs/stats");
+  if (!res.ok) throw new Error("Failed to fetch activity statistics");
+  return res.json();
+}
+

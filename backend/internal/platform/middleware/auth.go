@@ -144,3 +144,51 @@ func GetUserID(c *gin.Context) string {
 	userID, _ := val.(string)
 	return userID
 }
+
+// GetUserName returns full name, email, or user_id from JWT claims in gin context.
+func GetUserName(c *gin.Context) string {
+	claimsVal, exists := c.Get("token_claims")
+	if exists {
+		if claims, ok := claimsVal.(jwt.MapClaims); ok {
+			if name, ok := claims["full_name"].(string); ok && name != "" {
+				return name
+			}
+			if name, ok := claims["name"].(string); ok && name != "" {
+				return name
+			}
+			if email, ok := claims["email"].(string); ok && email != "" {
+				return email
+			}
+			if userMeta, ok := claims["user_metadata"].(map[string]interface{}); ok {
+				if fullName, ok := userMeta["full_name"].(string); ok && fullName != "" {
+					return fullName
+				}
+				if name, ok := userMeta["name"].(string); ok && name != "" {
+					return name
+				}
+			}
+		}
+	}
+	id := GetUserID(c)
+	if id != "" {
+		return id
+	}
+	return "System User"
+}
+
+// GetUserRole returns the user's role from JWT claims or defaults to "Staff".
+func GetUserRole(c *gin.Context) string {
+	claimsVal, exists := c.Get("token_claims")
+	if exists {
+		if claims, ok := claimsVal.(jwt.MapClaims); ok {
+			if role, ok := claims["role"].(string); ok && role != "" {
+				return role
+			}
+			if role, ok := claims["org_role"].(string); ok && role != "" {
+				return role
+			}
+		}
+	}
+	return "Staff"
+}
+

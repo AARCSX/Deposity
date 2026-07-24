@@ -15,6 +15,7 @@ const navItems = [
   { label: "Expenses", icon: "payments", href: "/expenses" },
   { label: "Maintenance", icon: "build", href: "/maintenance" },
   { label: "Reports", icon: "assessment", href: "/reports" },
+  { label: "Activity Logs", icon: "history", href: "/activity-logs" },
   { label: "Settings", icon: "settings", href: "/settings" },
 ];
 
