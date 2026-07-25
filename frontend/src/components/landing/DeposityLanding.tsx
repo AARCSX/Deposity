@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from 'react';
 import { motion, type Variants } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { generatePKCE } from '@/lib/pkce';
@@ -39,6 +40,23 @@ const itemVariants: Variants = {
 
 export default function DeposityLanding() {
   const router = useRouter();
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const urlParams = new URLSearchParams(window.location.search);
+      const queryOrgName = urlParams.get("org_name");
+      const token = localStorage.getItem("deposity_token");
+
+      if (queryOrgName) {
+        localStorage.setItem("deposity_org_name", queryOrgName);
+        window.dispatchEvent(new Event("deposity_org_name_changed"));
+      }
+
+      if (token) {
+        router.push("/dashboard" + (queryOrgName ? `?org_name=${encodeURIComponent(queryOrgName)}` : ""));
+      }
+    }
+  }, [router]);
 
   const handleSignIn = async () => {
     if (typeof window === 'undefined') return;

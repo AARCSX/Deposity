@@ -33,11 +33,18 @@ export default function Home() {
 
   useEffect(() => {
     if (typeof window !== "undefined") {
+      const urlParams = new URLSearchParams(window.location.search);
+      const queryOrgName = urlParams.get("org_name");
+      if (queryOrgName) {
+        localStorage.setItem("deposity_org_name", queryOrgName);
+        window.dispatchEvent(new Event("deposity_org_name_changed"));
+      }
+
       const token = localStorage.getItem("deposity_token");
       if (!token) {
         router.push("/");
       } else {
-        setOrgName(getOrgNameFromToken());
+        setOrgName(queryOrgName || getOrgNameFromToken());
       }
     }
 
