@@ -149,6 +149,66 @@ export function getOrgNameFromToken(): string {
   }
 }
 
+export function getUserRoleFromToken(): string {
+  const token = getAuthToken();
+  if (!token) return "Owner";
+  try {
+    const base64Url = token.split(".")[1];
+    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+    const jsonPayload = decodeURIComponent(
+      window
+        .atob(base64)
+        .split("")
+        .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+        .join("")
+    );
+    const payload = JSON.parse(jsonPayload);
+    return payload.role || payload.org_role || "Owner";
+  } catch (e) {
+    return "Owner";
+  }
+}
+
+export function getSubscriptionPlanFromToken(): string {
+  const token = getAuthToken();
+  if (!token) return "7-Day Free Trial";
+  try {
+    const base64Url = token.split(".")[1];
+    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+    const jsonPayload = decodeURIComponent(
+      window
+        .atob(base64)
+        .split("")
+        .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+        .join("")
+    );
+    const payload = JSON.parse(jsonPayload);
+    return payload.subscription_plan || "7-Day Free Trial";
+  } catch (e) {
+    return "7-Day Free Trial";
+  }
+}
+
+export function getSubscriptionStatusFromToken(): string {
+  const token = getAuthToken();
+  if (!token) return "trialing";
+  try {
+    const base64Url = token.split(".")[1];
+    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+    const jsonPayload = decodeURIComponent(
+      window
+        .atob(base64)
+        .split("")
+        .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+        .join("")
+    );
+    const payload = JSON.parse(jsonPayload);
+    return payload.subscription_status || "trialing";
+  } catch (e) {
+    return "trialing";
+  }
+}
+
 // ─── Activity Logs API ────────────────────────────────────────────────
 export async function fetchActivityLogs(params: {
   page?: number;

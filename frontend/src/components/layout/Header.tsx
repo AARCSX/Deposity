@@ -2,20 +2,26 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { getOrgNameFromToken, authenticatedFetch } from "@/lib/api";
+import { getOrgNameFromToken, getUserRoleFromToken, getSubscriptionPlanFromToken, authenticatedFetch } from "@/lib/api";
 import { parsePermitDetails } from "@/types/vehicle";
 
 export default function Header({ onMenuClick }: { onMenuClick: () => void }) {
   const [orgName, setOrgName] = useState("OnWay");
+  const [userRole, setUserRole] = useState("Owner");
+  const [planName, setPlanName] = useState("7-Day Free Trial");
   const [alerts, setAlerts] = useState<any[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const popoverRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setOrgName(getOrgNameFromToken());
+    setUserRole(getUserRoleFromToken());
+    setPlanName(getSubscriptionPlanFromToken());
 
     const handleOrgNameChange = () => {
       setOrgName(getOrgNameFromToken());
+      setUserRole(getUserRoleFromToken());
+      setPlanName(getSubscriptionPlanFromToken());
     };
     window.addEventListener("deposity_org_name_changed", handleOrgNameChange);
     return () => {
@@ -126,17 +132,23 @@ export default function Header({ onMenuClick }: { onMenuClick: () => void }) {
           />
         </div>
 
-        {/* Depot Branch / Organization Switcher */}
+        {/* Depot Branch, Role & Subscription Plan Badges */}
         <a
-          href="https://identity.aarcsx.com/organizations"
-          title="Switch Depot Branch / Organization in AARCSX Identity"
-          className="hidden sm:flex items-center gap-2 bg-slate-100/90 hover:bg-slate-200/90 border border-slate-300/60 px-3.5 py-1.5 rounded-full transition group"
+          href="https://identity.aarcsx.com/products"
+          title="Manage Depot Subscriptions & Branches in AARCSX Identity"
+          className="hidden sm:flex items-center gap-2.5 bg-slate-100/90 hover:bg-slate-200/90 border border-slate-300/60 px-4 py-1.5 rounded-full transition group"
         >
           <span className="material-symbols-outlined text-[18px] text-primary">domain</span>
-          <span className="font-bold text-sm text-[#191C1E]">{orgName}</span>
-          <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-extrabold uppercase group-hover:bg-primary group-hover:text-white transition">
-            Branch
+          <span className="font-extrabold text-sm text-[#191C1E]">{orgName}</span>
+          
+          <span className="text-[10px] bg-amber-500/15 text-amber-800 border border-amber-500/30 px-2.5 py-0.5 rounded-full font-bold uppercase">
+            {userRole}
           </span>
+
+          <span className="text-[10px] bg-emerald-500/15 text-emerald-800 border border-emerald-500/30 px-2.5 py-0.5 rounded-full font-extrabold uppercase">
+            {planName}
+          </span>
+
           <span className="material-symbols-outlined text-[16px] text-slate-400 group-hover:text-slate-600">unfold_more</span>
         </a>
       </div>
