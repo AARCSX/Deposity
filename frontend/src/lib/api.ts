@@ -104,7 +104,6 @@ export async function authenticatedFetch(path: string, options: RequestInit = {}
     activeOrgName = urlParams.get("org_name") || localStorage.getItem("deposity_org_name") || "";
 
     if (activeTenantId) {
-      headers.set("X-Tenant-ID", activeTenantId);
       localStorage.setItem("deposity_tenant_id", activeTenantId);
     }
     if (activeOrgName) {
