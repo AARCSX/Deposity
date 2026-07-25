@@ -61,6 +61,10 @@ func main() {
 	// Enable CORS for frontend integration
 	router.Use(corsMiddleware(cfg.CORSOrigins))
 
+	// Enable Global Rate Limiting (300 requests per minute per IP/Tenant)
+	rateLimiter := middleware.NewRateLimiter(300, time.Minute)
+	router.Use(rateLimiter.Middleware())
+
 	// Global check route
 	router.GET("/ping", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok", "time": time.Now().UTC()})
