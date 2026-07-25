@@ -101,9 +101,16 @@ func AuthRequired(jwksURL string, anonKey string) gin.HandlerFunc {
 			return
 		}
 
-		// AARCSX Identity injects tenant_id for multi-tenancy support
+		// Check for tenant override in X-Tenant-ID header or ?tenant_id= query parameter
+		activeTenantID := c.GetHeader("X-Tenant-ID")
+		if activeTenantID == "" {
+			activeTenantID = c.Query("tenant_id")
+		}
+
 		tenantID, ok := claims["tenant_id"].(string)
-		if !ok || tenantID == "" {
+		if activeTenantID != "" {
+			tenantID = activeTenantID
+		} else if !ok || tenantID == "" {
 			c.AbortWithStatusJSON(http.StatusForbidden, apperror.New(http.StatusForbidden, "Token is missing tenant_id claim. User does not belong to an organization."))
 			return
 		}

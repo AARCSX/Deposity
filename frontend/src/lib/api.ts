@@ -95,14 +95,28 @@ export async function authenticatedFetch(path: string, options: RequestInit = {}
     headers.set("Authorization", `Bearer ${token}`);
   }
 
+  let activeTenantId = "";
+  let activeOrgName = "";
+
   if (typeof window !== "undefined") {
-    const activeTenantId = localStorage.getItem("deposity_tenant_id");
+    const urlParams = new URLSearchParams(window.location.search);
+    activeTenantId = urlParams.get("tenant_id") || localStorage.getItem("deposity_tenant_id") || "";
+    activeOrgName = urlParams.get("org_name") || localStorage.getItem("deposity_org_name") || "";
+
     if (activeTenantId) {
       headers.set("X-Tenant-ID", activeTenantId);
+      localStorage.setItem("deposity_tenant_id", activeTenantId);
+    }
+    if (activeOrgName) {
+      localStorage.setItem("deposity_org_name", activeOrgName);
     }
   }
 
-  const url = path.startsWith("http") ? path : `${apiBase}${path.startsWith("/") ? "" : "/"}${path}`;
+  let url = path.startsWith("http") ? path : `${apiBase}${path.startsWith("/") ? "" : "/"}${path}`;
+  if (activeTenantId && !url.includes("tenant_id=")) {
+    const separator = url.includes("?") ? "&" : "?";
+    url = `${url}${separator}tenant_id=${encodeURIComponent(activeTenantId)}`;
+  }
 
   try {
     const response = await fetch(url, {

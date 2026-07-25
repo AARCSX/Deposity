@@ -201,6 +201,9 @@ export default function Header({ onMenuClick }: { onMenuClick: () => void }) {
                         onClick={() => {
                           switchActiveBranch(branch.name, branch.tenant_id);
                           setIsBranchDropdownOpen(false);
+                          if (typeof window !== "undefined") {
+                            window.location.href = `/dashboard?org_name=${encodeURIComponent(branch.name)}&tenant_id=${encodeURIComponent(branch.tenant_id)}`;
+                          }
                         }}
                         className={`w-full p-3 rounded-xl text-left flex items-center justify-between transition cursor-pointer ${
                           isActive
