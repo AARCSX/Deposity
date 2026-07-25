@@ -1,11 +1,13 @@
 package vehicles
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/Akshansh-29072005/Deposity/backend/internal/activity"
 	"github.com/Akshansh-29072005/Deposity/backend/internal/platform/apperror"
 	"github.com/Akshansh-29072005/Deposity/backend/internal/platform/middleware"
 )
@@ -38,6 +40,20 @@ func (h *Handler) CreateFASTag(c *gin.Context) {
 		c.JSON(apperror.Resolve(err))
 		return
 	}
+
+	activity.LogActivity(h.db, activity.LogActivityParams{
+		TenantID:    tenantID,
+		UserID:      middleware.GetUserID(c),
+		UserName:    middleware.GetUserName(c),
+		UserRole:    middleware.GetUserRole(c),
+		Action:      "CREATE_FASTAG_LOG",
+		Category:    "VEHICLES",
+		EntityType:  "fastag_log",
+		EntityID:    fastagEntry.ID,
+		Description: fmt.Sprintf("%s logged FASTag toll expense (₹%.2f) at %s", middleware.GetUserName(c), req.Amount, req.TollPlaza),
+		IPAddress:   c.ClientIP(),
+	})
+
 	c.JSON(http.StatusCreated, fastagEntry)
 }
 
@@ -51,5 +67,19 @@ func (h *Handler) DeleteFASTag(c *gin.Context) {
 		c.JSON(apperror.Resolve(err))
 		return
 	}
+
+	activity.LogActivity(h.db, activity.LogActivityParams{
+		TenantID:    tenantID,
+		UserID:      middleware.GetUserID(c),
+		UserName:    middleware.GetUserName(c),
+		UserRole:    middleware.GetUserRole(c),
+		Action:      "DELETE_FASTAG_LOG",
+		Category:    "VEHICLES",
+		EntityType:  "fastag_log",
+		EntityID:    fastagID,
+		Description: fmt.Sprintf("%s deleted FASTag toll entry", middleware.GetUserName(c)),
+		IPAddress:   c.ClientIP(),
+	})
+
 	c.Status(http.StatusNoContent)
 }

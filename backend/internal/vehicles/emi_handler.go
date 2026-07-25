@@ -1,10 +1,12 @@
 package vehicles
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/Akshansh-29072005/Deposity/backend/internal/activity"
 	"github.com/Akshansh-29072005/Deposity/backend/internal/platform/apperror"
 	"github.com/Akshansh-29072005/Deposity/backend/internal/platform/middleware"
 )
@@ -49,6 +51,20 @@ func (h *Handler) CreateEMI(c *gin.Context) {
 		c.JSON(apperror.Resolve(err))
 		return
 	}
+
+	activity.LogActivity(h.db, activity.LogActivityParams{
+		TenantID:    tenantID,
+		UserID:      middleware.GetUserID(c),
+		UserName:    middleware.GetUserName(c),
+		UserRole:    middleware.GetUserRole(c),
+		Action:      "CREATE_EMI_SCHEDULE",
+		Category:    "VEHICLES",
+		EntityType:  "emi_schedule",
+		EntityID:    emi.ID,
+		Description: fmt.Sprintf("%s logged EMI schedule (₹%.2f/mo) for vehicle", middleware.GetUserName(c), req.EMIAmount),
+		IPAddress:   c.ClientIP(),
+	})
+
 	c.JSON(http.StatusCreated, emi)
 }
 
@@ -68,6 +84,20 @@ func (h *Handler) UpdateEMI(c *gin.Context) {
 		c.JSON(apperror.Resolve(err))
 		return
 	}
+
+	activity.LogActivity(h.db, activity.LogActivityParams{
+		TenantID:    tenantID,
+		UserID:      middleware.GetUserID(c),
+		UserName:    middleware.GetUserName(c),
+		UserRole:    middleware.GetUserRole(c),
+		Action:      "UPDATE_EMI_SCHEDULE",
+		Category:    "VEHICLES",
+		EntityType:  "emi_schedule",
+		EntityID:    emi.ID,
+		Description: fmt.Sprintf("%s updated EMI payment status to %s", middleware.GetUserName(c), req.Status),
+		IPAddress:   c.ClientIP(),
+	})
+
 	c.JSON(http.StatusOK, emi)
 }
 
@@ -81,5 +111,19 @@ func (h *Handler) DeleteEMI(c *gin.Context) {
 		c.JSON(apperror.Resolve(err))
 		return
 	}
+
+	activity.LogActivity(h.db, activity.LogActivityParams{
+		TenantID:    tenantID,
+		UserID:      middleware.GetUserID(c),
+		UserName:    middleware.GetUserName(c),
+		UserRole:    middleware.GetUserRole(c),
+		Action:      "DELETE_EMI_SCHEDULE",
+		Category:    "VEHICLES",
+		EntityType:  "emi_schedule",
+		EntityID:    emiID,
+		Description: fmt.Sprintf("%s deleted EMI schedule", middleware.GetUserName(c)),
+		IPAddress:   c.ClientIP(),
+	})
+
 	c.Status(http.StatusNoContent)
 }

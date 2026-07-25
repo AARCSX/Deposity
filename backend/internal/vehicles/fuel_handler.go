@@ -1,11 +1,13 @@
 package vehicles
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/Akshansh-29072005/Deposity/backend/internal/activity"
 	"github.com/Akshansh-29072005/Deposity/backend/internal/platform/apperror"
 	"github.com/Akshansh-29072005/Deposity/backend/internal/platform/middleware"
 )
@@ -38,6 +40,20 @@ func (h *Handler) CreateFuel(c *gin.Context) {
 		c.JSON(apperror.Resolve(err))
 		return
 	}
+
+	activity.LogActivity(h.db, activity.LogActivityParams{
+		TenantID:    tenantID,
+		UserID:      middleware.GetUserID(c),
+		UserName:    middleware.GetUserName(c),
+		UserRole:    middleware.GetUserRole(c),
+		Action:      "CREATE_FUEL_LOG",
+		Category:    "VEHICLES",
+		EntityType:  "fuel_log",
+		EntityID:    fuelEntry.ID,
+		Description: fmt.Sprintf("%s logged %.1fL fuel refuel (₹%.2f) for vehicle", middleware.GetUserName(c), req.Liters, req.TotalCost),
+		IPAddress:   c.ClientIP(),
+	})
+
 	c.JSON(http.StatusCreated, fuelEntry)
 }
 
@@ -51,5 +67,19 @@ func (h *Handler) DeleteFuel(c *gin.Context) {
 		c.JSON(apperror.Resolve(err))
 		return
 	}
+
+	activity.LogActivity(h.db, activity.LogActivityParams{
+		TenantID:    tenantID,
+		UserID:      middleware.GetUserID(c),
+		UserName:    middleware.GetUserName(c),
+		UserRole:    middleware.GetUserRole(c),
+		Action:      "DELETE_FUEL_LOG",
+		Category:    "VEHICLES",
+		EntityType:  "fuel_log",
+		EntityID:    fuelID,
+		Description: fmt.Sprintf("%s deleted fuel log entry", middleware.GetUserName(c)),
+		IPAddress:   c.ClientIP(),
+	})
+
 	c.Status(http.StatusNoContent)
 }
