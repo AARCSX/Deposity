@@ -11,7 +11,9 @@ export default function Header({ onMenuClick }: { onMenuClick: () => void }) {
   const [planName, setPlanName] = useState("7-Day Free Trial");
   const [alerts, setAlerts] = useState<any[]>([]);
   const [isOpen, setIsOpen] = useState(false);
+  const [isBranchDropdownOpen, setIsBranchDropdownOpen] = useState(false);
   const popoverRef = useRef<HTMLDivElement>(null);
+  const branchDropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setOrgName(getOrgNameFromToken());
@@ -27,6 +29,17 @@ export default function Header({ onMenuClick }: { onMenuClick: () => void }) {
     return () => {
       window.removeEventListener("deposity_org_name_changed", handleOrgNameChange);
     };
+  }, []);
+
+  // Close branch dropdown on outside click
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (branchDropdownRef.current && !branchDropdownRef.current.contains(e.target as Node)) {
+        setIsBranchDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
   }, []);
 
   const fetchAlerts = async () => {
@@ -132,25 +145,76 @@ export default function Header({ onMenuClick }: { onMenuClick: () => void }) {
           />
         </div>
 
-        {/* Depot Branch, Role & Subscription Plan Badges */}
-        <a
-          href="https://identity.aarcsx.com/products"
-          title="Manage Depot Subscriptions & Branches in AARCSX Identity"
-          className="hidden sm:flex items-center gap-2.5 bg-slate-100/90 hover:bg-slate-200/90 border border-slate-300/60 px-4 py-1.5 rounded-full transition group"
-        >
-          <span className="material-symbols-outlined text-[18px] text-primary">domain</span>
-          <span className="font-extrabold text-sm text-[#191C1E]">{orgName}</span>
-          
-          <span className="text-[10px] bg-amber-500/15 text-amber-800 border border-amber-500/30 px-2.5 py-0.5 rounded-full font-bold uppercase">
-            {userRole}
-          </span>
+        {/* Custom Non-Native Glassmorphic Branch Switcher Dropdown */}
+        <div ref={branchDropdownRef} className="relative hidden sm:block">
+          <button
+            type="button"
+            onClick={() => setIsBranchDropdownOpen(!isBranchDropdownOpen)}
+            className="flex items-center gap-2.5 bg-slate-100/90 hover:bg-slate-200/90 border border-slate-300/60 px-4 py-1.5 rounded-full transition active:scale-[0.98] cursor-pointer"
+          >
+            <span className="material-symbols-outlined text-[18px] text-primary">domain</span>
+            <span className="font-extrabold text-sm text-[#191C1E]">{orgName}</span>
+            
+            <span className="text-[10px] bg-amber-500/15 text-amber-800 border border-amber-500/30 px-2.5 py-0.5 rounded-full font-bold uppercase">
+              {userRole}
+            </span>
 
-          <span className="text-[10px] bg-emerald-500/15 text-emerald-800 border border-emerald-500/30 px-2.5 py-0.5 rounded-full font-extrabold uppercase">
-            {planName}
-          </span>
+            <span className="text-[10px] bg-emerald-500/15 text-emerald-800 border border-emerald-500/30 px-2.5 py-0.5 rounded-full font-extrabold uppercase">
+              {planName}
+            </span>
 
-          <span className="material-symbols-outlined text-[16px] text-slate-400 group-hover:text-slate-600">unfold_more</span>
-        </a>
+            <span className={`material-symbols-outlined text-[16px] text-slate-400 transition-transform duration-200 ${isBranchDropdownOpen ? "rotate-180" : ""}`}>
+              unfold_more
+            </span>
+          </button>
+
+          {/* Custom Glassmorphic Branch Dropdown Card */}
+          {isBranchDropdownOpen && (
+            <div className="absolute left-0 mt-2.5 w-80 bg-white/95 backdrop-blur-md border border-slate-200/80 rounded-2xl shadow-2xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+              <div className="p-3.5 border-b border-slate-100 bg-slate-50/80 flex justify-between items-center">
+                <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">Select Active Branch</span>
+                <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded font-bold">
+                  Identity Synced
+                </span>
+              </div>
+
+              <div className="p-2 space-y-1 max-h-64 overflow-y-auto">
+                <button
+                  type="button"
+                  onClick={() => setIsBranchDropdownOpen(false)}
+                  className="w-full p-3 rounded-xl bg-primary/10 border border-primary/20 text-left flex items-center justify-between transition"
+                >
+                  <div className="space-y-0.5">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-sm text-slate-900">{orgName}</span>
+                      <span className="text-[9px] bg-emerald-500/20 text-emerald-700 font-bold px-1.5 py-0.2 rounded uppercase">
+                        Active
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 text-[11px] text-slate-500">
+                      <span>Role: {userRole}</span>
+                      <span>•</span>
+                      <span className="font-semibold text-emerald-600">{planName}</span>
+                    </div>
+                  </div>
+                  <span className="material-symbols-outlined text-primary text-[20px]">check_circle</span>
+                </button>
+              </div>
+
+              <div className="p-3 border-t border-slate-100 bg-slate-50/80 text-center">
+                <a
+                  href="https://identity.aarcsx.com/products"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-xs font-bold text-primary hover:underline inline-flex items-center gap-1"
+                >
+                  <span>Manage Branches & Subscription Plans</span>
+                  <span className="material-symbols-outlined text-[14px]">open_in_new</span>
+                </a>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="flex items-center gap-4 relative">

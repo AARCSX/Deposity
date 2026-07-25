@@ -209,6 +209,49 @@ export function getSubscriptionStatusFromToken(): string {
   }
 }
 
+export type UserBranchInfo = {
+  id: string;
+  name: string;
+  tenant_id: string;
+  role: string;
+  plan: string;
+};
+
+export async function fetchUserBranches(): Promise<UserBranchInfo[]> {
+  const token = getAuthToken();
+  if (!token) return [];
+
+  try {
+    const res = await fetch("https://zrxdlanspjqewyqurvvl.supabase.co/functions/v1/oauth-userinfo", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!res.ok) return [];
+
+    const data = await res.json();
+    return [
+      {
+        id: data.tenant_id || "default",
+        name: data.org_name || "AARCSX Transport",
+        tenant_id: data.tenant_id || "",
+        role: data.role || "Owner",
+        plan: data.subscription_plan || "7-Day Free Trial",
+      },
+    ];
+  } catch (e) {
+    return [];
+  }
+}
+
+export function switchActiveBranch(branchName: string) {
+  if (typeof window !== "undefined") {
+    localStorage.setItem("deposity_org_name", branchName);
+    window.dispatchEvent(new Event("deposity_org_name_changed"));
+  }
+}
+
 // ─── Activity Logs API ────────────────────────────────────────────────
 export async function fetchActivityLogs(params: {
   page?: number;
