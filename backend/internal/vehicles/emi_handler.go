@@ -61,7 +61,7 @@ func (h *Handler) CreateEMI(c *gin.Context) {
 		Category:    "VEHICLES",
 		EntityType:  "emi_schedule",
 		EntityID:    emi.ID,
-		Description: fmt.Sprintf("%s logged EMI schedule (₹%.2f/mo) for vehicle", middleware.GetUserName(c), req.EMIAmount),
+		Description: fmt.Sprintf("%s logged EMI schedule (₹%.2f/mo) for vehicle", middleware.GetUserName(c), req.Amount),
 		IPAddress:   c.ClientIP(),
 	})
 

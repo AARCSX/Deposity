@@ -50,7 +50,7 @@ func (h *Handler) CreateFuel(c *gin.Context) {
 		Category:    "VEHICLES",
 		EntityType:  "fuel_log",
 		EntityID:    fuelEntry.ID,
-		Description: fmt.Sprintf("%s logged %.1fL fuel refuel (₹%.2f) for vehicle", middleware.GetUserName(c), req.Liters, req.TotalCost),
+		Description: fmt.Sprintf("%s logged %.1fL fuel refuel (₹%.2f) for vehicle", middleware.GetUserName(c), req.Litres, req.TotalPrice),
 		IPAddress:   c.ClientIP(),
 	})
 
