@@ -7,8 +7,9 @@ export interface TripCardProps {
   vehicle: string;
   material: string;
   driver: { name: string; avatar: string };
-  financials: { total: string; advance: string; balance: string };
+  financials: { total: string; advance: string; balance: string; rawBalance?: number };
   onUpdateStatus?: () => void;
+  onRecordPayment?: () => void;
 }
 
 export default function TripCard({
@@ -22,6 +23,7 @@ export default function TripCard({
   driver,
   financials,
   onUpdateStatus,
+  onRecordPayment,
 }: TripCardProps) {
   const statusColors = {
     "in-transit": "bg-secondary-container text-on-secondary-container",
@@ -30,6 +32,7 @@ export default function TripCard({
   };
 
   const isDelivered = status === "delivered";
+  const isPaidInFull = (financials.rawBalance ?? 0) <= 0 || financials.balance === "₹0" || financials.balance === "₹0.00";
 
   return (
     <div className={`bg-surface-container-lowest rounded-xl p-6 flex flex-col xl:flex-row gap-6 relative border border-outline-variant/10 transition-all hover:shadow-[0px_20px_40px_rgba(23,28,31,0.06)] ${isDelivered ? "opacity-90 grayscale-[0.2]" : ""}`}>
@@ -42,7 +45,7 @@ export default function TripCard({
               {status.replace("-", " ")}
             </span>
           </div>
-          <button className="text-on-surface-variant hover:text-primary transition-colors">
+          <button onClick={onUpdateStatus} className="text-on-surface-variant hover:text-primary transition-colors cursor-pointer" title="Options">
             <span className="material-symbols-outlined">more_vert</span>
           </button>
         </div>
@@ -127,23 +130,33 @@ export default function TripCard({
             )}
             <div className={`flex justify-between items-center text-sm pt-2 border-t border-outline-variant/15`}>
               <span className="font-medium text-on-surface">{isDelivered ? "Balance Pending" : "Balance"}</span>
-              <span className={`font-bold tabular-nums ${isDelivered ? "text-error" : "text-error"}`}>{financials.balance}</span>
+              <span className={`font-bold tabular-nums ${isPaidInFull ? "text-emerald-600" : "text-rose-600"}`}>{financials.balance}</span>
             </div>
           </div>
         </div>
         <div className="flex gap-2">
-          {status === "delivered" ? (
-            <button className="flex-1 py-2 text-sm font-bold rounded-lg bg-surface-container-highest text-on-surface hover:bg-outline-variant/30 transition-colors active:scale-[0.98]">
-              Record Payment
-            </button>
+          {isPaidInFull ? (
+            <div className="flex-1 py-2 text-center text-xs font-bold rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center justify-center gap-1.5">
+              <span className="material-symbols-outlined text-[16px]">check_circle</span>
+              Paid in Full
+            </div>
           ) : (
             <button 
-              onClick={onUpdateStatus}
-              className="flex-1 py-2 text-sm font-bold rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors active:scale-[0.98]"
+              onClick={onRecordPayment || onUpdateStatus}
+              className="flex-1 py-2 text-sm font-bold rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 shadow-md shadow-emerald-600/20 transition-all active:scale-[0.98] cursor-pointer flex items-center justify-center gap-1.5"
             >
-              Update Status
+              <span className="material-symbols-outlined text-[16px]">payments</span>
+              Record Payment
             </button>
           )}
+          <button 
+            onClick={onUpdateStatus}
+            className="px-3 py-2 text-xs font-bold rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors active:scale-[0.98] cursor-pointer flex items-center justify-center gap-1"
+            title="Update Trip Status"
+          >
+            <span className="material-symbols-outlined text-[16px]">edit</span>
+            Status
+          </button>
         </div>
       </div>
     </div>

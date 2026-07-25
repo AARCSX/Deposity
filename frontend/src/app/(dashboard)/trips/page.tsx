@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import MetricCard from "@/components/dashboard/MetricCard";
 import TripCard from "@/components/dashboard/TripCard";
 import CreateTripWizard from "@/components/trips/CreateTripWizard";
+import RecordPaymentModal from "@/components/trips/RecordPaymentModal";
 import { TripRecord } from "@/types/trip";
 import { authenticatedFetch } from "@/lib/api";
 
@@ -19,6 +20,9 @@ function TripsContent() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingTrip, setEditingTrip] = useState<TripRecord | null>(null);
   
+  const [selectedPaymentTrip, setSelectedPaymentTrip] = useState<TripRecord | null>(null);
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+
   const ITEMS_PER_PAGE = 5;
   const [visibleCount, setVisibleCount] = useState(ITEMS_PER_PAGE);
 
@@ -81,8 +85,29 @@ function TripsContent() {
     }
   };
 
+  const handlePaymentSubmitted = async (updatedTrip: TripRecord) => {
+    // Update local state immediately for instant feedback
+    setTrips(prev => prev.map(t => (t.id === updatedTrip.id ? updatedTrip : t)));
+
+    if (updatedTrip.id) {
+      try {
+        await authenticatedFetch(`/trips/${updatedTrip.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(updatedTrip),
+        });
+      } catch (err) {
+        console.warn("Failed to persist payment to backend:", err);
+      }
+    }
+  };
+
   // Helper to map robust data to the simpler TripCard props
   const mapToCardProps = (t: TripRecord) => {
+    const total = t.financials.totalFreight || 0;
+    const advance = t.financials.advancePaid || 0;
+    const balanceNum = Math.max(0, total - advance);
+
     return {
       id: t.id || "TRP-NEW",
       status: t.status,
@@ -96,9 +121,10 @@ function TripsContent() {
         avatar: "https://lh3.googleusercontent.com/aida-public/AB6AXuDs8vYyaJRt3Ehc5U9tkxEe2f2cRwGnXFP-zUSS11H-wWFcjpuyUFPMCcS5saeF0FDVEASQBKoNfcCM-aHGja_scXSRDnZIbwZQ6eAOxVzd2rRWhzDXNICRMRuk6FL4M5jqyBhngdZru0sp7W1Vpi-wSHeQnWU8Vm_iJq8Hg-FeFQEWh1E3nHniHMQ8ByJMDbu-QZ7ibO02iV1JH2fxrPIHfDDedTa1Py-tp6MVpH9BgZubOeIcKAV4xajaE6O169gEAG3q9ZO0ddgE",
       },
       financials: {
-        total: `₹${t.financials.totalFreight.toLocaleString()}`,
-        advance: `₹${t.financials.advancePaid.toLocaleString()}`,
-        balance: `₹${(t.financials.totalFreight - t.financials.advancePaid).toLocaleString()}`,
+        total: `₹${total.toLocaleString("en-IN")}`,
+        advance: `₹${advance.toLocaleString("en-IN")}`,
+        balance: `₹${balanceNum.toLocaleString("en-IN")}`,
+        rawBalance: balanceNum,
       },
     };
   };
@@ -107,7 +133,7 @@ function TripsContent() {
   const activeTrips = trips.filter(t => t.status === "in-transit").length;
   const pendingTrips = trips.filter(t => t.status === "pending").length;
   const totalRevenue = trips.reduce((sum, t) => sum + t.financials.totalFreight, 0);
-  const pendingPayments = trips.reduce((sum, t) => sum + (t.financials.totalFreight - t.financials.advancePaid), 0);
+  const pendingPayments = trips.reduce((sum, t) => sum + Math.max(0, t.financials.totalFreight - t.financials.advancePaid), 0);
 
   const formattedRevenue = totalRevenue >= 100000 
     ? `₹${(totalRevenue / 100000).toFixed(1)}L` 
@@ -123,53 +149,53 @@ function TripsContent() {
 
   return (
     <>
-      <div className="space-y-8">
-        {/* Header Section */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+      <div className="p-8 space-y-8 max-w-[1600px] mx-auto">
+        {/* Header */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h1 className="text-[2.75rem] font-bold text-on-surface leading-tight tracking-[-0.02em]">Trips Management</h1>
-            <p className="text-on-surface-variant mt-1 font-medium">
-              Monitor <span className="text-primary font-bold">{trips.length} trips</span>, active routes, and financials.
+            <h1 className="text-3xl font-black text-on-surface tracking-tight">Trips Management</h1>
+            <p className="text-sm text-on-surface-variant mt-1">
+              Monitor <span className="font-bold text-on-surface">{trips.length} trips</span>, active routes, and financials.
             </p>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             <button 
-              onClick={() => setIsCreateModalOpen(true)}
-              className="bg-primary text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-primary/20 hover:opacity-90 transition-all flex items-center gap-2"
+              onClick={() => {
+                setEditingTrip(null);
+                setIsCreateModalOpen(true);
+              }}
+              className="px-5 py-2.5 rounded-xl bg-primary text-on-primary font-bold text-sm hover:bg-primary-container hover:text-on-primary-container transition-all shadow-sm active:scale-[0.98] flex items-center gap-2"
             >
-              <span className="material-symbols-outlined text-[18px]">add</span>
+              <span className="material-symbols-outlined text-[20px]">add</span>
               New Trip
             </button>
-            <div className="flex bg-surface-container-high rounded-xl p-1 shadow-sm">
-              <button className="px-4 py-2 rounded-lg bg-surface-container-lowest text-primary font-bold shadow-sm flex items-center gap-2 text-sm transition-all">
-                <span className="material-symbols-outlined text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>list</span>
-                List
+            <div className="flex items-center bg-surface-container-high rounded-xl p-1 border border-outline-variant/10">
+              <button className="px-3 py-1.5 rounded-lg text-xs font-bold bg-surface text-on-surface shadow-sm flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-[16px]">format_list_bulleted</span> List
               </button>
-              <button className="px-4 py-2 rounded-lg text-on-surface-variant hover:text-on-surface font-bold flex items-center gap-2 text-sm transition-colors">
-                <span className="material-symbols-outlined text-[20px]">calendar_month</span>
-                Calendar
+              <button className="px-3 py-1.5 rounded-lg text-xs font-medium text-on-surface-variant hover:text-on-surface flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-[16px]">calendar_today</span> Calendar
               </button>
-              <button className="px-4 py-2 rounded-lg text-on-surface-variant hover:text-on-surface font-bold flex items-center gap-2 text-sm transition-colors">
-                <span className="material-symbols-outlined text-[20px]">map</span>
-                Map
+              <button className="px-3 py-1.5 rounded-lg text-xs font-medium text-on-surface-variant hover:text-on-surface flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-[16px]">map</span> Map
               </button>
             </div>
           </div>
         </div>
 
-        {/* Metric Stack — now driven by actual data */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        {/* Metrics Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
           <MetricCard 
             label="Active Trips" 
-            value={String(activeTrips)} 
-            icon="route" 
-            theme="primary" 
+            value={activeTrips.toString()} 
+            icon="alt_route" 
+            theme="secondary" 
           />
           <MetricCard 
             label="Pending Deliveries" 
-            value={String(pendingTrips)} 
-            subtitle="Awaiting dispatch" 
+            value={pendingTrips.toString()} 
             icon="inventory_2" 
+            subtitle="Awaiting dispatch" 
             theme="warning" 
           />
           <MetricCard 
@@ -184,19 +210,6 @@ function TripsContent() {
             icon="account_balance_wallet" 
             theme="tertiary" 
           />
-        </div>
-
-        {/* Filters Area */}
-        <div className="flex flex-wrap items-center gap-3 bg-surface-container-low/30 p-2 rounded-2xl border border-outline-variant/10">
-          <span className="text-sm font-bold text-on-surface-variant ml-2 flex items-center gap-1.5 uppercase tracking-wider">
-            <span className="material-symbols-outlined text-[18px]">filter_list</span> Filters
-          </span>
-          <div className="flex flex-wrap gap-2">
-            <FilterButton label="Status" value="All" active />
-            <FilterButton label="Payment" value="Pending" />
-            <FilterButton label="Date" value="Last 30 Days" />
-            <FilterButton label="Company" value="Any" />
-          </div>
         </div>
 
         {/* Trip Cards Container */}
@@ -218,6 +231,10 @@ function TripsContent() {
               onUpdateStatus={() => {
                 setEditingTrip(trip);
                 setIsCreateModalOpen(true);
+              }}
+              onRecordPayment={() => {
+                setSelectedPaymentTrip(trip);
+                setIsPaymentModalOpen(true);
               }}
             />
           ))}
@@ -247,6 +264,18 @@ function TripsContent() {
           onSubmit={handleWizardSubmit} 
           tripToEdit={editingTrip}
         />
+
+        {selectedPaymentTrip && (
+          <RecordPaymentModal
+            trip={selectedPaymentTrip}
+            isOpen={isPaymentModalOpen}
+            onClose={() => {
+              setIsPaymentModalOpen(false);
+              setSelectedPaymentTrip(null);
+            }}
+            onPaymentSubmitted={handlePaymentSubmitted}
+          />
+        )}
       </div>
     </>
   );
