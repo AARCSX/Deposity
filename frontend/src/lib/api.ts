@@ -238,6 +238,16 @@ export async function fetchUserBranches(): Promise<UserBranchInfo[]> {
     if (!res.ok) return [];
 
     const data = await res.json();
+    if (data.user_organizations && Array.isArray(data.user_organizations) && data.user_organizations.length > 0) {
+      return data.user_organizations.map((org: any) => ({
+        id: org.id || org.tenant_id,
+        name: org.name || "Organization",
+        tenant_id: org.tenant_id || "",
+        role: org.role || "Owner",
+        plan: org.subscription_plan || "7-Day Free Trial",
+      }));
+    }
+
     return [
       {
         id: data.tenant_id || "default",
@@ -252,9 +262,12 @@ export async function fetchUserBranches(): Promise<UserBranchInfo[]> {
   }
 }
 
-export function switchActiveBranch(branchName: string) {
+export function switchActiveBranch(branchName: string, tenantId?: string) {
   if (typeof window !== "undefined") {
     localStorage.setItem("deposity_org_name", branchName);
+    if (tenantId) {
+      localStorage.setItem("deposity_tenant_id", tenantId);
+    }
     window.dispatchEvent(new Event("deposity_org_name_changed"));
   }
 }

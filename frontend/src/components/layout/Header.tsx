@@ -1,14 +1,13 @@
-"use client";
-
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { getOrgNameFromToken, getUserRoleFromToken, getSubscriptionPlanFromToken, authenticatedFetch } from "@/lib/api";
+import { getOrgNameFromToken, getUserRoleFromToken, getSubscriptionPlanFromToken, fetchUserBranches, switchActiveBranch, UserBranchInfo, authenticatedFetch } from "@/lib/api";
 import { parsePermitDetails } from "@/types/vehicle";
 
 export default function Header({ onMenuClick }: { onMenuClick: () => void }) {
   const [orgName, setOrgName] = useState("OnWay");
   const [userRole, setUserRole] = useState("Owner");
   const [planName, setPlanName] = useState("7-Day Free Trial");
+  const [userBranches, setUserBranches] = useState<UserBranchInfo[]>([]);
   const [alerts, setAlerts] = useState<any[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [isBranchDropdownOpen, setIsBranchDropdownOpen] = useState(false);
@@ -20,10 +19,22 @@ export default function Header({ onMenuClick }: { onMenuClick: () => void }) {
     setUserRole(getUserRoleFromToken());
     setPlanName(getSubscriptionPlanFromToken());
 
+    fetchUserBranches().then((branches) => {
+      if (branches && branches.length > 0) {
+        setUserBranches(branches);
+      }
+    });
+
     const handleOrgNameChange = () => {
       setOrgName(getOrgNameFromToken());
       setUserRole(getUserRoleFromToken());
       setPlanName(getSubscriptionPlanFromToken());
+
+      fetchUserBranches().then((branches) => {
+        if (branches && branches.length > 0) {
+          setUserBranches(branches);
+        }
+      });
     };
     window.addEventListener("deposity_org_name_changed", handleOrgNameChange);
     return () => {
@@ -179,26 +190,67 @@ export default function Header({ onMenuClick }: { onMenuClick: () => void }) {
               </div>
 
               <div className="p-2 space-y-1 max-h-64 overflow-y-auto">
-                <button
-                  type="button"
-                  onClick={() => setIsBranchDropdownOpen(false)}
-                  className="w-full p-3 rounded-xl bg-primary/10 border border-primary/20 text-left flex items-center justify-between transition"
-                >
-                  <div className="space-y-0.5">
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-sm text-slate-900">{orgName}</span>
-                      <span className="text-[9px] bg-emerald-500/20 text-emerald-700 font-bold px-1.5 py-0.2 rounded uppercase">
-                        Active
-                      </span>
+                {userBranches.length > 0 ? (
+                  userBranches.map((branch) => {
+                    const isActive = branch.name.toLowerCase() === orgName.toLowerCase();
+
+                    return (
+                      <button
+                        key={branch.id || branch.name}
+                        type="button"
+                        onClick={() => {
+                          switchActiveBranch(branch.name, branch.tenant_id);
+                          setIsBranchDropdownOpen(false);
+                        }}
+                        className={`w-full p-3 rounded-xl text-left flex items-center justify-between transition cursor-pointer ${
+                          isActive
+                            ? "bg-primary/10 border border-primary/20 text-slate-900 font-bold"
+                            : "bg-slate-50/60 hover:bg-slate-100/90 border border-slate-200/50 text-slate-700"
+                        }`}
+                      >
+                        <div className="space-y-0.5">
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-sm text-slate-900">{branch.name}</span>
+                            {isActive && (
+                              <span className="text-[9px] bg-emerald-500/20 text-emerald-700 font-bold px-1.5 py-0.2 rounded uppercase">
+                                Active
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 text-[11px] text-slate-500">
+                            <span>Role: {branch.role}</span>
+                            <span>•</span>
+                            <span className="font-semibold text-emerald-600">{branch.plan}</span>
+                          </div>
+                        </div>
+                        {isActive && (
+                          <span className="material-symbols-outlined text-primary text-[20px]">check_circle</span>
+                        )}
+                      </button>
+                    );
+                  })
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setIsBranchDropdownOpen(false)}
+                    className="w-full p-3 rounded-xl bg-primary/10 border border-primary/20 text-left flex items-center justify-between transition"
+                  >
+                    <div className="space-y-0.5">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-sm text-slate-900">{orgName}</span>
+                        <span className="text-[9px] bg-emerald-500/20 text-emerald-700 font-bold px-1.5 py-0.2 rounded uppercase">
+                          Active
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 text-[11px] text-slate-500">
+                        <span>Role: {userRole}</span>
+                        <span>•</span>
+                        <span className="font-semibold text-emerald-600">{planName}</span>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2 text-[11px] text-slate-500">
-                      <span>Role: {userRole}</span>
-                      <span>•</span>
-                      <span className="font-semibold text-emerald-600">{planName}</span>
-                    </div>
-                  </div>
-                  <span className="material-symbols-outlined text-primary text-[20px]">check_circle</span>
-                </button>
+                    <span className="material-symbols-outlined text-primary text-[20px]">check_circle</span>
+                  </button>
+                )}
               </div>
 
               <div className="p-3 border-t border-slate-100 bg-slate-50/80 text-center">
