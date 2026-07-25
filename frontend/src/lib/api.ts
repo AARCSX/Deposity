@@ -95,6 +95,13 @@ export async function authenticatedFetch(path: string, options: RequestInit = {}
     headers.set("Authorization", `Bearer ${token}`);
   }
 
+  if (typeof window !== "undefined") {
+    const activeTenantId = localStorage.getItem("deposity_tenant_id");
+    if (activeTenantId) {
+      headers.set("X-Tenant-ID", activeTenantId);
+    }
+  }
+
   const url = path.startsWith("http") ? path : `${apiBase}${path.startsWith("/") ? "" : "/"}${path}`;
   const response = await fetch(url, {
     ...options,

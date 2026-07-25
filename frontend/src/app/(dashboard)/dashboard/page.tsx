@@ -35,16 +35,19 @@ export default function Home() {
     if (typeof window !== "undefined") {
       const urlParams = new URLSearchParams(window.location.search);
       const queryOrgName = urlParams.get("org_name");
+      const queryTenantId = urlParams.get("tenant_id");
       if (queryOrgName) {
         localStorage.setItem("deposity_org_name", queryOrgName);
-        window.dispatchEvent(new Event("deposity_org_name_changed"));
+      }
+      if (queryTenantId) {
+        localStorage.setItem("deposity_tenant_id", queryTenantId);
       }
 
       const token = localStorage.getItem("deposity_token");
       if (!token) {
         router.push("/");
       } else {
-        setOrgName(queryOrgName || getOrgNameFromToken());
+        setOrgName(getOrgNameFromToken());
       }
     }
 
@@ -62,11 +65,10 @@ export default function Home() {
     const loadDashboardData = async () => {
       setIsLoading(true);
       try {
-        const [resVehicles, resTrips, resMaint, resSettings] = await Promise.all([
+        const [resVehicles, resTrips, resMaint] = await Promise.all([
           authenticatedFetch("/vehicles").catch(() => null),
           authenticatedFetch("/trips").catch(() => null),
           authenticatedFetch("/maintenance").catch(() => null),
-          authenticatedFetch("/settings").catch(() => null),
         ]);
 
         let vehiclesData = [];
@@ -82,14 +84,8 @@ export default function Home() {
         if (resMaint && resMaint.ok) {
           maintData = await resMaint.json();
         }
-        if (resSettings && resSettings.ok) {
-          const settingsData = await resSettings.json();
-          if (settingsData && settingsData.name) {
-            setOrgName(settingsData.name);
-          }
-        }
 
-        // Set backend data or empty lists (no mock fallback)
+        // Set backend data or empty lists
         setVehicles(Array.isArray(vehiclesData) ? vehiclesData : []);
         setTrips(Array.isArray(tripsData) ? tripsData : []);
         setMaintenance(Array.isArray(maintData) ? maintData : []);
