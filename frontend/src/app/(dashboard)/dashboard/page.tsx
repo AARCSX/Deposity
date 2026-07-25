@@ -40,6 +40,15 @@ export default function Home() {
         setOrgName(getOrgNameFromToken());
       }
     }
+
+    const handleOrgNameChange = () => {
+      setOrgName(getOrgNameFromToken());
+      setRefreshKey((prev) => prev + 1);
+    };
+    window.addEventListener("deposity_org_name_changed", handleOrgNameChange);
+    return () => {
+      window.removeEventListener("deposity_org_name_changed", handleOrgNameChange);
+    };
   }, [router]);
 
   useEffect(() => {
