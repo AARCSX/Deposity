@@ -30,6 +30,7 @@ export interface VehicleCardProps {
   emiDate?: string;
   locationState?: "online" | "offline";
   onEdit?: (id: string) => void;
+  onDelete?: (id: string) => void;
 }
 
 export default function VehicleCard({
@@ -42,6 +43,7 @@ export default function VehicleCard({
   emiDate,
   locationState = "online",
   onEdit,
+  onDelete,
 }: VehicleCardProps) {
   const [hovering, setHovering] = useState(false);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
@@ -194,8 +196,15 @@ export default function VehicleCard({
             <span className="text-xs font-bold">{label}</span>
           </div>
         </div>
-        <button className="text-on-surface-variant hover:text-primary transition-colors">
-          <span className="material-symbols-outlined">more_vert</span>
+        <button 
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete?.(id);
+          }}
+          title="Delete Vehicle"
+          className="w-8 h-8 rounded-lg bg-red-50 hover:bg-red-500 text-red-600 hover:text-white flex items-center justify-center transition-all cursor-pointer border border-red-200/60 shadow-xs active:scale-95 shrink-0"
+        >
+          <span className="material-symbols-outlined text-[1.1rem]">delete</span>
         </button>
       </div>
 

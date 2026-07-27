@@ -65,6 +65,23 @@ export default function VehiclesPage() {
     }
   };
 
+  const handleVehicleDelete = async (vehicleId: string) => {
+    if (!vehicleId) return;
+    if (!confirm("Are you sure you want to delete this vehicle from your fleet?")) return;
+    try {
+      const response = await authenticatedFetch(`/vehicles/${vehicleId}`, {
+        method: "DELETE",
+      });
+      if (response.ok) {
+        loadVehicles();
+      } else {
+        alert("Failed to delete vehicle");
+      }
+    } catch {
+      alert("Network error while deleting vehicle");
+    }
+  };
+
   // Helper to map robust data to the simpler VehicleCard props
   const mapToCardProps = (v: VehicleRecord) => {
     // Real driver data returned by the backend LEFT JOIN
@@ -84,7 +101,8 @@ export default function VehiclesPage() {
       onEdit: () => {
         setEditingVehicle(v);
         setIsCreateModalOpen(true);
-      }
+      },
+      onDelete: (id: string) => handleVehicleDelete(id),
     };
   };
 
