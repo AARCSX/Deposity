@@ -6,6 +6,7 @@ import DynamicChassis, { AxleConfig } from "./DynamicChassis";
 import TyreHistoryCard, { TyreActivity } from "./TyreHistoryCard";
 import CreateMaintenanceWizard, { MaintenanceRecord } from "./CreateMaintenanceWizard";
 import { VehicleRecord } from "@/types/vehicle";
+import { parseAxleConfig as parseAxleHelper } from "@/types/axle";
 
 const fallbackRecords: MaintenanceRecord[] = [
   {
@@ -121,74 +122,15 @@ const fallbackVehicles: VehicleRecord[] = [
 export function parseAxleConfig(configStr: string): AxleConfig[] {
   if (!configStr) return [{ left: 1, right: 1 }, { left: 2, right: 2 }, { left: 2, right: 2 }];
   
-  const lower = configStr.toLowerCase().trim();
-  
-  // Helper to dynamically calculate axles for any wheel count
-  const parseWheelCount = (w: number): AxleConfig[] => {
-    if (w <= 2) return [{ left: 1, right: 1 }];
-    if (w <= 4) return [{ left: 1, right: 1 }, { left: 1, right: 1 }];
-    const target = w % 2 === 0 ? w : w + 1;
-    const config: AxleConfig[] = [];
-    if (target % 4 === 0) {
-      config.push({ left: 1, right: 1 });
-      config.push({ left: 1, right: 1 });
-      const driveAxles = (target - 4) / 4;
-      for (let i = 0; i < driveAxles; i++) {
-        config.push({ left: 2, right: 2 });
-      }
-    } else {
-      config.push({ left: 1, right: 1 });
-      const driveAxles = (target - 2) / 4;
-      for (let i = 0; i < driveAxles; i++) {
-        config.push({ left: 2, right: 2 });
-      }
-    }
-    return config;
-  };
-
-  // 1. Check for total wheel count mappings first to handle inputs like "10", "12", "6", "10 wheeler", "20 wheels", etc.
-  const wheelOnlyMatch = lower.replace(/\s*wheelers?|\s*wheels?|\s*wheel/g, "").trim();
-  const wheels = parseInt(wheelOnlyMatch);
-  if (!isNaN(wheels) && /^\d+$/.test(wheelOnlyMatch)) {
-    return parseWheelCount(wheels);
+  const parsedHelper = parseAxleHelper(configStr);
+  if (parsedHelper && parsedHelper.axleTyres && parsedHelper.axleTyres.length > 0) {
+    return parsedHelper.axleTyres.map((tyres) => {
+      if (tyres <= 2) return { left: 1, right: 1 };
+      if (tyres === 4) return { left: 2, right: 2 };
+      return { left: Math.ceil(tyres / 2), right: Math.floor(tyres / 2) };
+    });
   }
 
-  if (lower.includes("4x2") || lower.includes("6 wheeler")) {
-    return [{ left: 1, right: 1 }, { left: 2, right: 2 }];
-  }
-  if (lower.includes("6x4") || lower.includes("6x2") || lower.includes("10 wheeler")) {
-    return [{ left: 1, right: 1 }, { left: 2, right: 2 }, { left: 2, right: 2 }];
-  }
-  if (lower.includes("8x2") || lower.includes("8x4") || lower.includes("12 wheeler")) {
-    return [{ left: 1, right: 1 }, { left: 1, right: 1 }, { left: 2, right: 2 }, { left: 2, right: 2 }];
-  }
-
-  // 2. Otherwise parse custom layouts like "1 1, 2 2, 2 2" or "1 1, 1 1, 2 2. 2 2"
-  const segments = configStr.split(/[;,/\.\-]/);
-  const parsed: AxleConfig[] = [];
-  
-  for (let seg of segments) {
-    seg = seg.trim();
-    if (!seg) continue;
-    const numbers = seg.match(/\d+/g);
-    if (numbers && numbers.length >= 2) {
-      parsed.push({ left: parseInt(numbers[0]), right: parseInt(numbers[1]) });
-    } else if (numbers && numbers.length === 1) {
-      const val = parseInt(numbers[0]);
-      if (val === 2) {
-        parsed.push({ left: 1, right: 1 });
-      } else if (val === 4) {
-        parsed.push({ left: 2, right: 2 });
-      } else {
-        const left = Math.ceil(val / 2);
-        const right = Math.floor(val / 2);
-        parsed.push({ left, right });
-      }
-    }
-  }
-  
-  if (parsed.length > 0) return parsed;
-  
   return [{ left: 1, right: 1 }, { left: 2, right: 2 }, { left: 2, right: 2 }];
 }
 
