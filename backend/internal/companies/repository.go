@@ -16,13 +16,21 @@ func NewRepository(pool *pgxpool.Pool) *Repository {
 	return &Repository{pool: pool}
 }
 
-// GetAll returns all companies for the given tenant.
+// GetAll returns all companies for the given tenant with live aggregated trip financials.
 func (r *Repository) GetAll(ctx context.Context, tenantID string) ([]Company, error) {
 	query := `
-		SELECT id, tenant_id, name, logo, status, location, contact_person, phone, email, total_value, is_paid, pending_amount, industry, created_at, updated_at
-		FROM companies
-		WHERE tenant_id = $1
-		ORDER BY created_at DESC
+		SELECT 
+			c.id, c.tenant_id, c.name, c.logo, c.status, c.location, 
+			c.contact_person, c.phone, c.email, 
+			COALESCE(SUM(t.total_freight), c.total_value) as total_value, 
+			CASE WHEN COALESCE(SUM(GREATEST(0, t.total_freight - t.advance_paid)), c.pending_amount) <= 0 THEN true ELSE false END as is_paid, 
+			COALESCE(SUM(GREATEST(0, t.total_freight - t.advance_paid)), c.pending_amount) as pending_amount, 
+			c.industry, c.created_at, c.updated_at
+		FROM companies c
+		LEFT JOIN trips t ON (t.tenant_id = c.tenant_id AND (t.company_id = c.id OR LOWER(t.company_id) = LOWER(c.name)))
+		WHERE c.tenant_id = $1
+		GROUP BY c.id, c.tenant_id, c.name, c.logo, c.status, c.location, c.contact_person, c.phone, c.email, c.total_value, c.is_paid, c.pending_amount, c.industry, c.created_at, c.updated_at
+		ORDER BY c.created_at DESC
 	`
 	rows, err := r.pool.Query(ctx, query, tenantID)
 	if err != nil {
