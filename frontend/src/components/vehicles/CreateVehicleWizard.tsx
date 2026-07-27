@@ -4,6 +4,8 @@ import React, { useState, useEffect } from "react";
 import { VehicleRecord, PermitData, PermitState, INDIAN_STATES, DEFAULT_PERMIT_DATA, parsePermitDetails, serializePermitDetails } from "@/types/vehicle";
 import { authenticatedFetch } from "@/lib/api";
 
+import AxleConfigSelector from "./AxleConfigSelector";
+
 interface CreateVehicleWizardProps {
   isOpen: boolean;
   onClose: () => void;
@@ -251,7 +253,14 @@ export default function CreateVehicleWizard({ isOpen, onClose, onSubmit, vehicle
               <Input label="Model" placeholder="e.g. Signa 4923" value={formData.core.model} onChange={(v) => setFormData(f => ({...f, core: {...f.core, model: v}}))} />
               <Input label="Year" type="number" placeholder="2023" value={formData.core.year.toString()} onChange={(v) => setFormData(f => ({...f, core: {...f.core, year: Number(v)}}))} />
               <Select label="Body Type" value={formData.core.bodyType} onChange={(v) => setFormData(f => ({...f, core: {...f.core, bodyType: v}}))} options={["Open Body", "Container", "Flatbed", "Reefer"]} />
-              <Input label="Axle Configuration" placeholder="e.g. 10 Wheeler (6x2)" value={formData.core.axleConfig} onChange={(v) => setFormData(f => ({...f, core: {...f.core, axleConfig: v}}))} />
+              
+              <div className="md:col-span-2">
+                <AxleConfigSelector 
+                  value={formData.core.axleConfig} 
+                  onChange={(v) => setFormData(f => ({...f, core: {...f.core, axleConfig: v}}))} 
+                />
+              </div>
+
               <Input label="Tonnage Capacity (MT)" type="number" placeholder="25" value={formData.core.tonnageCapacity.toString()} onChange={(v) => setFormData(f => ({...f, core: {...f.core, tonnageCapacity: Number(v)}}))} />
               <Input label="Fuel Tank Capacity (Liters)" type="number" placeholder="300" value={formData.core.fuelCapacity.toString()} onChange={(v) => setFormData(f => ({...f, core: {...f.core, fuelCapacity: Number(v)}}))} />
               <Input label="Average Mileage (kmpl)" type="number" placeholder="4.5" value={formData.core.averageMileage.toString()} onChange={(v) => setFormData(f => ({...f, core: {...f.core, averageMileage: Number(v)}}))} />
