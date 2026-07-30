@@ -1,11 +1,10 @@
-package drivers
+package expenses
 
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// RegisterRoutes registers the CRUD routes for Drivers.
 func RegisterRoutes(rg *gin.RouterGroup, pool *pgxpool.Pool, authMiddleware gin.HandlerFunc) {
 	repo := NewRepository(pool)
 	service := NewService(repo)
@@ -14,11 +13,8 @@ func RegisterRoutes(rg *gin.RouterGroup, pool *pgxpool.Pool, authMiddleware gin.
 	rg.Use(authMiddleware)
 	{
 		rg.GET("", handler.List)
-		rg.GET("/:id", handler.Get)
 		rg.POST("", handler.Create)
-		rg.PATCH("/:id", handler.Update)
-		rg.PUT("/:id", handler.Update)
 		rg.DELETE("/:id", handler.Delete)
-		rg.GET("/:id/salary-history", handler.GetSalaryHistory)
+		rg.GET("/emi-summary", handler.GetVehicleEMISummaries)
 	}
 }

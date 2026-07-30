@@ -1,0 +1,3 @@
+DROP TABLE IF EXISTS expenses;
+DROP TABLE IF EXISTS salary_payments;
+DROP TABLE IF EXISTS employees;

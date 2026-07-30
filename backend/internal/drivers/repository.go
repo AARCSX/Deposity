@@ -228,6 +228,46 @@ func (r *Repository) Delete(ctx context.Context, tenantID, id string) (bool, err
 	return res.RowsAffected() > 0, nil
 }
 
+type SalaryPaymentRecord struct {
+	ID             string    `json:"id"`
+	RecipientType  string    `json:"recipientType"`
+	RecipientID    string    `json:"recipientId"`
+	AmountPaid     float64   `json:"amountPaid"`
+	PendingBalance float64   `json:"pendingBalance"`
+	PaymentMode    string    `json:"paymentMode"`
+	Notes          string    `json:"notes"`
+	PaymentDate    time.Time `json:"paymentDate"`
+}
+
+func (r *Repository) GetSalaryHistory(ctx context.Context, tenantID, driverID string) ([]SalaryPaymentRecord, error) {
+	query := `
+		SELECT id, recipient_type, recipient_id, amount_paid, pending_balance,
+		       COALESCE(payment_mode, 'Bank Transfer'), COALESCE(notes, ''), payment_date
+		FROM salary_payments
+		WHERE tenant_id = $1 AND LOWER(recipient_type) = 'driver' AND recipient_id = $2::uuid
+		ORDER BY payment_date DESC
+	`
+	rows, err := r.pool.Query(ctx, query, tenantID, driverID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var payments []SalaryPaymentRecord
+	for rows.Next() {
+		var p SalaryPaymentRecord
+		err := rows.Scan(
+			&p.ID, &p.RecipientType, &p.RecipientID, &p.AmountPaid, &p.PendingBalance,
+			&p.PaymentMode, &p.Notes, &p.PaymentDate,
+		)
+		if err != nil {
+			return nil, err
+		}
+		payments = append(payments, p)
+	}
+	return payments, nil
+}
+
 // Helper to format currency values to Indian Rupee (₹xx,xxx) format
 func formatCurrency(val float64) string {
 	if val == 0 {

@@ -1,11 +1,10 @@
-package drivers
+package employees
 
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// RegisterRoutes registers the CRUD routes for Drivers.
 func RegisterRoutes(rg *gin.RouterGroup, pool *pgxpool.Pool, authMiddleware gin.HandlerFunc) {
 	repo := NewRepository(pool)
 	service := NewService(repo)

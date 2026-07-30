@@ -743,80 +743,23 @@ export default function VehicleDetailPage() {
         )}
 
         {activeTab === "emi" && (
-          <div className="bg-surface-container-lowest rounded-xl p-6 border border-outline-variant/15 shadow-sm">
-            <div className="flex justify-between items-center mb-6">
-              <div>
-                <h3 className="font-bold text-lg text-on-surface">EMI Payment Schedule</h3>
-                <p className="text-xs text-on-surface-variant">Track loan installments, amounts, status, and payment records.</p>
-              </div>
-              <button 
-                onClick={() => handleOpenEmiModal()}
-                className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-bold text-white shadow-md shadow-primary/20 hover:opacity-90 transition-opacity active:scale-[0.98]"
-              >
-                <span className="material-symbols-outlined text-sm">add</span>
-                Add Installment
-              </button>
+          <div className="bg-surface-container-lowest rounded-xl p-8 border border-outline-variant/15 text-center space-y-4">
+            <div className="w-16 h-16 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center mx-auto">
+              <span className="material-symbols-outlined text-3xl">account_balance</span>
             </div>
-
-            {emiSchedules.length === 0 ? (
-              <div className="py-12 text-center border border-dashed border-outline-variant/20 rounded-xl bg-surface-container-low/30">
-                <span className="material-symbols-outlined text-4xl text-outline mb-2">account_balance</span>
-                <p className="text-sm font-bold text-on-surface">No installments found</p>
-                <p className="text-xs text-on-surface-variant mt-1">Add your first EMI schedule installment details above.</p>
-              </div>
-            ) : (
-              <div className="overflow-x-auto rounded-xl border border-outline-variant/10">
-                <table className="min-w-full text-left text-sm">
-                  <thead className="bg-surface-container-high">
-                    <tr>
-                      <th className="px-4 py-3 font-semibold text-on-surface-variant">Installment #</th>
-                      <th className="px-4 py-3 font-semibold text-on-surface-variant">Due Date</th>
-                      <th className="px-4 py-3 font-semibold text-on-surface-variant">Amount</th>
-                      <th className="px-4 py-3 font-semibold text-on-surface-variant">Status</th>
-                      <th className="px-4 py-3 font-semibold text-on-surface-variant">Payment Date</th>
-                      <th className="px-4 py-3 font-semibold text-on-surface-variant">Bank Name</th>
-                      <th className="px-4 py-3 font-semibold text-on-surface-variant">Reference No</th>
-                      <th className="px-4 py-3 font-semibold text-on-surface-variant text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-outline-variant/10">
-                    {emiSchedules.map((emi) => (
-                      <tr key={emi.id} className="hover:bg-primary/5 transition-colors">
-                        <td className="px-4 py-3 font-medium text-on-surface">Installment {emi.installmentNo}</td>
-                        <td className="px-4 py-3 text-on-surface-variant">{formatDateForDisplay(emi.dueDate)}</td>
-                        <td className="px-4 py-3 font-semibold text-on-surface">₹{emi.amount.toLocaleString()}</td>
-                        <td className="px-4 py-3">
-                          <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${
-                            emi.status === "Paid" ? "bg-tertiary/10 text-tertiary" :
-                            emi.status === "Overdue" ? "bg-error/10 text-error" :
-                            "bg-warning/10 text-warning"
-                          }`}>
-                            {emi.status}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-on-surface-variant">{emi.paymentDate ? formatDateForDisplay(emi.paymentDate) : "—"}</td>
-                        <td className="px-4 py-3 text-on-surface-variant">{emi.bankName || "—"}</td>
-                        <td className="px-4 py-3 text-on-surface-variant">{emi.referenceNo || "—"}</td>
-                        <td className="px-4 py-3 text-right space-x-2">
-                          <button 
-                            onClick={() => handleOpenEmiModal(emi)}
-                            className="text-primary hover:text-primary-container text-xs font-semibold"
-                          >
-                            Edit
-                          </button>
-                          <button 
-                            onClick={() => handleDeleteEmi(emi.id)}
-                            className="text-error hover:text-error/85 text-xs font-semibold"
-                          >
-                            Delete
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+            <div>
+              <h3 className="text-xl font-bold text-on-surface">Centralized Vehicle EMI Tracker</h3>
+              <p className="text-sm text-on-surface-variant max-w-md mx-auto mt-1">
+                Vehicle loan EMIs, installment tracking, and bank payment schedules are now centralized in the <strong>Expenses Portal</strong>.
+              </p>
+            </div>
+            <Link
+              href="/expenses"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-xl font-bold text-sm shadow-md shadow-primary/20 hover:opacity-90 transition cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-lg">open_in_new</span>
+              Open Expenses &amp; EMI Portal
+            </Link>
           </div>
         )}
 

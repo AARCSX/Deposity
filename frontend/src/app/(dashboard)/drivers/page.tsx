@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import DriverCard from "@/components/dashboard/DriverCard";
 import CreateDriverWizard from "@/components/drivers/CreateDriverWizard";
+import SalaryHistoryModal from "@/components/common/SalaryHistoryModal";
 import { authenticatedFetch } from "@/lib/api";
 
 export default function DriversPage() {
@@ -14,6 +15,7 @@ export default function DriversPage() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [driverToEdit, setDriverToEdit] = useState<any | null>(null);
+  const [salaryHistoryDriver, setSalaryHistoryDriver] = useState<any | null>(null);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -194,6 +196,7 @@ export default function DriversPage() {
                   setIsEditModalOpen(true);
                 }}
                 onDelete={() => handleDelete(driver.id)}
+                onViewSalaryHistory={() => setSalaryHistoryDriver(driver)}
               />
             ))
           )}
@@ -215,6 +218,18 @@ export default function DriversPage() {
           onSubmit={handleEditSubmit}
           driverToEdit={driverToEdit}
         />
+
+        {salaryHistoryDriver && (
+          <SalaryHistoryModal
+            isOpen={!!salaryHistoryDriver}
+            onClose={() => setSalaryHistoryDriver(null)}
+            recipientType="driver"
+            recipientId={salaryHistoryDriver.id || ""}
+            recipientName={salaryHistoryDriver.name}
+            baseSalary={parseFloat((salaryHistoryDriver.salary || "0").replace(/[^0-9.]/g, ""))}
+            pendingBalance={parseFloat((salaryHistoryDriver.pendingBalance || "0").replace(/[^0-9.]/g, ""))}
+          />
+        )}
       </div>
     </>
   );

@@ -14,6 +14,8 @@ import (
 	"github.com/Akshansh-29072005/Deposity/backend/internal/config"
 	"github.com/Akshansh-29072005/Deposity/backend/internal/dashboard"
 	"github.com/Akshansh-29072005/Deposity/backend/internal/drivers"
+	"github.com/Akshansh-29072005/Deposity/backend/internal/employees"
+	"github.com/Akshansh-29072005/Deposity/backend/internal/expenses"
 	"github.com/Akshansh-29072005/Deposity/backend/internal/maintenance"
 	"github.com/Akshansh-29072005/Deposity/backend/internal/platform/cache"
 	"github.com/Akshansh-29072005/Deposity/backend/internal/platform/database"
@@ -82,6 +84,8 @@ func main() {
 		// Secure CRUD routes
 		companies.RegisterRoutes(apiGroup.Group("/companies"), pool, authMiddleware)
 		drivers.RegisterRoutes(apiGroup.Group("/drivers"), pool, authMiddleware)
+		employees.RegisterRoutes(apiGroup.Group("/employees"), pool, authMiddleware)
+		expenses.RegisterRoutes(apiGroup.Group("/expenses"), pool, authMiddleware)
 		vehicles.RegisterRoutes(apiGroup.Group("/vehicles"), pool, authMiddleware)
 		trips.RegisterRoutes(apiGroup.Group("/trips"), pool, authMiddleware)
 		maintenance.RegisterRoutes(apiGroup.Group("/maintenance"), pool, authMiddleware)

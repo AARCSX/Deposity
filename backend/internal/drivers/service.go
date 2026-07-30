@@ -206,3 +206,36 @@ func (s *Service) Delete(ctx context.Context, tenantID, id string) error {
 
 	return nil
 }
+
+type SalaryHistoryResponse struct {
+	ID             string  `json:"id"`
+	RecipientType  string  `json:"recipientType"`
+	RecipientID    string  `json:"recipientId"`
+	AmountPaid     float64 `json:"amountPaid"`
+	PendingBalance float64 `json:"pendingBalance"`
+	PaymentMode    string  `json:"paymentMode"`
+	Notes          string  `json:"notes"`
+	PaymentDate    string  `json:"paymentDate"`
+}
+
+func (s *Service) GetSalaryHistory(ctx context.Context, tenantID, driverID string) ([]SalaryHistoryResponse, error) {
+	payments, err := s.repo.GetSalaryHistory(ctx, tenantID, driverID)
+	if err != nil {
+		return nil, err
+	}
+
+	res := make([]SalaryHistoryResponse, len(payments))
+	for i, p := range payments {
+		res[i] = SalaryHistoryResponse{
+			ID:             p.ID,
+			RecipientType:  p.RecipientType,
+			RecipientID:    p.RecipientID,
+			AmountPaid:     p.AmountPaid,
+			PendingBalance: p.PendingBalance,
+			PaymentMode:    p.PaymentMode,
+			Notes:          p.Notes,
+			PaymentDate:    p.PaymentDate.Format("02 Jan 2006, 03:04 PM"),
+		}
+	}
+	return res, nil
+}

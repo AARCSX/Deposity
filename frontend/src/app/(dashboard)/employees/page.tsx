@@ -1,69 +1,248 @@
 "use client";
 
-import Link from "next/link";
+import React, { useState, useEffect, useMemo } from "react";
+import { useRouter } from "next/navigation";
+import EmployeeCard from "@/components/employees/EmployeeCard";
+import CreateEmployeeModal from "@/components/employees/CreateEmployeeModal";
+import SalaryHistoryModal from "@/components/common/SalaryHistoryModal";
+import { EmployeeRecord } from "@/types/employee";
+import { authenticatedFetch } from "@/lib/api";
 
-export default function EmployeesComingSoon() {
+export default function EmployeesPage() {
+  const router = useRouter();
+  const [employees, setEmployees] = useState<EmployeeRecord[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [employeeToEdit, setEmployeeToEdit] = useState<EmployeeRecord | null>(null);
+  const [salaryHistoryEmployee, setSalaryHistoryEmployee] = useState<EmployeeRecord | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const token = localStorage.getItem("deposity_token");
+      if (!token) {
+        router.push("/");
+      }
+    }
+  }, [router]);
+
+  const loadEmployees = async () => {
+    setIsLoading(true);
+    setFetchError(null);
+    try {
+      const response = await authenticatedFetch("/employees");
+      if (!response.ok) throw new Error(`Server responded with ${response.status}`);
+      const data = await response.json();
+      setEmployees(Array.isArray(data) ? data : []);
+    } catch (err: any) {
+      setFetchError(err.message || "Failed to load employees");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadEmployees();
+  }, []);
+
+  const handleCreateOrUpdate = async (data: EmployeeRecord) => {
+    const isEdit = !!data.id;
+    const url = isEdit ? `/employees/${data.id}` : "/employees";
+    const method = isEdit ? "PUT" : "POST";
+
+    const response = await authenticatedFetch(url, {
+      method,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      const errData = await response.json().catch(() => ({}));
+      throw new Error(errData.error || `Failed to ${isEdit ? "update" : "create"} employee`);
+    }
+
+    await loadEmployees();
+  };
+
+  const handleDelete = async (id?: string) => {
+    if (!id) return;
+    try {
+      const response = await authenticatedFetch(`/employees/${id}`, { method: "DELETE" });
+      if (!response.ok) throw new Error("Failed to delete employee");
+      await loadEmployees();
+    } catch (err: any) {
+      alert(err.message || "Could not delete employee");
+    }
+  };
+
+  const filteredEmployees = useMemo(() => {
+    if (!searchQuery.trim()) return employees;
+    const q = searchQuery.toLowerCase();
+    return employees.filter(
+      (e) =>
+        e.name.toLowerCase().includes(q) ||
+        e.role.toLowerCase().includes(q) ||
+        e.phone.toLowerCase().includes(q) ||
+        (e.email && e.email.toLowerCase().includes(q))
+    );
+  }, [employees, searchQuery]);
+
+  // Statistics
+  const activeCount = employees.filter((e) => e.status === "Active").length;
+  const totalBasePayroll = employees.reduce((acc, curr) => acc + (curr.baseSalary || 0), 0);
+  const totalPendingSalary = employees.reduce((acc, curr) => acc + (curr.pendingBalance || 0), 0);
+
   return (
     <>
-      <div className="min-h-[70vh] flex flex-col items-center justify-center relative overflow-hidden px-4">
-        {/* Glow decorative blobs */}
-        <div className="absolute top-1/4 left-1/4 w-72 h-72 bg-primary/10 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-secondary/5 rounded-full blur-3xl animate-pulse duration-5000"></div>
-
-        {/* Content Card */}
-        <div className="bg-surface-container-lowest/40 backdrop-blur-md rounded-[2.5rem] p-8 md:p-16 border border-outline-variant/15 shadow-2xl text-center max-w-2xl relative z-10 space-y-8">
-          {/* Animated Premium Icon */}
-          <div className="inline-flex items-center justify-center w-24 h-24 rounded-3xl bg-linear-to-br from-primary to-primary-container text-white shadow-xl shadow-primary/20 animate-bounce duration-3000">
-            <span className="material-symbols-outlined text-4xl">badge</span>
-          </div>
-
-          <div className="space-y-3">
-            <span className="inline-block px-4 py-1.5 bg-primary/10 text-primary text-xs font-black uppercase tracking-widest rounded-full">
-              Phase 2 Launch
-            </span>
-            <h1 className="text-4xl md:text-5xl font-black tracking-tight text-on-surface leading-tight">
-              Employee Portal <br />
-              <span className="text-primary bg-clip-text">Coming Soon</span>
-            </h1>
-            <p className="text-on-surface-variant font-medium text-sm md:text-base max-w-md mx-auto leading-relaxed">
-              We are crafting a next-generation HR and driver directory system. You'll soon be able to manage shifts, compliance records, logins, and staff security permissions.
+      <div className="p-6 md:p-10 space-y-8 max-w-7xl mx-auto">
+        {/* Page Header */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="material-symbols-outlined text-primary text-3xl">badge</span>
+              <h1 className="text-3xl font-black text-on-surface tracking-tight">Employees Portal</h1>
+            </div>
+            <p className="text-sm font-medium text-on-surface-variant mt-1">
+              Manage non-driver staff, payroll, designations, and track individual salary disbursement histories.
             </p>
           </div>
 
-          {/* Interactive Progress Indicator */}
-          <div className="space-y-2 max-w-sm mx-auto">
-            <div className="flex justify-between text-xs font-bold text-on-surface-variant uppercase tracking-wider">
-              <span>Development Progress</span>
-              <span>75%</span>
-            </div>
-            <div className="w-full h-3 bg-surface-container rounded-full overflow-hidden p-0.5 border border-outline-variant/10 shadow-inner">
-              <div className="h-full bg-linear-to-r from-primary to-primary-container rounded-full w-3/4 relative">
-                <div className="absolute inset-0 bg-white/20 animate-shimmer scale-x-150"></div>
-              </div>
-            </div>
+          <button
+            onClick={() => {
+              setEmployeeToEdit(null);
+              setIsModalOpen(true);
+            }}
+            className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-2xl font-bold text-sm shadow-lg shadow-primary/20 hover:opacity-90 active:scale-[0.98] transition cursor-pointer"
+          >
+            <span className="material-symbols-outlined text-xl">person_add</span>
+            Add Employee
+          </button>
+        </div>
+
+        {/* Metrics Summary */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="bg-surface-container-lowest p-5 rounded-3xl border border-outline-variant/10 shadow-xs">
+            <span className="text-[10px] font-black uppercase tracking-wider text-outline block">Total Staff</span>
+            <span className="text-2xl font-black text-on-surface mt-1 block tabular-nums">{employees.length}</span>
           </div>
 
-          {/* Action Links */}
-          <div className="flex flex-col sm:flex-row justify-center items-center gap-4 pt-4">
-            <Link 
-              href="/dashboard"
-              className="w-full sm:w-auto px-8 py-3.5 bg-primary text-white font-bold text-sm rounded-xl shadow-lg shadow-primary/20 hover:opacity-90 active:scale-[0.98] transition-all"
+          <div className="bg-surface-container-lowest p-5 rounded-3xl border border-outline-variant/10 shadow-xs">
+            <span className="text-[10px] font-black uppercase tracking-wider text-emerald-600 block">Active Employees</span>
+            <span className="text-2xl font-black text-emerald-600 mt-1 block tabular-nums">{activeCount}</span>
+          </div>
+
+          <div className="bg-surface-container-lowest p-5 rounded-3xl border border-outline-variant/10 shadow-xs">
+            <span className="text-[10px] font-black uppercase tracking-wider text-outline block">Monthly Payroll</span>
+            <span className="text-2xl font-black text-on-surface mt-1 block tabular-nums">
+              ₹{totalBasePayroll.toLocaleString("en-IN")}
+            </span>
+          </div>
+
+          <div className="bg-surface-container-lowest p-5 rounded-3xl border border-outline-variant/10 shadow-xs">
+            <span className="text-[10px] font-black uppercase tracking-wider text-rose-600 block">Pending Salaries</span>
+            <span
+              className={`text-2xl font-black mt-1 block tabular-nums ${
+                totalPendingSalary > 0 ? "text-rose-600" : "text-emerald-600"
+              }`}
             >
-              Back to Dashboard
-            </Link>
-            <button 
-              onClick={() => alert("You will be notified when this feature goes live!")}
-              className="w-full sm:w-auto px-8 py-3.5 bg-surface-container-high text-on-surface hover:bg-surface-container-highest font-bold text-sm rounded-xl border border-outline-variant/15 transition-all"
-            >
-              Notify Me
-            </button>
+              ₹{totalPendingSalary.toLocaleString("en-IN")}
+            </span>
           </div>
         </div>
 
-        {/* Footer info */}
-        <p className="text-xs text-outline font-semibold uppercase tracking-widest mt-12 relative z-10">
-          AARCSX Deposity Operations Engine v1.2
-        </p>
+        {/* Search Bar */}
+        <div className="bg-surface-container-lowest p-2 rounded-2xl border border-outline-variant/10 shadow-xs flex items-center gap-3 px-4">
+          <span className="material-symbols-outlined text-outline">search</span>
+          <input
+            type="text"
+            placeholder="Search employees by name, designation, phone, or email..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full bg-transparent text-sm text-on-surface outline-none font-medium placeholder:text-outline"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery("")}
+              className="text-xs text-outline hover:text-on-surface font-bold"
+            >
+              Clear
+            </button>
+          )}
+        </div>
+
+        {/* Employee Cards List */}
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+          {isLoading ? (
+            <div className="col-span-full py-16 text-center text-sm font-semibold text-on-surface-variant">
+              Loading employee database...
+            </div>
+          ) : fetchError ? (
+            <div className="col-span-full py-16 flex flex-col items-center justify-center text-center rounded-3xl border border-dashed border-error/30 bg-error/5 p-6">
+              <span className="material-symbols-outlined text-4xl text-error mb-2">cloud_off</span>
+              <p className="text-sm font-bold text-error">{fetchError}</p>
+              <button
+                onClick={loadEmployees}
+                className="mt-4 px-5 py-2 bg-primary text-white rounded-xl text-xs font-bold shadow-md hover:opacity-90"
+              >
+                Retry
+              </button>
+            </div>
+          ) : filteredEmployees.length === 0 ? (
+            <div className="col-span-full py-16 flex flex-col items-center justify-center text-center rounded-3xl border border-dashed border-outline-variant/20 bg-surface-container-lowest p-8">
+              <span className="material-symbols-outlined text-5xl text-outline mb-3">badge</span>
+              <p className="text-base font-bold text-on-surface">No employees registered yet</p>
+              <p className="text-xs text-on-surface-variant mt-1 max-w-sm">
+                Register your fleet managers, accountants, mechanics, and yard operators to track their salaries and pending balances.
+              </p>
+              <button
+                onClick={() => {
+                  setEmployeeToEdit(null);
+                  setIsModalOpen(true);
+                }}
+                className="mt-5 px-6 py-2.5 bg-primary text-white rounded-xl text-xs font-bold shadow-md"
+              >
+                Register Employee
+              </button>
+            </div>
+          ) : (
+            filteredEmployees.map((emp) => (
+              <EmployeeCard
+                key={emp.id}
+                employee={emp}
+                onEdit={() => {
+                  setEmployeeToEdit(emp);
+                  setIsModalOpen(true);
+                }}
+                onDelete={() => handleDelete(emp.id)}
+                onViewSalaryHistory={() => setSalaryHistoryEmployee(emp)}
+              />
+            ))
+          )}
+        </div>
+
+        {/* Modals */}
+        <CreateEmployeeModal
+          isOpen={isModalOpen}
+          onClose={() => {
+            setIsModalOpen(false);
+            setEmployeeToEdit(null);
+          }}
+          onSubmit={handleCreateOrUpdate}
+          employeeToEdit={employeeToEdit}
+        />
+
+        {salaryHistoryEmployee && (
+          <SalaryHistoryModal
+            isOpen={!!salaryHistoryEmployee}
+            onClose={() => setSalaryHistoryEmployee(null)}
+            recipientType="employee"
+            recipientId={salaryHistoryEmployee.id || ""}
+            recipientName={salaryHistoryEmployee.name}
+            baseSalary={salaryHistoryEmployee.baseSalary}
+            pendingBalance={salaryHistoryEmployee.pendingBalance}
+          />
+        )}
       </div>
     </>
   );
