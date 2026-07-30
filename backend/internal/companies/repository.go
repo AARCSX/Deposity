@@ -20,12 +20,18 @@ func NewRepository(pool *pgxpool.Pool) *Repository {
 func (r *Repository) GetAll(ctx context.Context, tenantID string) ([]Company, error) {
 	query := `
 		SELECT 
-			c.id, c.tenant_id, c.name, c.logo, c.status, c.location, 
-			c.contact_person, c.phone, c.email, 
+			c.id, c.tenant_id, c.name, 
+			COALESCE(c.logo, '') as logo, 
+			COALESCE(c.status, 'Standard Account') as status, 
+			COALESCE(c.location, '') as location, 
+			COALESCE(c.contact_person, '') as contact_person, 
+			COALESCE(c.phone, '') as phone, 
+			COALESCE(c.email, '') as email, 
 			COALESCE(SUM(t.total_freight), c.total_value) as total_value, 
 			CASE WHEN COALESCE(SUM(GREATEST(0, t.total_freight - t.advance_paid)), c.pending_amount) <= 0 THEN true ELSE false END as is_paid, 
 			COALESCE(SUM(GREATEST(0, t.total_freight - t.advance_paid)), c.pending_amount) as pending_amount, 
-			c.industry, c.created_at, c.updated_at
+			COALESCE(c.industry, '') as industry, 
+			c.created_at, c.updated_at
 		FROM companies c
 		LEFT JOIN trips t ON (t.tenant_id = c.tenant_id AND (t.company_id = c.id OR LOWER(t.company_id) = LOWER(c.name)))
 		WHERE c.tenant_id = $1
@@ -58,7 +64,17 @@ func (r *Repository) GetAll(ctx context.Context, tenantID string) ([]Company, er
 // GetByID returns a single company by ID, scoped to the tenant.
 func (r *Repository) GetByID(ctx context.Context, tenantID, id string) (*Company, error) {
 	query := `
-		SELECT id, tenant_id, name, logo, status, location, contact_person, phone, email, total_value, is_paid, pending_amount, industry, created_at, updated_at
+		SELECT 
+			id, tenant_id, name, 
+			COALESCE(logo, '') as logo, 
+			COALESCE(status, 'Standard Account') as status, 
+			COALESCE(location, '') as location, 
+			COALESCE(contact_person, '') as contact_person, 
+			COALESCE(phone, '') as phone, 
+			COALESCE(email, '') as email, 
+			total_value, is_paid, pending_amount, 
+			COALESCE(industry, '') as industry, 
+			created_at, updated_at
 		FROM companies
 		WHERE tenant_id = $1 AND id = $2
 	`
@@ -87,7 +103,7 @@ func (r *Repository) Create(ctx context.Context, tenantID string, c *Company) er
 	`
 	return r.pool.QueryRow(ctx, query,
 		tenantID, c.Name, c.Logo, c.Status, c.Location,
-		c.ContactPerson, &c.Phone, c.Email, c.TotalValue, c.IsPaid,
+		c.ContactPerson, c.Phone, c.Email, c.TotalValue, c.IsPaid,
 		c.PendingAmount, c.Industry,
 	).Scan(&c.ID, &c.CreatedAt, &c.UpdatedAt)
 }
@@ -103,7 +119,17 @@ func (r *Repository) Update(ctx context.Context, tenantID, id string, updateFn f
 
 	// Fetch existing
 	querySelect := `
-		SELECT id, tenant_id, name, logo, status, location, contact_person, phone, email, total_value, is_paid, pending_amount, industry, created_at, updated_at
+		SELECT 
+			id, tenant_id, name, 
+			COALESCE(logo, '') as logo, 
+			COALESCE(status, 'Standard Account') as status, 
+			COALESCE(location, '') as location, 
+			COALESCE(contact_person, '') as contact_person, 
+			COALESCE(phone, '') as phone, 
+			COALESCE(email, '') as email, 
+			total_value, is_paid, pending_amount, 
+			COALESCE(industry, '') as industry, 
+			created_at, updated_at
 		FROM companies
 		WHERE tenant_id = $1 AND id = $2
 	`
