@@ -33,30 +33,63 @@ export default function CreateCompanyWizard({ isOpen, onClose, onSubmit }: Creat
   const [currentStep, setCurrentStep] = useState(0);
   const [formData, setFormData] = useState<CompanyRecord>(initialData);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
+  const validateCurrentStep = (): boolean => {
+    setErrorMsg(null);
+    if (currentStep === 0) {
+      if (!formData.name.trim()) {
+        setErrorMsg("Company Name is required.");
+        return false;
+      }
+    }
+    return true;
+  };
+
   const handleNext = () => {
+    if (!validateCurrentStep()) return;
     if (currentStep < STEPS.length - 1) setCurrentStep((p) => p + 1);
   };
 
   const handleBack = () => {
+    setErrorMsg(null);
     if (currentStep > 0) setCurrentStep((p) => p - 1);
   };
 
   const handleSubmit = async () => {
+    if (!validateCurrentStep()) return;
     setIsSubmitting(true);
-    await onSubmit(formData);
-    setIsSubmitting(false);
-    setCurrentStep(0);
-    setFormData(initialData);
+    try {
+      await onSubmit(formData);
+      setCurrentStep(0);
+      setFormData(initialData);
+      setErrorMsg(null);
+    } catch (err: any) {
+      setErrorMsg(err.message || "Failed to register company.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (currentStep < STEPS.length - 1) {
+      handleNext();
+    } else {
+      handleSubmit();
+    }
   };
 
   const progressPercentage = ((currentStep + 1) / STEPS.length) * 100;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-surface-container-lowest w-full max-w-3xl rounded-3xl shadow-2xl flex flex-col overflow-hidden max-h-[90vh]">
+      <form 
+        onSubmit={handleFormSubmit}
+        className="bg-surface-container-lowest w-full max-w-3xl rounded-3xl shadow-2xl flex flex-col overflow-hidden max-h-[90vh]"
+      >
         
         {/* Header */}
         <div className="bg-surface px-6 py-4 border-b border-outline-variant/15 flex justify-between items-center">
@@ -88,6 +121,12 @@ export default function CreateCompanyWizard({ isOpen, onClose, onSubmit }: Creat
 
         {/* Form Content */}
         <div className="p-6 overflow-y-auto flex-1">
+          {errorMsg && (
+            <div className="mb-4 p-3.5 rounded-xl bg-error/10 border border-error/20 text-error text-xs font-bold flex items-center gap-2 animate-in fade-in">
+              <span className="material-symbols-outlined text-[16px]">error</span>
+              {errorMsg}
+            </div>
+          )}
           {currentStep === 0 && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5 animate-in slide-in-from-right-4 duration-300">
               <div className="md:col-span-2 text-sm text-on-surface-variant mb-2">Basic company identity and operating location.</div>
@@ -156,7 +195,7 @@ export default function CreateCompanyWizard({ isOpen, onClose, onSubmit }: Creat
             </button>
           )}
         </div>
-      </div>
+      </form>
     </div>
   );
 }

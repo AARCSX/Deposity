@@ -8,7 +8,7 @@ type CreateCompanyRequest struct {
 	Location      string  `json:"location"`
 	ContactPerson string  `json:"contactPerson"`
 	Phone         string  `json:"phone"`
-	Email         string  `json:"email" binding:"omitempty,email"`
+	Email         string  `json:"email"`
 	TotalValue    float64 `json:"totalValue"`
 	IsPaid        *bool   `json:"isPaid"` // Use pointer to distinguish between false and omission
 	PendingAmount float64 `json:"pendingAmount"`
@@ -23,7 +23,7 @@ type UpdateCompanyRequest struct {
 	Location      *string  `json:"location"`
 	ContactPerson *string  `json:"contactPerson"`
 	Phone         *string  `json:"phone"`
-	Email         *string  `json:"email" binding:"omitempty,email"`
+	Email         *string  `json:"email"`
 	TotalValue    *float64 `json:"totalValue"`
 	IsPaid        *bool    `json:"isPaid"`
 	PendingAmount *float64 `json:"pendingAmount"`

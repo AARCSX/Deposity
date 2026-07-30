@@ -88,23 +88,27 @@ export default function CompaniesPage() {
   }, []);
 
   const handleCreateSubmit = async (data: CompanyRecord) => {
-    try {
-      const response = await authenticatedFetch("/companies", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-      if (response.ok) {
-        loadData();
-      } else {
-        const newCompany = { ...data, id: `#ON-${Math.floor(1000 + Math.random() * 9000)}` };
-        setCompanies((prev) => [newCompany, ...prev]);
-      }
-    } catch {
-      const newCompany = { ...data, id: `#ON-${Math.floor(1000 + Math.random() * 9000)}` };
-      setCompanies((prev) => [newCompany, ...prev]);
+    const payload = {
+      ...data,
+      email: data.email?.trim() || "",
+      phone: data.phone?.trim() || "",
+      contactPerson: data.contactPerson?.trim() || "",
+      location: data.location?.trim() || "",
+    };
+
+    const response = await authenticatedFetch("/companies", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    if (response.ok) {
+      await loadData();
+      setIsCreateModalOpen(false);
+    } else {
+      const errData = await response.json().catch(() => ({}));
+      throw new Error(errData.error || "Failed to register company on backend server.");
     }
-    setIsCreateModalOpen(false);
   };
 
   // Derive dynamic client financial metrics cross-referenced with Trips
