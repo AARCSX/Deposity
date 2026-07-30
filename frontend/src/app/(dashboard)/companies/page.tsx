@@ -46,21 +46,24 @@ export default function CompaniesPage() {
 
       setTrips(Array.isArray(tripData) ? tripData : []);
 
-      // Cross-reference companies with trips to ensure any company from trips is registered
-      const companyMap = new Map<string, CompanyRecord>();
+      // Preserve every registered company from the DB
+      const companyList: CompanyRecord[] = [];
+      const knownNames = new Set<string>();
 
       (Array.isArray(companyData) ? companyData : []).forEach((c) => {
-        companyMap.set(c.name.toLowerCase(), c);
+        companyList.push(c);
+        if (c.name) knownNames.add(c.name.toLowerCase().trim());
       });
 
-      // Auto-discover company names present in trips
+      // Auto-discover company names present in trips that aren't registered
       (Array.isArray(tripData) ? tripData : []).forEach((t) => {
-        const compName = t.cargo?.company;
-        if (compName && !companyMap.has(compName.toLowerCase())) {
-          companyMap.set(compName.toLowerCase(), {
+        const compName = t.cargo?.company?.trim();
+        if (compName && !knownNames.has(compName.toLowerCase())) {
+          knownNames.add(compName.toLowerCase());
+          companyList.push({
             id: `comp_${compName.toLowerCase().replace(/\s+/g, "_")}`,
             name: compName,
-            status: "Active",
+            status: "Active Partner",
             location: "Pan India",
             contactPerson: "Operations Lead",
             phone: "+91 98765 43210",
@@ -73,7 +76,7 @@ export default function CompaniesPage() {
         }
       });
 
-      setCompanies(Array.from(companyMap.values()));
+      setCompanies(companyList);
     } catch {
       setCompanies([]);
       setTrips([]);
