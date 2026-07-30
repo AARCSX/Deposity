@@ -287,13 +287,16 @@ export default function CompaniesPage() {
               </button>
             </div>
 
-            {/* Live Trip Transaction History Table */}
+            {/* Live Micro-Payment & Trip Installments History Table */}
             <div className="mt-16 bg-surface-container-lowest rounded-[2rem] overflow-hidden border border-outline-variant/15 shadow-sm">
               <div className="px-8 py-6 border-b border-outline-variant/10 flex items-center justify-between">
                 <div>
-                  <h3 className="font-bold text-lg text-slate-900">Transaction &amp; Trip History Summary</h3>
+                  <h3 className="font-bold text-lg text-slate-900 flex items-center gap-2">
+                    <span className="material-symbols-outlined text-emerald-600 text-xl">payments</span>
+                    Transaction &amp; Trip Micro-Payment History Summary
+                  </h3>
                   <p className="text-xs text-slate-500 font-medium mt-0.5">
-                    Live trip dispatches and freight transactions across all partner companies
+                    Live installment transactions, advances, and final settlements with date &amp; timestamp across all client partnerships
                   </p>
                 </div>
                 <div className="flex gap-2">
@@ -310,69 +313,104 @@ export default function CompaniesPage() {
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="bg-surface-container-low/50 border-b border-slate-200/60">
-                      <th className="px-8 py-4 text-[0.7rem] font-bold text-outline uppercase tracking-widest">Trip &amp; Client</th>
-                      <th className="px-8 py-4 text-[0.7rem] font-bold text-outline uppercase tracking-widest">Route &amp; Schedule</th>
-                      <th className="px-8 py-4 text-[0.7rem] font-bold text-outline uppercase tracking-widest">Trip Status</th>
-                      <th className="px-8 py-4 text-[0.7rem] font-bold text-outline uppercase tracking-widest text-right">Freight Billed</th>
-                      <th className="px-8 py-4 text-[0.7rem] font-bold text-outline uppercase tracking-widest text-right">Balance Pending</th>
+                      <th className="px-8 py-4 text-[0.7rem] font-bold text-outline uppercase tracking-widest">Client &amp; Trip ID</th>
+                      <th className="px-8 py-4 text-[0.7rem] font-bold text-outline uppercase tracking-widest">Date &amp; Timestamp</th>
+                      <th className="px-8 py-4 text-[0.7rem] font-bold text-outline uppercase tracking-widest">Payment Type &amp; Mode</th>
+                      <th className="px-8 py-4 text-[0.7rem] font-bold text-outline uppercase tracking-widest text-right">Amount Received</th>
+                      <th className="px-8 py-4 text-[0.7rem] font-bold text-outline uppercase tracking-widest text-right">Remaining Trip Balance</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-outline-variant/5">
-                    {trips.length === 0 ? (
-                      <tr>
-                        <td colSpan={5} className="px-8 py-10 text-center text-sm text-slate-500">
-                          No active trip transactions recorded yet.
-                        </td>
-                      </tr>
-                    ) : (
-                      trips.map((t, i) => {
+                    {(() => {
+                      const transactions = trips.flatMap((t) => {
                         const totalFreight = t.financials?.totalFreight || 0;
                         const advance = t.financials?.advancePaid || 0;
                         const pending = Math.max(0, totalFreight - advance);
-                        const isSettled = pending <= 0;
 
+                        if (t.payments && t.payments.length > 0) {
+                          return t.payments.map((p) => ({
+                            id: p.id || `pmt_${t.id}_${p.amount}`,
+                            tripId: t.id || "TRP-NEW",
+                            company: t.cargo?.company || "General Client",
+                            material: t.cargo?.material || "Cargo",
+                            amount: p.amount,
+                            type: p.paymentType || "installment",
+                            mode: p.paymentMode || "Bank Transfer",
+                            notes: p.notes || "",
+                            date: p.paymentDate,
+                            pending,
+                          }));
+                        }
+
+                        if (t.financials?.advancePaid > 0) {
+                          return [
+                            {
+                              id: `adv_${t.id}`,
+                              tripId: t.id || "TRP-NEW",
+                              company: t.cargo?.company || "General Client",
+                              material: t.cargo?.material || "Cargo",
+                              amount: t.financials.advancePaid,
+                              type: "advance",
+                              mode: "Bank Transfer",
+                              notes: "Initial Advance Payment",
+                              date: t.route?.originDate || "Upon Dispatch",
+                              pending,
+                            },
+                          ];
+                        }
+                        return [];
+                      });
+
+                      if (transactions.length === 0) {
                         return (
-                          <tr key={t.id || i} className="hover:bg-primary/5 transition-colors group cursor-pointer">
-                            <td className="px-8 py-4">
-                              <div className="flex items-center gap-3">
-                                <div className="w-9 h-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center font-bold text-xs">
-                                  <span className="material-symbols-outlined text-[18px]">local_shipping</span>
-                                </div>
-                                <div>
-                                  <p className="font-bold text-sm text-on-surface">{t.cargo?.company || "General Client"}</p>
-                                  <p className="text-xs text-on-surface-variant font-mono">{t.id || "TRP-NEW"} • {t.cargo?.material || "Cargo"}</p>
-                                </div>
-                              </div>
-                            </td>
-                            <td className="px-8 py-4">
-                              <p className="text-sm font-bold text-on-surface">{t.route?.originName} ➔ {t.route?.destinationName}</p>
-                              <p className="text-xs text-on-surface-variant font-medium">{t.route?.originDate}</p>
-                            </td>
-                            <td className="px-8 py-4">
-                              <span className={`px-2.5 py-1 rounded-md text-xs font-bold uppercase tracking-wider ${
-                                t.status === "delivered"
-                                  ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                                  : t.status === "in-transit"
-                                  ? "bg-blue-50 text-blue-700 border border-blue-200"
-                                  : "bg-amber-50 text-amber-700 border border-amber-200"
-                              }`}>
-                                {t.status}
-                              </span>
-                            </td>
-                            <td className="px-8 py-4 text-right tabular-nums font-bold text-sm text-on-surface">
-                              ₹{totalFreight.toLocaleString("en-IN")}
-                            </td>
-                            <td className="px-8 py-4 text-right tabular-nums font-bold text-sm">
-                              {isSettled ? (
-                                <span className="text-emerald-600 font-bold text-xs bg-emerald-50 px-2 py-1 rounded-md">Paid in Full</span>
-                              ) : (
-                                <span className="text-rose-600">₹{pending.toLocaleString("en-IN")}</span>
-                              )}
+                          <tr>
+                            <td colSpan={5} className="px-8 py-10 text-center text-sm text-slate-500">
+                              No payment transactions or micro-installments recorded yet.
                             </td>
                           </tr>
                         );
-                      })
-                    )}
+                      }
+
+                      return transactions.map((tx, idx) => (
+                        <tr key={tx.id || idx} className="hover:bg-primary/5 transition-colors group">
+                          <td className="px-8 py-4">
+                            <div className="flex items-center gap-3">
+                              <div className="w-9 h-9 rounded-lg bg-emerald-500/10 text-emerald-700 flex items-center justify-center font-black text-sm">
+                                ₹
+                              </div>
+                              <div>
+                                <p className="font-bold text-sm text-on-surface">{tx.company}</p>
+                                <p className="text-xs text-on-surface-variant font-mono">{tx.tripId} • {tx.material}</p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-8 py-4">
+                            <p className="text-sm font-bold text-on-surface">{tx.date}</p>
+                            {tx.notes && <p className="text-xs text-on-surface-variant font-medium">{tx.notes}</p>}
+                          </td>
+                          <td className="px-8 py-4">
+                            <div className="flex items-center gap-2">
+                              <span className="px-2.5 py-1 rounded-md text-xs font-bold uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                {tx.type.replace("_", " ")}
+                              </span>
+                              <span className="text-xs font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
+                                {tx.mode}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="px-8 py-4 text-right tabular-nums font-black text-sm text-emerald-600">
+                            + ₹{tx.amount.toLocaleString("en-IN")}
+                          </td>
+                          <td className="px-8 py-4 text-right tabular-nums font-bold text-sm">
+                            {tx.pending <= 0 ? (
+                              <span className="text-emerald-600 font-bold text-xs bg-emerald-50 px-2 py-1 rounded-md">Fully Settled ✓</span>
+                            ) : (
+                              <span className="text-rose-600">₹{tx.pending.toLocaleString("en-IN")}</span>
+                            )}
+                          </td>
+                        </tr>
+                      ));
+                    })()}
                   </tbody>
                 </table>
               </div>

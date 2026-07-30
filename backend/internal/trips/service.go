@@ -217,6 +217,39 @@ func (s *Service) Delete(ctx context.Context, tenantID, id string) error {
 	return nil
 }
 
+// AddPayment records a new payment installment against a trip and clears cache.
+func (s *Service) AddPayment(ctx context.Context, tenantID, tripID string, req RecordPaymentRequest) (*TripResponse, error) {
+	pDate := parseFlexibleDate(req.PaymentDate)
+
+	p := &TripPayment{
+		Amount:      req.Amount,
+		PaymentType: req.PaymentType,
+		PaymentMode: req.PaymentMode,
+		Notes:       req.Notes,
+		PaymentDate: pDate,
+	}
+
+	t, err := s.repo.AddPayment(ctx, tenantID, tripID, p)
+	if err != nil {
+		return nil, err
+	}
+	if t == nil {
+		return nil, apperror.NotFound("trip not found")
+	}
+
+	// Invalidate trip caches
+	cache.Invalidate(ctx,
+		fmt.Sprintf("tenant:%s:trip:%s", tenantID, tripID),
+		fmt.Sprintf("tenant:%s:trips:all", tenantID),
+	)
+
+	resp, err := s.MapToResponse(ctx, *t)
+	if err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
 // MapToResponse translates the database Trip record back into the nested TripResponse.
 func (s *Service) MapToResponse(ctx context.Context, t Trip) (TripResponse, error) {
 	var companyName string
@@ -237,6 +270,11 @@ func (s *Service) MapToResponse(ctx context.Context, t Trip) (TripResponse, erro
 	// Format dates for display
 	originDateStr := t.OriginDate.Format("02 Jan 2006, 03:04 PM")
 	destDateStr := t.DestinationDate.Format("02 Jan 2006")
+
+	pmts := t.Payments
+	if pmts == nil {
+		pmts = []TripPayment{}
+	}
 
 	return TripResponse{
 		ID:     t.ID,
@@ -262,6 +300,7 @@ func (s *Service) MapToResponse(ctx context.Context, t Trip) (TripResponse, erro
 			TotalFreight: t.TotalFreight,
 			AdvancePaid:  t.AdvancePaid,
 		},
+		Payments: pmts,
 	}, nil
 }
 

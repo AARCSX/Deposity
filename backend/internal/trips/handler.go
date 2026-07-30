@@ -128,3 +128,35 @@ func (h *Handler) Delete(c *gin.Context) {
 
 	c.Status(http.StatusNoContent)
 }
+
+func (h *Handler) RecordPayment(c *gin.Context) {
+	tenantID := middleware.GetTenantID(c)
+	id := c.Param("id")
+
+	var req RecordPaymentRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	item, err := h.service.AddPayment(c.Request.Context(), tenantID, id, req)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	activity.LogActivity(h.db, activity.LogActivityParams{
+		TenantID:    tenantID,
+		UserID:      middleware.GetUserID(c),
+		UserName:    middleware.GetUserName(c),
+		UserRole:    middleware.GetUserRole(c),
+		Action:      "RECORD_TRIP_PAYMENT",
+		Category:    "TRIPS",
+		EntityType:  "trip",
+		EntityID:    item.ID,
+		Description: fmt.Sprintf("%s recorded payment of ₹%.2f for Trip #%s", middleware.GetUserName(c), req.Amount, item.ID),
+		IPAddress:   c.ClientIP(),
+	})
+
+	c.JSON(http.StatusOK, item)
+}

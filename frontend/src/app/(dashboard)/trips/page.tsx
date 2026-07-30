@@ -126,6 +126,7 @@ function TripsContent() {
         balance: `₹${balanceNum.toLocaleString("en-IN")}`,
         rawBalance: balanceNum,
       },
+      payments: t.payments || [],
     };
   };
 

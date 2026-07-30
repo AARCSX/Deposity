@@ -1,3 +1,13 @@
+export interface PaymentRecord {
+  id: string;
+  tripId: string;
+  amount: number;
+  paymentType: string;
+  paymentMode?: string;
+  notes?: string;
+  paymentDate: string;
+}
+
 export interface RouteDetails {
   originName: string;
   originDate: string;
@@ -30,4 +40,5 @@ export interface TripRecord {
   cargo: CargoDetails;
   assignment: AssignmentDetails;
   financials: FinancialsDetails;
+  payments?: PaymentRecord[];
 }

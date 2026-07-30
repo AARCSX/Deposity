@@ -33,6 +33,16 @@ type TripResponse struct {
 	Cargo      CargoDetails      `json:"cargo"`
 	Assignment AssignmentDetails `json:"assignment"`
 	Financials FinancialsDetails `json:"financials"`
+	Payments   []TripPayment     `json:"payments"`
+}
+
+// RecordPaymentRequest represents a payload to record a new micro-payment or installment against a trip.
+type RecordPaymentRequest struct {
+	Amount      float64 `json:"amount" binding:"required"`
+	PaymentType string  `json:"paymentType"` // 'advance', 'installment', 'settlement'
+	PaymentMode string  `json:"paymentMode"` // 'Bank Transfer', 'UPI', 'Cheque', 'Cash'
+	Notes       string  `json:"notes"`
+	PaymentDate string  `json:"paymentDate"` // ISO string or empty for NOW
 }
 
 // CreateTripRequest represents the payload to create a new trip.

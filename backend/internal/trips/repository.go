@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -17,7 +18,33 @@ func NewRepository(pool *pgxpool.Pool) *Repository {
 	return &Repository{pool: pool}
 }
 
-// GetAll returns all trips for the given tenant with resolved names.
+// GetPaymentsForTrip returns all payment records for a given trip ordered by payment_date ASC.
+func (r *Repository) GetPaymentsForTrip(ctx context.Context, tenantID, tripID string) ([]TripPayment, error) {
+	query := `
+		SELECT id, tenant_id, trip_id, amount, payment_type, COALESCE(payment_mode, 'Bank Transfer') as payment_mode, COALESCE(notes, '') as notes, payment_date, created_at
+		FROM trip_payments
+		WHERE tenant_id = $1 AND trip_id = $2
+		ORDER BY payment_date ASC
+	`
+	rows, err := r.pool.Query(ctx, query, tenantID, tripID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var payments []TripPayment
+	for rows.Next() {
+		var p TripPayment
+		err := rows.Scan(&p.ID, &p.TenantID, &p.TripID, &p.Amount, &p.PaymentType, &p.PaymentMode, &p.Notes, &p.PaymentDate, &p.CreatedAt)
+		if err != nil {
+			return nil, err
+		}
+		payments = append(payments, p)
+	}
+	return payments, nil
+}
+
+// GetAll returns all trips for the given tenant with resolved names and payment history.
 func (r *Repository) GetAll(ctx context.Context, tenantID string) ([]Trip, error) {
 	query := `
 		SELECT id, tenant_id, status, origin_name, origin_date, destination_name, destination_date, is_estimated,
@@ -46,6 +73,14 @@ func (r *Repository) GetAll(ctx context.Context, tenantID string) ([]Trip, error
 		t.CompanyID = companyID
 		t.VehicleID = vehicleID
 		t.DriverID = driverID
+
+		// Fetch payment timeline
+		pmts, _ := r.GetPaymentsForTrip(ctx, tenantID, t.ID)
+		if pmts == nil {
+			pmts = []TripPayment{}
+		}
+		t.Payments = pmts
+
 		list = append(list, t)
 	}
 
@@ -76,11 +111,23 @@ func (r *Repository) GetByID(ctx context.Context, tenantID, id string) (*Trip, e
 	t.VehicleID = vehicleID
 	t.DriverID = driverID
 
+	pmts, _ := r.GetPaymentsForTrip(ctx, tenantID, t.ID)
+	if pmts == nil {
+		pmts = []TripPayment{}
+	}
+	t.Payments = pmts
+
 	return &t, nil
 }
 
-// Create inserts a new trip.
+// Create inserts a new trip and records an initial advance payment if specified.
 func (r *Repository) Create(ctx context.Context, tenantID string, t *Trip) error {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
 	query := `
 		INSERT INTO trips (
 			tenant_id, status, origin_name, origin_date, destination_name, destination_date, is_estimated,
@@ -99,10 +146,100 @@ func (r *Repository) Create(ctx context.Context, tenantID string, t *Trip) error
 		driverID = t.DriverID.String
 	}
 
-	return r.pool.QueryRow(ctx, query,
+	err = tx.QueryRow(ctx, query,
 		tenantID, t.Status, t.OriginName, t.OriginDate, t.DestinationName, t.DestinationDate, t.IsEstimated,
 		t.Material, t.Weight, companyID, vehicleID, driverID, t.TotalFreight, t.AdvancePaid, t.RatePerTon,
 	).Scan(&t.ID, &t.CreatedAt, &t.UpdatedAt)
+	if err != nil {
+		return err
+	}
+
+	// Insert initial advance payment record if advance_paid > 0
+	if t.AdvancePaid > 0 {
+		queryPayment := `
+			INSERT INTO trip_payments (tenant_id, trip_id, amount, payment_type, payment_mode, notes, payment_date)
+			VALUES ($1, $2, $3, 'advance', 'Bank Transfer', 'Initial Advance Payment upon Dispatch', $4)
+		`
+		_, err = tx.Exec(ctx, queryPayment, tenantID, t.ID, t.AdvancePaid, t.OriginDate)
+		if err != nil {
+			return err
+		}
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return err
+	}
+
+	// Attach payment list
+	pmts, _ := r.GetPaymentsForTrip(ctx, tenantID, t.ID)
+	if pmts == nil {
+		pmts = []TripPayment{}
+	}
+	t.Payments = pmts
+
+	return nil
+}
+
+// AddPayment inserts a new installment or settlement payment, recalculating total advance_paid on the trip.
+func (r *Repository) AddPayment(ctx context.Context, tenantID, tripID string, p *TripPayment) (*Trip, error) {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback(ctx)
+
+	// Verify trip exists
+	var currentAdvance, totalFreight float64
+	err = tx.QueryRow(ctx, `SELECT advance_paid, total_freight FROM trips WHERE tenant_id = $1 AND id = $2`, tenantID, tripID).Scan(&currentAdvance, &totalFreight)
+	if err != nil {
+		return nil, err
+	}
+
+	pType := "installment"
+	if p.PaymentType != "" {
+		pType = p.PaymentType
+	} else if currentAdvance+p.Amount >= totalFreight {
+		pType = "final_settlement"
+	}
+
+	pMode := "Bank Transfer"
+	if p.PaymentMode != "" {
+		pMode = p.PaymentMode
+	}
+
+	pDate := p.PaymentDate
+	if pDate.IsZero() {
+		pDate = time.Now()
+	}
+
+	queryInsert := `
+		INSERT INTO trip_payments (tenant_id, trip_id, amount, payment_type, payment_mode, notes, payment_date)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		RETURNING id, created_at
+	`
+	err = tx.QueryRow(ctx, queryInsert, tenantID, tripID, p.Amount, pType, pMode, p.Notes, pDate).Scan(&p.ID, &p.CreatedAt)
+	if err != nil {
+		return nil, err
+	}
+
+	// Update advance_paid on trip to match sum of all payments
+	queryUpdateTrip := `
+		UPDATE trips
+		SET advance_paid = (SELECT COALESCE(SUM(amount), 0) FROM trip_payments WHERE trip_id = $1),
+		    updated_at = NOW()
+		WHERE tenant_id = $2 AND id = $1
+	`
+	_, err = tx.Exec(ctx, queryUpdateTrip, tripID, tenantID)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return nil, err
+	}
+
+	// Fetch updated trip
+	return r.GetByID(ctx, tenantID, tripID)
 }
 
 // Update updates an existing trip.

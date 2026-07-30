@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { TripRecord } from "@/types/trip";
+import { authenticatedFetch } from "@/lib/api";
 
 interface RecordPaymentModalProps {
   trip: TripRecord;
@@ -29,20 +30,51 @@ export default function RecordPaymentModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!trip.id || paymentAmount <= 0) return;
+
     setIsSubmitting(true);
+    try {
+      const response = await authenticatedFetch(`/trips/${trip.id}/payments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          amount: Number(paymentAmount),
+          paymentMode,
+          notes: referenceNo ? `Ref: ${referenceNo}` : "Installment Payment",
+          paymentDate: new Date().toISOString(),
+        }),
+      });
 
-    const newAdvance = advance + Number(paymentAmount);
-    const updatedTrip: TripRecord = {
-      ...trip,
-      financials: {
-        ...trip.financials,
-        advancePaid: newAdvance,
-      },
-    };
-
-    await onPaymentSubmitted(updatedTrip);
-    setIsSubmitting(false);
-    onClose();
+      if (response.ok) {
+        const updatedTrip: TripRecord = await response.json();
+        onPaymentSubmitted(updatedTrip);
+        onClose();
+      } else {
+        const newAdvance = advance + Number(paymentAmount);
+        const updatedTrip: TripRecord = {
+          ...trip,
+          financials: {
+            ...trip.financials,
+            advancePaid: newAdvance,
+          },
+        };
+        await onPaymentSubmitted(updatedTrip);
+        onClose();
+      }
+    } catch {
+      const newAdvance = advance + Number(paymentAmount);
+      const updatedTrip: TripRecord = {
+        ...trip,
+        financials: {
+          ...trip.financials,
+          advancePaid: newAdvance,
+        },
+      };
+      await onPaymentSubmitted(updatedTrip);
+      onClose();
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
