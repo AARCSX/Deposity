@@ -14,6 +14,7 @@ interface CompanyCardProps {
   isPaid?: boolean;
   pendingAmount?: string;
   id: string;
+  onEdit?: (id: string) => void;
 }
 
 export default function CompanyCard({
@@ -28,6 +29,7 @@ export default function CompanyCard({
   isPaid,
   pendingAmount,
   id,
+  onEdit,
 }: CompanyCardProps) {
   const isOverdue = status.includes("Overdue");
 
@@ -47,11 +49,22 @@ export default function CompanyCard({
             <span className="material-symbols-outlined text-3xl text-primary">domain</span>
           )}
         </div>
-        <div className="flex flex-col items-end">
-          <span className={`text-[0.65rem] px-2 py-1 rounded font-bold uppercase tracking-tighter ${isOverdue ? "bg-error-container text-on-error-container" : status === "Premium Partner" ? "bg-tertiary-fixed text-on-tertiary-fixed" : "bg-surface-container-high text-on-surface-variant"}`}>
-            {status}
-          </span>
-          <span className="text-[0.65rem] text-outline mt-1 tabular-nums">ID: {id}</span>
+        <div className="flex flex-col items-end gap-1.5">
+          <div className="flex items-center gap-1.5">
+            <span className={`text-[0.65rem] px-2 py-1 rounded font-bold uppercase tracking-tighter ${isOverdue ? "bg-error-container text-on-error-container" : status === "Premium Partner" ? "bg-tertiary-fixed text-on-tertiary-fixed" : "bg-surface-container-high text-on-surface-variant"}`}>
+              {status}
+            </span>
+            {onEdit && (
+              <button
+                onClick={() => onEdit(id)}
+                title="Edit Company Details"
+                className="w-7 h-7 rounded-lg bg-surface-container-high hover:bg-primary/10 text-on-surface-variant hover:text-primary transition-colors flex items-center justify-center cursor-pointer active:scale-95"
+              >
+                <span className="material-symbols-outlined text-[16px]">edit</span>
+              </button>
+            )}
+          </div>
+          <span className="text-[0.65rem] text-outline tabular-nums">ID: {id}</span>
         </div>
       </div>
 

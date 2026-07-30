@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import CompanyCard from "@/components/dashboard/CompanyCard";
 import MetricCard from "@/components/dashboard/MetricCard";
 import CreateCompanyWizard from "@/components/companies/CreateCompanyWizard";
+import EditCompanyModal from "@/components/companies/EditCompanyModal";
 import { CompanyRecord } from "@/types/company";
 import { TripRecord } from "@/types/trip";
 import { authenticatedFetch } from "@/lib/api";
@@ -23,6 +24,7 @@ export default function CompaniesPage() {
   const [trips, setTrips] = useState<TripRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [editingCompany, setEditingCompany] = useState<CompanyRecord | null>(null);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -111,6 +113,22 @@ export default function CompaniesPage() {
     } else {
       const errData = await response.json().catch(() => ({}));
       throw new Error(errData.error || "Failed to register company on backend server.");
+    }
+  };
+
+  const handleEditSubmit = async (id: string, data: Partial<CompanyRecord>) => {
+    const response = await authenticatedFetch(`/companies/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+
+    if (response.ok) {
+      await loadData();
+      setEditingCompany(null);
+    } else {
+      const errData = await response.json().catch(() => ({}));
+      throw new Error(errData.error || "Failed to update company details on server.");
     }
   };
 
@@ -246,7 +264,14 @@ export default function CompaniesPage() {
             {/* Client Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
               {enrichedCompanies.map((company, i) => (
-                <CompanyCard key={company.id || i} {...mapToCardProps(company)} />
+                <CompanyCard
+                  key={company.id || i}
+                  {...mapToCardProps(company)}
+                  onEdit={(id) => {
+                    const target = companies.find((c) => c.id === id);
+                    if (target) setEditingCompany(target);
+                  }}
+                />
               ))}
 
               {/* Quick-Add card at the end of the grid */}
@@ -369,6 +394,12 @@ export default function CompaniesPage() {
           isOpen={isCreateModalOpen}
           onClose={() => setIsCreateModalOpen(false)}
           onSubmit={handleCreateSubmit}
+        />
+        <EditCompanyModal
+          isOpen={!!editingCompany}
+          company={editingCompany}
+          onClose={() => setEditingCompany(null)}
+          onSubmit={handleEditSubmit}
         />
       </div>
     </>
