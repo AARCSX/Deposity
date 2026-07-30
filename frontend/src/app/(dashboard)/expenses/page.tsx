@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import CreateExpenseModal from "@/components/expenses/CreateExpenseModal";
+import SetupVehicleEmiModal from "@/components/expenses/SetupVehicleEmiModal";
 import { ExpenseRecord, VehicleEMISummary } from "@/types/expense";
 import { authenticatedFetch } from "@/lib/api";
 
@@ -15,6 +16,7 @@ export default function ExpensesPage() {
 
   const [activeTab, setActiveTab] = useState<"ledger" | "emi">("ledger");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isEmiSetupOpen, setIsEmiSetupOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -319,19 +321,29 @@ export default function ExpensesPage() {
         {/* TAB 2: VEHICLE EMI TRACKER */}
         {activeTab === "emi" && (
           <div className="space-y-6">
-            <div className="bg-surface-container-low/40 p-6 rounded-3xl border border-outline-variant/15 flex items-center justify-between">
+            <div className="bg-surface-container-low/40 p-6 rounded-3xl border border-outline-variant/15 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
                 <h3 className="text-lg font-black text-on-surface">Vehicle EMI Loans &amp; Installments</h3>
                 <p className="text-xs text-on-surface-variant mt-0.5">
                   Centralized tracking for fleet vehicle loans, bank financing, and paid installment counts.
                 </p>
               </div>
-              <button
-                onClick={() => setIsModalOpen(true)}
-                className="px-5 py-2.5 bg-blue-600 text-white rounded-xl text-xs font-bold shadow-md hover:bg-blue-700 transition cursor-pointer"
-              >
-                Pay EMI via Wizard
-              </button>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setIsEmiSetupOpen(true)}
+                  className="px-5 py-2.5 bg-slate-900 text-white rounded-xl text-xs font-bold shadow-md hover:bg-slate-800 transition cursor-pointer flex items-center gap-1.5"
+                >
+                  <span className="material-symbols-outlined text-sm">post_add</span>
+                  Setup Vehicle EMI
+                </button>
+                <button
+                  onClick={() => setIsModalOpen(true)}
+                  className="px-5 py-2.5 bg-blue-600 text-white rounded-xl text-xs font-bold shadow-md hover:bg-blue-700 transition cursor-pointer flex items-center gap-1.5"
+                >
+                  <span className="material-symbols-outlined text-sm">payments</span>
+                  Pay EMI via Wizard
+                </button>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -423,6 +435,13 @@ export default function ExpensesPage() {
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
           onSubmit={handleCreateExpense}
+        />
+
+        {/* Setup Vehicle EMI Modal */}
+        <SetupVehicleEmiModal
+          isOpen={isEmiSetupOpen}
+          onClose={() => setIsEmiSetupOpen(false)}
+          onSuccess={loadData}
         />
       </div>
     </>

@@ -289,11 +289,17 @@ export default function CreateExpenseModal({
                   className="w-full bg-surface-container-highest border border-outline-variant/20 rounded-xl px-4 py-2.5 text-sm text-on-surface outline-none focus:border-primary font-semibold"
                 >
                   <option value="">-- Select Vehicle --</option>
-                  {vehicles.map((v) => (
-                    <option key={v.id} value={v.id}>
-                      {v.registrationNumber} ({v.make} {v.model})
-                    </option>
-                  ))}
+                  {vehicles.map((v) => {
+                    const reg = v.core?.registrationNumber || v.registrationNumber || "Vehicle";
+                    const make = v.core?.make || v.make || "";
+                    const model = v.core?.model || v.model || "";
+                    const label = `${reg.toUpperCase()} ${make || model ? `(${make} ${model})`.trim() : ""}`;
+                    return (
+                      <option key={v.id} value={v.id}>
+                        {label}
+                      </option>
+                    );
+                  })}
                 </select>
               </div>
 
@@ -337,11 +343,16 @@ export default function CreateExpenseModal({
                   className="w-full bg-surface-container-highest border border-outline-variant/20 rounded-xl px-4 py-2.5 text-sm text-on-surface outline-none focus:border-primary font-semibold"
                 >
                   <option value="">-- Select Vehicle --</option>
-                  {vehicles.map((v) => (
-                    <option key={v.id} value={v.id}>
-                      {v.registrationNumber} ({v.make})
-                    </option>
-                  ))}
+                  {vehicles.map((v) => {
+                    const reg = v.core?.registrationNumber || v.registrationNumber || "Vehicle";
+                    const make = v.core?.make || v.make || "";
+                    const label = `${reg.toUpperCase()} ${make ? `(${make})` : ""}`;
+                    return (
+                      <option key={v.id} value={v.id}>
+                        {label}
+                      </option>
+                    );
+                  })}
                 </select>
               </div>
 
