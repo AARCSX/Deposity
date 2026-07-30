@@ -33,7 +33,7 @@ func (r *Repository) GetAll(ctx context.Context, tenantID string) ([]Company, er
 			COALESCE(c.industry, '') as industry, 
 			c.created_at, c.updated_at
 		FROM companies c
-		LEFT JOIN trips t ON (t.tenant_id = c.tenant_id AND (t.company_id = c.id OR LOWER(t.company_id) = LOWER(c.name)))
+		LEFT JOIN trips t ON (t.tenant_id = c.tenant_id AND (t.company_id::text = c.id::text OR LOWER(t.company_id::text) = LOWER(c.name)))
 		WHERE c.tenant_id = $1
 		GROUP BY c.id, c.tenant_id, c.name, c.logo, c.status, c.location, c.contact_person, c.phone, c.email, c.total_value, c.is_paid, c.pending_amount, c.industry, c.created_at, c.updated_at
 		ORDER BY c.created_at DESC
