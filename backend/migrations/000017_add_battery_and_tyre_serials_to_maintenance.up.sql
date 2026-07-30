@@ -1,0 +1,5 @@
+ALTER TABLE maintenance 
+ADD COLUMN IF NOT EXISTS old_battery_serial TEXT DEFAULT '',
+ADD COLUMN IF NOT EXISTS new_battery_serial TEXT DEFAULT '',
+ADD COLUMN IF NOT EXISTS old_tyre_serial TEXT DEFAULT '',
+ADD COLUMN IF NOT EXISTS new_tyre_serial TEXT DEFAULT '';

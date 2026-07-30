@@ -23,6 +23,10 @@ type Maintenance struct {
 	Status              string    `json:"status" db:"status"` // E.g., Completed, Scheduled
 	Notes               string    `json:"notes" db:"notes"`
 	TyreID              string    `json:"tyreId" db:"tyre_id"`
+	OldBatterySerial    string    `json:"oldBatterySerial" db:"old_battery_serial"`
+	NewBatterySerial    string    `json:"newBatterySerial" db:"new_battery_serial"`
+	OldTyreSerial       string    `json:"oldTyreSerial" db:"old_tyre_serial"`
+	NewTyreSerial       string    `json:"newTyreSerial" db:"new_tyre_serial"`
 	CreatedAt           time.Time `json:"createdAt" db:"created_at"`
 	UpdatedAt           time.Time `json:"updatedAt" db:"updated_at"`
 }

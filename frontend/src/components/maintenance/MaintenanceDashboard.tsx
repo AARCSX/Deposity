@@ -511,6 +511,12 @@ export default function MaintenanceDashboard() {
                     <InfoItem label="Cost" value={`₹${selectedRecord.cost.toLocaleString()}`} />
                     <InfoItem label="Next Service" value={selectedRecord.nextServiceDate || "—"} />
                     <InfoItem label="Next Odometer" value={selectedRecord.nextServiceOdometer ? `${selectedRecord.nextServiceOdometer.toLocaleString()} km` : "—"} />
+
+                    {/* Serial Numbers */}
+                    {selectedRecord.oldBatterySerial && <InfoItem label="Old Battery Serial #" value={selectedRecord.oldBatterySerial} />}
+                    {selectedRecord.newBatterySerial && <InfoItem label="New Battery Serial #" value={selectedRecord.newBatterySerial} />}
+                    {selectedRecord.oldTyreSerial && <InfoItem label="Old Tyre Serial #" value={selectedRecord.oldTyreSerial} />}
+                    {selectedRecord.newTyreSerial && <InfoItem label="New Tyre Serial #" value={selectedRecord.newTyreSerial} />}
                   </div>
                   <div className="rounded-2xl bg-surface-container-low p-4">
                     <p className="mb-2 text-xs uppercase tracking-[0.3em] text-outline">Description</p>

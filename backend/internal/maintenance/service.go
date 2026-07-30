@@ -85,6 +85,10 @@ func (s *Service) Create(ctx context.Context, tenantID string, req CreateMainten
 		Status:              status,
 		Notes:               req.Notes,
 		TyreID:              req.TyreID,
+		OldBatterySerial:    req.OldBatterySerial,
+		NewBatterySerial:    req.NewBatterySerial,
+		OldTyreSerial:       req.OldTyreSerial,
+		NewTyreSerial:       req.NewTyreSerial,
 	}
 
 	if err := s.repo.Create(ctx, tenantID, m); err != nil {
@@ -152,6 +156,18 @@ func (s *Service) Update(ctx context.Context, tenantID, id string, req UpdateMai
 		if req.TyreID != nil {
 			m.TyreID = *req.TyreID
 		}
+		if req.OldBatterySerial != nil {
+			m.OldBatterySerial = *req.OldBatterySerial
+		}
+		if req.NewBatterySerial != nil {
+			m.NewBatterySerial = *req.NewBatterySerial
+		}
+		if req.OldTyreSerial != nil {
+			m.OldTyreSerial = *req.OldTyreSerial
+		}
+		if req.NewTyreSerial != nil {
+			m.NewTyreSerial = *req.NewTyreSerial
+		}
 		return nil
 	})
 
@@ -214,6 +230,10 @@ func MapToResponse(m Maintenance) MaintenanceResponse {
 		Status:              m.Status,
 		Notes:               m.Notes,
 		TyreID:              m.TyreID,
+		OldBatterySerial:    m.OldBatterySerial,
+		NewBatterySerial:    m.NewBatterySerial,
+		OldTyreSerial:       m.OldTyreSerial,
+		NewTyreSerial:       m.NewTyreSerial,
 	}
 }
 

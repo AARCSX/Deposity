@@ -22,6 +22,10 @@ export interface MaintenanceRecord {
   status: string;
   notes: string;
   tyreId?: string;
+  oldBatterySerial?: string;
+  newBatterySerial?: string;
+  oldTyreSerial?: string;
+  newTyreSerial?: string;
 }
 
 interface CreateMaintenanceWizardProps {
@@ -48,6 +52,10 @@ interface FormState {
   status: string;
   notes: string;
   tyreId: string;
+  oldBatterySerial: string;
+  newBatterySerial: string;
+  oldTyreSerial: string;
+  newTyreSerial: string;
 }
 
 function getTyreDisplayName(tyreId: string): string {
@@ -77,11 +85,15 @@ const getInitialFormState = (vehicles: VehicleRecord[]): FormState => ({
   status: "Scheduled",
   notes: "",
   tyreId: "",
+  oldBatterySerial: "",
+  newBatterySerial: "",
+  oldTyreSerial: "",
+  newTyreSerial: "",
 });
 
 const STEPS = [
   { id: 0, title: "Vehicle & Odo", subtitle: "Select truck and type" },
-  { id: 1, title: "Tyre Selection", subtitle: "Select affected tyre (optional)" },
+  { id: 1, title: "Component Details", subtitle: "Tyre/Battery serial numbers" },
   { id: 2, title: "Service Details", subtitle: "Center, mechanic and cost" },
   { id: 3, title: "Parts & Next Date", subtitle: "Replaced parts & notes" },
 ];
@@ -121,6 +133,10 @@ export default function CreateMaintenanceWizard({
         status: recordToEdit.status || "Scheduled",
         notes: recordToEdit.notes || "",
         tyreId: recordToEdit.tyreId || "",
+        oldBatterySerial: recordToEdit.oldBatterySerial || "",
+        newBatterySerial: recordToEdit.newBatterySerial || "",
+        oldTyreSerial: recordToEdit.oldTyreSerial || "",
+        newTyreSerial: recordToEdit.newTyreSerial || "",
       });
     } else {
       setFormData(getInitialFormState(vehicles));
@@ -220,6 +236,10 @@ export default function CreateMaintenanceWizard({
         status: formData.status,
         notes: formData.notes,
         tyreId: formData.tyreId,
+        oldBatterySerial: formData.oldBatterySerial,
+        newBatterySerial: formData.newBatterySerial,
+        oldTyreSerial: formData.oldTyreSerial,
+        newTyreSerial: formData.newTyreSerial,
       };
       await onSubmit(payload);
       onClose();
@@ -369,7 +389,7 @@ export default function CreateMaintenanceWizard({
                   label="Maintenance Type"
                   value={formData.maintenanceType}
                   onChange={(v) => setFormData((f) => ({ ...f, maintenanceType: v }))}
-                  options={["Service", "Inspection", "Tyre Replacement", "Repair"]}
+                  options={["Service", "Inspection", "Tyre Replacement", "Battery", "Repair"]}
                 />
                 <Input
                   label="Maintenance Date *"
@@ -386,20 +406,91 @@ export default function CreateMaintenanceWizard({
                 value={formData.odometerReading}
                 onChange={(v) => setFormData((f) => ({ ...f, odometerReading: v }))}
               />
+
+              {/* Battery Serial Documentation in Step 0 if Battery selected */}
+              {formData.maintenanceType === "Battery" && (
+                <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 space-y-3 animate-in fade-in duration-200">
+                  <div className="flex items-center gap-2 text-amber-800 font-bold text-xs uppercase tracking-wider">
+                    <span className="material-symbols-outlined text-amber-600 text-lg">battery_charging_full</span>
+                    Battery Serial Numbers Documentation
+                  </div>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <Input
+                      label="Old Battery Serial Number"
+                      placeholder="e.g. BAT-OLD-9912"
+                      value={formData.oldBatterySerial}
+                      onChange={(v) => setFormData((f) => ({ ...f, oldBatterySerial: v }))}
+                    />
+                    <Input
+                      label="New Battery Serial Number"
+                      placeholder="e.g. BAT-NEW-4481"
+                      value={formData.newBatterySerial}
+                      onChange={(v) => setFormData((f) => ({ ...f, newBatterySerial: v }))}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Tyre Serial Documentation in Step 0 if Tyre Replacement selected */}
+              {formData.maintenanceType === "Tyre Replacement" && (
+                <div className="p-4 rounded-2xl bg-blue-500/10 border border-blue-500/20 space-y-3 animate-in fade-in duration-200">
+                  <div className="flex items-center gap-2 text-blue-800 font-bold text-xs uppercase tracking-wider">
+                    <span className="material-symbols-outlined text-blue-600 text-lg">tires</span>
+                    Tyre Serial Numbers Documentation
+                  </div>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <Input
+                      label="Old Tyre Serial Number"
+                      placeholder="e.g. TYR-OLD-7712"
+                      value={formData.oldTyreSerial}
+                      onChange={(v) => setFormData((f) => ({ ...f, oldTyreSerial: v }))}
+                    />
+                    <Input
+                      label="New Tyre Serial Number"
+                      placeholder="e.g. TYR-NEW-3341"
+                      value={formData.newTyreSerial}
+                      onChange={(v) => setFormData((f) => ({ ...f, newTyreSerial: v }))}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
           {currentStep === 1 && (
             <div className="space-y-4 animate-in slide-in-from-right-4 duration-300">
+              {/* Component specific serial documentation */}
+              {formData.maintenanceType === "Battery" && (
+                <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 space-y-3">
+                  <div className="flex items-center gap-2 text-amber-800 font-bold text-xs uppercase tracking-wider">
+                    <span className="material-symbols-outlined text-amber-600 text-lg">battery_charging_full</span>
+                    Battery Serial Numbers Documentation
+                  </div>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <Input
+                      label="Old Battery Serial Number"
+                      placeholder="e.g. BAT-OLD-9912"
+                      value={formData.oldBatterySerial}
+                      onChange={(v) => setFormData((f) => ({ ...f, oldBatterySerial: v }))}
+                    />
+                    <Input
+                      label="New Battery Serial Number"
+                      placeholder="e.g. BAT-NEW-4481"
+                      value={formData.newBatterySerial}
+                      onChange={(v) => setFormData((f) => ({ ...f, newBatterySerial: v }))}
+                    />
+                  </div>
+                </div>
+              )}
+
               <div className="text-center">
-                <p className="text-sm font-semibold text-on-surface">Select Affected Tyre</p>
+                <p className="text-sm font-semibold text-on-surface">Select Affected Tyre &amp; Serial Numbers</p>
                 <p className="text-xs text-on-surface-variant mt-1">
-                  Click on the chassis diagram to select the tyre being replaced or repaired. 
-                  Leave blank if this service is for non-tyre components (e.g. engine, battery).
+                  Click on the chassis diagram to select the tyre being replaced or repaired.
                 </p>
               </div>
 
-              <div className="bg-surface-container-low/30 rounded-2xl border border-outline-variant/10 flex items-center justify-center min-h-[250px] py-4">
+              <div className="bg-surface-container-low/30 rounded-2xl border border-outline-variant/10 flex items-center justify-center min-h-[220px] py-4">
                 <DynamicChassis
                   axles={
                     vehicles.find(
@@ -444,6 +535,30 @@ export default function CreateMaintenanceWizard({
                   </button>
                 )}
               </div>
+
+              {/* Tyre Serial Numbers Input */}
+              {(formData.maintenanceType === "Tyre Replacement" || formData.tyreId) && (
+                <div className="p-4 rounded-2xl bg-blue-500/10 border border-blue-500/20 space-y-3">
+                  <div className="flex items-center gap-2 text-blue-800 font-bold text-xs uppercase tracking-wider">
+                    <span className="material-symbols-outlined text-blue-600 text-lg">tires</span>
+                    Tyre Serial Numbers Documentation
+                  </div>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <Input
+                      label="Old Tyre Serial Number"
+                      placeholder="e.g. TYR-OLD-7712"
+                      value={formData.oldTyreSerial}
+                      onChange={(v) => setFormData((f) => ({ ...f, oldTyreSerial: v }))}
+                    />
+                    <Input
+                      label="New Tyre Serial Number"
+                      placeholder="e.g. TYR-NEW-3341"
+                      value={formData.newTyreSerial}
+                      onChange={(v) => setFormData((f) => ({ ...f, newTyreSerial: v }))}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

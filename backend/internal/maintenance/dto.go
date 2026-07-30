@@ -18,6 +18,10 @@ type MaintenanceResponse struct {
 	Status              string  `json:"status"`
 	Notes               string  `json:"notes"`
 	TyreID              string  `json:"tyreId"`
+	OldBatterySerial    string  `json:"oldBatterySerial"`
+	NewBatterySerial    string  `json:"newBatterySerial"`
+	OldTyreSerial       string  `json:"oldTyreSerial"`
+	NewTyreSerial       string  `json:"newTyreSerial"`
 }
 
 // CreateMaintenanceRequest represents the payload to create a maintenance log.
@@ -37,6 +41,10 @@ type CreateMaintenanceRequest struct {
 	Status              string  `json:"status"`
 	Notes               string  `json:"notes"`
 	TyreID              string  `json:"tyreId"`
+	OldBatterySerial    string  `json:"oldBatterySerial"`
+	NewBatterySerial    string  `json:"newBatterySerial"`
+	OldTyreSerial       string  `json:"oldTyreSerial"`
+	NewTyreSerial       string  `json:"newTyreSerial"`
 }
 
 // UpdateMaintenanceRequest represents the payload to update a maintenance log.
@@ -56,4 +64,8 @@ type UpdateMaintenanceRequest struct {
 	Status              *string  `json:"status"`
 	Notes               *string  `json:"notes"`
 	TyreID              *string  `json:"tyreId"`
+	OldBatterySerial    *string  `json:"oldBatterySerial"`
+	NewBatterySerial    *string  `json:"newBatterySerial"`
+	OldTyreSerial       *string  `json:"oldTyreSerial"`
+	NewTyreSerial       *string  `json:"newTyreSerial"`
 }
