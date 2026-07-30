@@ -162,3 +162,17 @@ func (r *Repository) Delete(ctx context.Context, tenantID, id string) (bool, err
 	}
 	return res.RowsAffected() > 0, nil
 }
+
+func (r *Repository) GetLatestSerials(ctx context.Context, tenantID, vehicleIdentifier string) (*LatestSerialsResponse, error) {
+	query := `
+		SELECT 
+			COALESCE((SELECT new_battery_serial FROM maintenance WHERE tenant_id = $1 AND (LOWER(vehicle_number) = LOWER($2) OR vehicle_id::text = $2) AND new_battery_serial != '' ORDER BY maintenance_date DESC, created_at DESC LIMIT 1), ''),
+			COALESCE((SELECT new_tyre_serial FROM maintenance WHERE tenant_id = $1 AND (LOWER(vehicle_number) = LOWER($2) OR vehicle_id::text = $2) AND new_tyre_serial != '' ORDER BY maintenance_date DESC, created_at DESC LIMIT 1), '')
+	`
+	var resp LatestSerialsResponse
+	err := r.pool.QueryRow(ctx, query, tenantID, vehicleIdentifier).Scan(&resp.LatestBatterySerial, &resp.LatestTyreSerial)
+	if err != nil {
+		return &LatestSerialsResponse{LatestBatterySerial: "", LatestTyreSerial: ""}, nil
+	}
+	return &resp, nil
+}

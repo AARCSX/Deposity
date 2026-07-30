@@ -14,6 +14,7 @@ func RegisterRoutes(rg *gin.RouterGroup, pool *pgxpool.Pool, authMiddleware gin.
 	rg.Use(authMiddleware)
 	{
 		rg.GET("", handler.List)
+		rg.GET("/latest-serials", handler.GetLatestSerials)
 		rg.GET("/:id", handler.Get)
 		rg.POST("", handler.Create)
 		rg.PATCH("/:id", handler.Update)

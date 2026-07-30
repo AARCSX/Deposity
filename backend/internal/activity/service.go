@@ -127,9 +127,15 @@ func GetActivityLogs(ctx context.Context, db *pgxpool.Pool, filter LogFilter) (P
 	argCount := 1
 
 	if filter.Category != "" && filter.Category != "ALL" {
-		argCount++
-		whereClause += fmt.Sprintf(" AND category = $%d", argCount)
-		args = append(args, filter.Category)
+		if filter.Category == "MAINTENANCE" {
+			whereClause += " AND (category = 'MAINTENANCE' OR category = 'REPAIRS_FUEL' OR action LIKE '%MAINTENANCE%' OR action LIKE '%FUEL%')"
+		} else if filter.Category == "VEHICLES" {
+			whereClause += " AND (category = 'VEHICLES' OR action LIKE '%VEHICLE%' OR action LIKE '%FASTAG%')"
+		} else {
+			argCount++
+			whereClause += fmt.Sprintf(" AND category = $%d", argCount)
+			args = append(args, filter.Category)
+		}
 	}
 
 	if filter.UserID != "" {

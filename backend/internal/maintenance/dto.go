@@ -69,3 +69,8 @@ type UpdateMaintenanceRequest struct {
 	OldTyreSerial       *string  `json:"oldTyreSerial"`
 	NewTyreSerial       *string  `json:"newTyreSerial"`
 }
+
+type LatestSerialsResponse struct {
+	LatestBatterySerial string `json:"latestBatterySerial"`
+	LatestTyreSerial    string `json:"latestTyreSerial"`
+}

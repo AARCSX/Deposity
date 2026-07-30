@@ -128,3 +128,18 @@ func (h *Handler) Delete(c *gin.Context) {
 
 	c.Status(http.StatusNoContent)
 }
+
+func (h *Handler) GetLatestSerials(c *gin.Context) {
+	tenantID := middleware.GetTenantID(c)
+	vehicleIdentifier := c.Query("vehicleNumber")
+	if vehicleIdentifier == "" {
+		vehicleIdentifier = c.Query("vehicleId")
+	}
+
+	resp, err := h.service.GetLatestSerials(c.Request.Context(), tenantID, vehicleIdentifier)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, resp)
+}

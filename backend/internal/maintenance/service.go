@@ -206,6 +206,10 @@ func (s *Service) Delete(ctx context.Context, tenantID, id string) error {
 	return nil
 }
 
+func (s *Service) GetLatestSerials(ctx context.Context, tenantID, vehicleIdentifier string) (*LatestSerialsResponse, error) {
+	return s.repo.GetLatestSerials(ctx, tenantID, vehicleIdentifier)
+}
+
 // MapToResponse converts database Maintenance struct to nested MaintenanceResponse DTO.
 func MapToResponse(m Maintenance) MaintenanceResponse {
 	nextServiceDateStr := ""

@@ -146,6 +146,25 @@ export default function CreateMaintenanceWizard({
     setValidationError(null);
   }, [recordToEdit, vehicles, isOpen]);
 
+  useEffect(() => {
+    if (!isOpen || recordToEdit) return;
+    const targetVeh = formData.vehicleNumber || formData.vehicleId;
+    if (!targetVeh) return;
+
+    authenticatedFetch(`/maintenance/latest-serials?vehicleNumber=${encodeURIComponent(targetVeh)}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data) {
+          setFormData((prev) => ({
+            ...prev,
+            oldBatterySerial: data.latestBatterySerial || prev.oldBatterySerial,
+            oldTyreSerial: data.latestTyreSerial || prev.oldTyreSerial,
+          }));
+        }
+      })
+      .catch(() => {});
+  }, [formData.vehicleNumber, formData.vehicleId, isOpen, recordToEdit]);
+
   if (!isOpen) return null;
 
   const validateStep = (step: number): boolean => {
