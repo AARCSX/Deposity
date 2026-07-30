@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import CreateExpenseModal from "@/components/expenses/CreateExpenseModal";
 import SetupVehicleEmiModal from "@/components/expenses/SetupVehicleEmiModal";
+import ExportCsvModal from "@/components/common/ExportCsvModal";
 import { ExpenseRecord, VehicleEMISummary } from "@/types/expense";
 import { authenticatedFetch } from "@/lib/api";
 
@@ -17,6 +18,7 @@ export default function ExpensesPage() {
   const [activeTab, setActiveTab] = useState<"ledger" | "emi">("ledger");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEmiSetupOpen, setIsEmiSetupOpen] = useState(false);
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -111,6 +113,43 @@ export default function ExpensesPage() {
     .filter((e) => e.category === "Fuel & Fleet")
     .reduce((acc, curr) => acc + (curr.amount || 0), 0);
 
+  const handleExportExpensesCSV = (month: number | "ALL", year: number | "ALL") => {
+    const filtered = expenses.filter((e) => {
+      const d = new Date(e.expenseDate || e.createdAt || "");
+      if (isNaN(d.getTime())) return true;
+      const matchYear = year === "ALL" || d.getFullYear() === Number(year);
+      const matchMonth = month === "ALL" || d.getMonth() + 1 === Number(month);
+      return matchYear && matchMonth;
+    });
+
+    if (filtered.length === 0) {
+      alert("No expense records found for the selected month and year.");
+      return;
+    }
+
+    const headers = ["Expense Date", "Category", "Title", "Amount (INR)", "Recipient / Vehicle", "Payment Mode", "Notes"];
+    const rows = filtered.map((e) => [
+      `"${e.expenseDate || ""}"`,
+      `"${e.category || ""}"`,
+      `"${(e.title || "").replace(/"/g, '""')}"`,
+      `"${e.amount || 0}"`,
+      `"${(e.recipientName || e.vehicleNumber || "").replace(/"/g, '""')}"`,
+      `"${e.paymentMode || "Bank Transfer"}"`,
+      `"${(e.notes || "").replace(/"/g, '""')}"`,
+    ]);
+
+    const csvContent = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    const fileName = `Deposity_Expenses_${month !== "ALL" ? `Month_${month}` : "FullYear"}_${year !== "ALL" ? year : "AllTime"}.csv`;
+    link.setAttribute("download", fileName);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <>
       <div className="p-6 md:p-10 space-y-8 max-w-7xl mx-auto">
@@ -126,13 +165,23 @@ export default function ExpensesPage() {
             </p>
           </div>
 
-          <button
-            onClick={() => setIsModalOpen(true)}
-            className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-2xl font-bold text-sm shadow-lg shadow-primary/20 hover:opacity-90 active:scale-[0.98] transition cursor-pointer"
-          >
-            <span className="material-symbols-outlined text-xl">add_card</span>
-            Log Expense
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setIsExportModalOpen(true)}
+              className="inline-flex items-center gap-2 px-5 py-3 bg-surface-container-high text-on-surface border border-outline-variant/20 rounded-2xl font-bold text-sm hover:bg-surface-container-highest transition cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-lg">download</span>
+              Export Expenses (CSV)
+            </button>
+
+            <button
+              onClick={() => setIsModalOpen(true)}
+              className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-2xl font-bold text-sm shadow-lg shadow-primary/20 hover:opacity-90 active:scale-[0.98] transition cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-xl">add_card</span>
+              Log Expense
+            </button>
+          </div>
         </div>
 
         {/* Metrics Summary */}
@@ -442,6 +491,15 @@ export default function ExpensesPage() {
           isOpen={isEmiSetupOpen}
           onClose={() => setIsEmiSetupOpen(false)}
           onSuccess={loadData}
+        />
+
+        {/* Export CSV Modal */}
+        <ExportCsvModal
+          isOpen={isExportModalOpen}
+          onClose={() => setIsExportModalOpen(false)}
+          onExport={handleExportExpensesCSV}
+          title="Export Expense Ledger (CSV)"
+          description="Filter expenses by target month and year for CSV file generation."
         />
       </div>
     </>

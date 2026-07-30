@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { fetchActivityLogs, fetchActivityStats } from "@/lib/api";
+import ExportCsvModal from "@/components/common/ExportCsvModal";
 
 interface ActivityLog {
   id: string;
@@ -52,6 +53,7 @@ export default function ActivityLogsPage() {
   const [totalRecords, setTotalRecords] = useState(0);
   const [expandedLogId, setExpandedLogId] = useState<string | null>(null);
   const [dateFilter, setDateFilter] = useState<"ALL" | "TODAY" | "7DAYS" | "30DAYS">("ALL");
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
   // Load stats once
   useEffect(() => {
@@ -141,12 +143,24 @@ export default function ActivityLogsPage() {
     return d.toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" });
   };
 
-  // CSV Export Handler
-  const exportCSV = () => {
-    if (!logs.length) return;
+  // CSV Export Handler with Month & Year Filter
+  const exportCSV = (month: number | "ALL", year: number | "ALL") => {
+    const filteredLogs = logs.filter((l) => {
+      const d = new Date(l.created_at);
+      if (isNaN(d.getTime())) return true;
+      const matchYear = year === "ALL" || d.getFullYear() === Number(year);
+      const matchMonth = month === "ALL" || d.getMonth() + 1 === Number(month);
+      return matchYear && matchMonth;
+    });
+
+    if (!filteredLogs.length) {
+      alert("No activity audit logs found for the selected month and year.");
+      return;
+    }
+
     const headers = ["Timestamp", "User Name", "User Role", "Action", "Category", "Description", "IP Address"];
-    const rows = logs.map((l) => [
-      `"${new Date(l.created_at).toLocaleString()}"`,
+    const rows = filteredLogs.map((l) => [
+      `"${new Date(l.created_at).toLocaleString("en-IN")}"`,
       `"${l.user_name || "System"}"`,
       `"${l.user_role || "Staff"}"`,
       `"${l.action}"`,
@@ -160,7 +174,8 @@ export default function ActivityLogsPage() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.setAttribute("download", `Deposity_Activity_Logs_${new Date().toISOString().slice(0, 10)}.csv`);
+    const fileName = `Deposity_Activity_Logs_${month !== "ALL" ? `Month_${month}` : "FullYear"}_${year !== "ALL" ? year : "AllTime"}.csv`;
+    link.setAttribute("download", fileName);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -181,7 +196,7 @@ export default function ActivityLogsPage() {
         </div>
 
         <button
-          onClick={exportCSV}
+          onClick={() => setIsExportModalOpen(true)}
           disabled={logs.length === 0}
           className="bg-primary text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-primary/20 hover:opacity-90 transition-all flex items-center gap-2 disabled:opacity-50 self-start md:self-auto cursor-pointer"
         >
@@ -416,6 +431,14 @@ export default function ActivityLogsPage() {
           </div>
         )}
       </div>
+
+      <ExportCsvModal
+        isOpen={isExportModalOpen}
+        onClose={() => setIsExportModalOpen(false)}
+        onExport={exportCSV}
+        title="Export Activity Audit Trail (CSV)"
+        description="Filter system audit records by target month and year for CSV file generation."
+      />
     </div>
   );
 }
