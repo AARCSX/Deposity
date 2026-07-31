@@ -17,6 +17,45 @@ func NewRepository(pool *pgxpool.Pool) *Repository {
 }
 
 func (r *Repository) GetAll(ctx context.Context, tenantID string) ([]Employee, error) {
+	// 1. Auto-sync missing active organization members from Identity into employees table
+	syncQuery := `
+		INSERT INTO employees (tenant_id, name, role, phone, email, joining_date, base_salary, pending_balance, status, avatar)
+		SELECT 
+			$1 AS tenant_id,
+			COALESCE(NULLIF(p.full_name, ''), SPLIT_PART(p.email, '@', 1), 'Staff Member') AS name,
+			COALESCE(m.role, 'Employee') AS role,
+			COALESCE(p.phone, '+91 9876543210') AS phone,
+			p.email,
+			COALESCE(m.joined_at, m.created_at, NOW()) AS joining_date,
+			CASE WHEN LOWER(m.role) = 'owner' THEN 0 ELSE 25000 END AS base_salary,
+			0 AS pending_balance,
+			'Active' AS status,
+			COALESCE(p.avatar_url, '') AS avatar
+		FROM public.organization_members m
+		JOIN public.organizations o ON o.id = m.organization_id
+		JOIN public.profiles p ON p.id = m.user_id
+		WHERE (o.tenant_id = $1 OR o.slug = $1 OR o.id::text = $1)
+		  AND NOT EXISTS (
+		    SELECT 1 FROM employees e 
+		    WHERE e.tenant_id = $1 AND (LOWER(e.email) = LOWER(p.email) OR e.name = p.full_name)
+		  )
+	`
+	_, _ = r.pool.Exec(ctx, syncQuery, tenantID)
+
+	// 2. Sync roles for existing members
+	roleSyncQuery := `
+		UPDATE employees e
+		SET role = m.role
+		FROM public.organization_members m
+		JOIN public.organizations o ON o.id = m.organization_id
+		JOIN public.profiles p ON p.id = m.user_id
+		WHERE e.tenant_id = $1
+		  AND (o.tenant_id = $1 OR o.slug = $1 OR o.id::text = $1)
+		  AND LOWER(e.email) = LOWER(p.email)
+		  AND e.role <> m.role
+	`
+	_, _ = r.pool.Exec(ctx, roleSyncQuery, tenantID)
+
 	query := `
 		SELECT id, tenant_id, name, role, phone, COALESCE(email, ''), joining_date,
 		       base_salary, pending_balance, status, COALESCE(avatar, ''), created_at, updated_at
