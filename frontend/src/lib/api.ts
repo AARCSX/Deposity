@@ -260,7 +260,7 @@ export async function fetchUserBranches(): Promise<UserBranchInfo[]> {
         id: org.id || org.tenant_id,
         name: org.name || "Organization",
         tenant_id: org.tenant_id || "",
-        role: org.role || "Owner",
+        role: org.role || "Employee",
         plan: org.subscription_plan || "7-Day Free Trial",
       }));
     }
@@ -270,7 +270,7 @@ export async function fetchUserBranches(): Promise<UserBranchInfo[]> {
         id: data.tenant_id || "default",
         name: data.org_name || "AARCSX Transport",
         tenant_id: data.tenant_id || "",
-        role: data.role || "Owner",
+        role: data.role || "Employee",
         plan: data.subscription_plan || "7-Day Free Trial",
       },
     ];

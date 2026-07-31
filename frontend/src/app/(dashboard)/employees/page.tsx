@@ -33,8 +33,92 @@ export default function EmployeesPage() {
     try {
       const response = await authenticatedFetch("/employees");
       if (!response.ok) throw new Error(`Server responded with ${response.status}`);
-      const data = await response.json();
-      setEmployees(Array.isArray(data) ? data : []);
+      let localData: EmployeeRecord[] = await response.json();
+      if (!Array.isArray(localData)) localData = [];
+
+      // Fetch organization members from AARCSX Identity via Supabase REST API
+      const token = typeof window !== "undefined" ? localStorage.getItem("deposity_token") : null;
+      let identityMembers: any[] = [];
+      if (token) {
+        try {
+          const supabaseRes = await fetch(
+            "https://zrxdlanspjqewyqurvvl.supabase.co/rest/v1/organization_members?select=id,organization_id,user_id,role,status,created_at,profiles(id,email,full_name,avatar_url)",
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            }
+          );
+          if (supabaseRes.ok) {
+            identityMembers = await supabaseRes.json();
+          }
+        } catch (e) {
+          console.warn("Could not fetch Identity organization members:", e);
+        }
+      }
+
+      // Sync Identity members into local employees list if not already present
+      if (Array.isArray(identityMembers) && identityMembers.length > 0) {
+        for (const m of identityMembers) {
+          const profile = m.profiles || {};
+          const email = profile.email || "";
+          const name = profile.full_name || (email ? email.split("@")[0] : "Staff Member");
+          const role = m.role || "Employee";
+          const avatar = profile.avatar_url || "";
+
+          // Match existing record by email or name
+          const existingIndex = localData.findIndex(
+            (e) =>
+              (email && e.email && e.email.toLowerCase() === email.toLowerCase()) ||
+              (e.name && name && e.name.toLowerCase() === name.toLowerCase())
+          );
+
+          if (existingIndex >= 0) {
+            // Update existing local record with latest real Identity role & name
+            localData[existingIndex] = {
+              ...localData[existingIndex],
+              role: role, // Sync real Identity role (e.g. Employee, Manager, Admin, Owner)
+              name: localData[existingIndex].name || name,
+              email: localData[existingIndex].email || email,
+              avatar: localData[existingIndex].avatar || avatar,
+            };
+          } else {
+            // Auto-create local employee record for newly joined Identity staff
+            const newEmpData: EmployeeRecord = {
+              name,
+              email,
+              role,
+              phone: profile.phone || "+91 9876543210",
+              joiningDate: m.created_at
+                ? new Date(m.created_at).toISOString().split("T")[0]
+                : new Date().toISOString().split("T")[0],
+              baseSalary: role === "Owner" ? 0 : 25000,
+              pendingBalance: 0,
+              status: m.status === "active" ? "Active" : "Inactive",
+              avatar,
+            };
+
+            // Post to Deposity backend so it persists
+            try {
+              const createRes = await authenticatedFetch("/employees", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(newEmpData),
+              });
+              if (createRes.ok) {
+                const created = await createRes.json();
+                localData.push(created);
+              } else {
+                localData.push(newEmpData);
+              }
+            } catch {
+              localData.push(newEmpData);
+            }
+          }
+        }
+      }
+
+      setEmployees(localData);
     } catch (err: any) {
       setFetchError(err.message || "Failed to load employees");
     } finally {
@@ -95,7 +179,7 @@ export default function EmployeesPage() {
 
   return (
     <>
-      <div className="p-6 md:p-10 space-y-8 max-w-7xl mx-auto">
+      <div className="space-y-8 animate-in fade-in duration-300">
         {/* Page Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
