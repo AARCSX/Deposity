@@ -1,19 +1,27 @@
 const DEFAULT_PROD_API_URL = "https://deposity-backend-117863432508.asia-south1.run.app";
 
 export function getApiBaseUrl(): string {
-  const envUrl = process.env.NEXT_PUBLIC_API_URL;
-  if (envUrl && envUrl.startsWith("http") && !envUrl.includes("localhost")) {
-    return envUrl.replace(/\/$/, "");
-  }
+  const envUrl = process.env.NEXT_PUBLIC_API_URL ? process.env.NEXT_PUBLIC_API_URL.trim() : "";
 
   if (typeof window !== "undefined") {
+    const currentOrigin = window.location.origin;
     const hostname = window.location.hostname;
-    if (hostname !== "localhost" && hostname !== "127.0.0.1" && !hostname.startsWith("192.168.")) {
-      return DEFAULT_PROD_API_URL;
+    const isLocalhost = hostname === "localhost" || hostname === "127.0.0.1" || hostname.startsWith("192.168.");
+
+    if (!isLocalhost) {
+      // If envUrl is empty, relative, or points to the frontend website domain (e.g. deposits.aarcsx.com), force production Cloud Run backend URL
+      if (!envUrl || !envUrl.startsWith("http") || envUrl.includes(currentOrigin) || envUrl.includes(hostname)) {
+        return DEFAULT_PROD_API_URL;
+      }
+      return envUrl.replace(/\/$/, "");
     }
   }
 
-  return envUrl ? envUrl.replace(/\/$/, "") : "http://localhost:8080";
+  if (envUrl && envUrl.startsWith("http")) {
+    return envUrl.replace(/\/$/, "");
+  }
+
+  return "http://localhost:8080";
 }
 
 export const apiBase = getApiBaseUrl();
@@ -129,6 +137,11 @@ export async function authenticatedFetch(path: string, options: RequestInit = {}
 
   const baseUrl = getApiBaseUrl();
   let url = path.startsWith("http") ? path : `${baseUrl}${path.startsWith("/") ? "" : "/"}${path}`;
+
+  if (typeof window !== "undefined" && window.location.hostname !== "localhost" && window.location.hostname !== "127.0.0.1" && url.startsWith(window.location.origin)) {
+    url = url.replace(window.location.origin, DEFAULT_PROD_API_URL);
+  }
+
   if (activeTenantId && !url.includes("tenant_id=")) {
     const separator = url.includes("?") ? "&" : "?";
     url = `${url}${separator}tenant_id=${encodeURIComponent(activeTenantId)}`;
