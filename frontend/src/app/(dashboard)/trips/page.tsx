@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useMemo, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import MetricCard from "@/components/dashboard/MetricCard";
 import TripCard from "@/components/dashboard/TripCard";
