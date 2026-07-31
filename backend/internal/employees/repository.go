@@ -22,7 +22,7 @@ func (r *Repository) GetAll(ctx context.Context, tenantID string) ([]Employee, e
 	syncQuery := `
 		INSERT INTO employees (tenant_id, name, role, phone, email, joining_date, base_salary, pending_balance, status, avatar)
 		SELECT 
-			$1 AS tenant_id,
+			COALESCE(o.tenant_id, $1) AS tenant_id,
 			COALESCE(NULLIF(p.full_name, ''), SPLIT_PART(p.email, '@', 1), 'Staff Member') AS name,
 			COALESCE(m.role, 'Employee') AS role,
 			COALESCE(p.phone, '+91 9876543210') AS phone,
@@ -38,7 +38,8 @@ func (r *Repository) GetAll(ctx context.Context, tenantID string) ([]Employee, e
 		WHERE (o.tenant_id = $1 OR o.slug = $1 OR o.id::text = $1)
 		  AND NOT EXISTS (
 		    SELECT 1 FROM employees e 
-		    WHERE e.tenant_id = $1 AND (LOWER(e.email) = LOWER(p.email) OR e.name = p.full_name)
+		    WHERE (e.tenant_id = o.tenant_id OR e.tenant_id = o.slug OR e.tenant_id = o.id::text OR e.tenant_id = $1)
+		      AND (LOWER(e.email) = LOWER(p.email) OR (p.full_name IS NOT NULL AND p.full_name <> '' AND e.name = p.full_name))
 		  )
 	`
 	if _, err := r.pool.Exec(ctx, syncQuery, tenantID); err != nil {
@@ -52,7 +53,7 @@ func (r *Repository) GetAll(ctx context.Context, tenantID string) ([]Employee, e
 		FROM public.organization_members m
 		JOIN public.organizations o ON o.id = m.organization_id
 		JOIN public.profiles p ON p.id = m.user_id
-		WHERE e.tenant_id = $1
+		WHERE (e.tenant_id = $1 OR e.tenant_id = o.tenant_id OR e.tenant_id = o.slug OR e.tenant_id = o.id::text)
 		  AND (o.tenant_id = $1 OR o.slug = $1 OR o.id::text = $1)
 		  AND LOWER(e.email) = LOWER(p.email)
 		  AND e.role <> m.role
@@ -65,7 +66,14 @@ func (r *Repository) GetAll(ctx context.Context, tenantID string) ([]Employee, e
 		SELECT id, tenant_id, name, role, phone, COALESCE(email, ''), joining_date,
 		       base_salary, pending_balance, status, COALESCE(avatar, ''), created_at, updated_at
 		FROM employees
-		WHERE tenant_id = $1
+		WHERE tenant_id = $1 
+		   OR tenant_id IN (
+		       SELECT o.tenant_id FROM public.organizations o WHERE o.tenant_id = $1 OR o.slug = $1 OR o.id::text = $1
+		       UNION
+		       SELECT o.slug FROM public.organizations o WHERE o.tenant_id = $1 OR o.slug = $1 OR o.id::text = $1
+		       UNION
+		       SELECT o.id::text FROM public.organizations o WHERE o.tenant_id = $1 OR o.slug = $1 OR o.id::text = $1
+		   )
 		ORDER BY created_at DESC
 	`
 	rows, err := r.pool.Query(ctx, query, tenantID)
