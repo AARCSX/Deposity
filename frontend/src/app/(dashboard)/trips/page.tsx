@@ -148,6 +148,43 @@ function TripsContent() {
     ? `₹${(pendingPayments / 1000).toFixed(1)}k` 
     : `₹${pendingPayments}`;
 
+  const [selectedVehicleFilter, setSelectedVehicleFilter] = useState("ALL");
+
+  // Extract unique vehicle numbers from current trips list
+  const vehicleOptions = useMemo(() => {
+    const set = new Set<string>();
+    trips.forEach((t) => {
+      if (t.assignment?.vehicleId) {
+        set.add(t.assignment.vehicleId);
+      }
+    });
+    return Array.from(set).sort();
+  }, [trips]);
+
+  // Filtered trips list based on selected vehicle
+  const filteredTrips = useMemo(() => {
+    if (selectedVehicleFilter === "ALL") return trips;
+    return trips.filter((t) => t.assignment?.vehicleId === selectedVehicleFilter);
+  }, [trips, selectedVehicleFilter]);
+
+  const handleQuickStatusChange = async (tripId: string, newStatus: "pending" | "in-transit" | "delivered") => {
+    const existing = trips.find((t) => t.id === tripId);
+    if (!existing) return;
+
+    const updatedTrip = { ...existing, status: newStatus };
+    setTrips((prev) => prev.map((t) => (t.id === tripId ? updatedTrip : t)));
+
+    try {
+      await authenticatedFetch(`/trips/${tripId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updatedTrip),
+      });
+    } catch (err) {
+      console.warn("Failed to persist quick status update:", err);
+    }
+  };
+
   return (
     <>
       <div className="p-8 space-y-8 max-w-[1600px] mx-auto">
@@ -159,13 +196,31 @@ function TripsContent() {
               Monitor <span className="font-bold text-on-surface">{trips.length} trips</span>, active routes, and financials.
             </p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Vehicle Filter Dropdown (Left side of New Trip button) */}
+            <div className="flex items-center gap-2 bg-surface-container-high rounded-xl px-3.5 py-2.5 border border-outline-variant/15 text-xs font-bold shadow-xs">
+              <span className="material-symbols-outlined text-[18px] text-primary">filter_alt</span>
+              <span className="text-slate-500 hidden sm:inline">Vehicle:</span>
+              <select
+                value={selectedVehicleFilter}
+                onChange={(e) => setSelectedVehicleFilter(e.target.value)}
+                className="bg-transparent text-xs font-bold text-on-surface outline-none cursor-pointer"
+              >
+                <option value="ALL">All Vehicles ({trips.length})</option>
+                {vehicleOptions.map((v) => (
+                  <option key={v} value={v}>
+                    {v}
+                  </option>
+                ))}
+              </select>
+            </div>
+
             <button 
               onClick={() => {
                 setEditingTrip(null);
                 setIsCreateModalOpen(true);
               }}
-              className="px-5 py-2.5 rounded-xl bg-primary text-on-primary font-bold text-sm hover:bg-primary-container hover:text-on-primary-container transition-all shadow-sm active:scale-[0.98] flex items-center gap-2"
+              className="px-5 py-2.5 rounded-xl bg-primary text-on-primary font-bold text-sm hover:bg-primary-container hover:text-on-primary-container transition-all shadow-sm active:scale-[0.98] flex items-center gap-2 cursor-pointer"
             >
               <span className="material-symbols-outlined text-[20px]">add</span>
               New Trip
@@ -219,13 +274,17 @@ function TripsContent() {
             <div className="py-12 flex justify-center text-on-surface-variant font-medium">
               Loading trips...
             </div>
-          ) : trips.length === 0 ? (
+          ) : filteredTrips.length === 0 ? (
             <div className="py-16 flex flex-col items-center justify-center text-center rounded-2xl border border-dashed border-outline-variant/20 bg-surface-container-lowest">
               <span className="material-symbols-outlined text-4xl text-outline mb-3">directions</span>
               <p className="text-sm font-semibold text-on-surface">No trips found</p>
-              <p className="text-xs text-on-surface-variant mt-1 max-w-xs">Create your first trip by clicking the &quot;New Trip&quot; button above.</p>
+              <p className="text-xs text-on-surface-variant mt-1 max-w-xs">
+                {selectedVehicleFilter !== "ALL"
+                  ? `No trips registered for vehicle ${selectedVehicleFilter}.`
+                  : "Create your first trip by clicking the 'New Trip' button above."}
+              </p>
             </div>
-          ) : trips.slice(0, visibleCount).map((trip) => (
+          ) : filteredTrips.slice(0, visibleCount).map((trip) => (
             <TripCard 
               key={trip.id || trip.route.originName} 
               {...mapToCardProps(trip)} 
@@ -233,6 +292,7 @@ function TripsContent() {
                 setEditingTrip(trip);
                 setIsCreateModalOpen(true);
               }}
+              onChangeStatus={(newStatus) => handleQuickStatusChange(trip.id, newStatus)}
               onRecordPayment={() => {
                 setSelectedPaymentTrip(trip);
                 setIsPaymentModalOpen(true);
@@ -242,7 +302,7 @@ function TripsContent() {
         </div>
 
         {/* Load More — only show when there are more trips to load */}
-        {trips.length > visibleCount && (
+        {filteredTrips.length > visibleCount && (
           <div className="py-8 text-center">
             <button 
               onClick={() => setVisibleCount(prev => prev + ITEMS_PER_PAGE)}

@@ -15,7 +15,7 @@ export default function CreateExpenseModal({
   onClose,
   onSubmit,
 }: CreateExpenseModalProps) {
-  const [category, setCategory] = useState<"Salary" | "EMI" | "Fuel & Fleet" | "Office & Misc">("Salary");
+  const [category, setCategory] = useState<"Salary" | "EMI" | "FASTag" | "Fuel & Fleet" | "Office & Misc">("Salary");
   const [title, setTitle] = useState("");
   const [amount, setAmount] = useState<number | "">("");
   const [expenseDate, setExpenseDate] = useState(new Date().toISOString().split("T")[0]);
@@ -96,19 +96,39 @@ export default function CreateExpenseModal({
       return;
     }
 
+    if (category === "FASTag" && !vehicleId) {
+      setError("Please select the vehicle for FASTag recharge.");
+      return;
+    }
+
     setIsSubmitting(true);
     setError(null);
 
     try {
+      let finalTitle = title;
+      if (!finalTitle.trim()) {
+        if (category === "FASTag") {
+          const selectedVeh = vehicles.find((v) => v.id === vehicleId);
+          const regNo = selectedVeh?.core?.registrationNumber || selectedVeh?.registrationNumber || "";
+          finalTitle = regNo ? `FASTag Recharge (${regNo})` : "FASTag Toll Recharge";
+        } else if (category === "Salary") {
+          finalTitle = "Staff Salary Disbursement";
+        } else if (category === "EMI") {
+          finalTitle = "Vehicle Loan EMI Payment";
+        } else {
+          finalTitle = `${category} Expense`;
+        }
+      }
+
       const payload: CreateExpenseRequest = {
         category,
-        title,
+        title: finalTitle,
         amount: Number(amount),
         expenseDate,
         recipientType: category === "Salary" ? recipientType : "",
         recipientId: category === "Salary" ? recipientId : "",
         pendingBalance: category === "Salary" ? Number(pendingBalance || 0) : 0,
-        vehicleId: category === "EMI" || category === "Fuel & Fleet" ? vehicleId : "",
+        vehicleId: category === "EMI" || category === "FASTag" || category === "Fuel & Fleet" ? vehicleId : "",
         installmentNo: category === "EMI" && installmentNo ? Number(installmentNo) : 0,
         paymentMode,
         notes,
@@ -135,7 +155,7 @@ export default function CreateExpenseModal({
             <div>
               <h3 className="text-xl font-black text-on-surface">1-Step Expense Wizard</h3>
               <p className="text-xs text-on-surface-variant font-medium">
-                Log fleet expenses, salaries, EMI, fuel, or operational costs
+                Log fleet expenses, salaries, EMI, FASTag, fuel, or operational costs
               </p>
             </div>
           </div>
@@ -159,13 +179,13 @@ export default function CreateExpenseModal({
           {/* Expense Category Dropdown */}
           <div className="space-y-1.5">
             <label className="text-xs font-bold text-outline">Select Expense Type *</label>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              {(["Salary", "EMI", "Fuel & Fleet", "Office & Misc"] as const).map((cat) => (
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+              {(["Salary", "EMI", "FASTag", "Fuel & Fleet", "Office & Misc"] as const).map((cat) => (
                 <button
                   type="button"
                   key={cat}
                   onClick={() => setCategory(cat)}
-                  className={`p-3 rounded-2xl border text-xs font-bold transition flex flex-col items-center gap-1 cursor-pointer ${
+                  className={`p-2.5 rounded-2xl border text-xs font-bold transition flex flex-col items-center gap-1 cursor-pointer ${
                     category === cat
                       ? "bg-primary text-white border-primary shadow-md shadow-primary/20"
                       : "bg-surface-container-highest/50 border-outline-variant/20 text-on-surface hover:bg-surface-container-highest"
@@ -176,11 +196,13 @@ export default function CreateExpenseModal({
                       ? "badge"
                       : cat === "EMI"
                       ? "directions_bus"
+                      : cat === "FASTag"
+                      ? "credit_card"
                       : cat === "Fuel & Fleet"
                       ? "local_gas_station"
                       : "business"}
                   </span>
-                  <span>{cat}</span>
+                  <span className="truncate w-full text-center">{cat}</span>
                 </button>
               ))}
             </div>
@@ -328,6 +350,46 @@ export default function CreateExpenseModal({
                     className="w-full bg-surface-container-highest border border-outline-variant/20 rounded-xl px-4 py-2.5 text-sm text-on-surface outline-none focus:border-primary font-medium"
                   />
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* 3. FASTAG SPECIFIC */}
+          {category === "FASTag" && (
+            <div className="p-4 rounded-2xl bg-surface-container-low/40 border border-outline-variant/15 space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-outline">Select Vehicle for FASTag Recharge *</label>
+                <select
+                  required
+                  value={vehicleId}
+                  onChange={(e) => setVehicleId(e.target.value)}
+                  className="w-full bg-surface-container-highest border border-outline-variant/20 rounded-xl px-4 py-2.5 text-sm text-on-surface outline-none focus:border-primary font-semibold"
+                >
+                  <option value="">-- Select Vehicle --</option>
+                  {vehicles.map((v) => {
+                    const reg = v.core?.registrationNumber || v.registrationNumber || "Vehicle";
+                    const make = v.core?.make || v.make || "";
+                    const model = v.core?.model || v.model || "";
+                    const label = `${reg.toUpperCase()} ${make || model ? `(${make} ${model})`.trim() : ""}`;
+                    return (
+                      <option key={v.id} value={v.id}>
+                        {label}
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-outline">FASTag Recharge Amount (₹) *</label>
+                <input
+                  type="number"
+                  required
+                  placeholder="e.g. 3000"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value ? Number(e.target.value) : "")}
+                  className="w-full bg-surface-container-highest border border-outline-variant/20 rounded-xl px-4 py-2.5 text-sm text-on-surface outline-none focus:border-primary font-bold"
+                />
               </div>
             </div>
           )}

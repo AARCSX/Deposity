@@ -13,6 +13,7 @@ export interface TripCardProps {
   financials: { total: string; advance: string; balance: string; rawBalance?: number };
   payments?: PaymentRecord[];
   onUpdateStatus?: () => void;
+  onChangeStatus?: (newStatus: "pending" | "in-transit" | "delivered") => void;
   onRecordPayment?: () => void;
 }
 
@@ -28,9 +29,11 @@ export default function TripCard({
   financials,
   payments = [],
   onUpdateStatus,
+  onChangeStatus,
   onRecordPayment,
 }: TripCardProps) {
   const [showHistory, setShowHistory] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const statusColors = {
     "in-transit": "bg-secondary-container text-on-secondary-container",
@@ -46,16 +49,100 @@ export default function TripCard({
       <div className="flex flex-col xl:flex-row gap-6">
         {/* Left: Identity & Route */}
         <div className="flex-1 flex flex-col gap-5">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between relative">
             <div className="flex items-center gap-3">
-              <span className="text-lg font-bold text-on-surface tracking-tight">{id}</span>
+              {/* VEHICLE NUMBER IS NOW BOLD TITLE */}
+              <div className="flex items-center gap-1.5 bg-slate-900 text-white px-3 py-1 rounded-xl shadow-xs">
+                <span className="material-symbols-outlined text-[16px] text-amber-400">local_shipping</span>
+                <span className="text-base font-black tracking-wider uppercase font-mono">{vehicle || "NO VEHICLE"}</span>
+              </div>
               <span className={`px-2.5 py-1 rounded-md text-xs font-bold tracking-wide uppercase ${statusColors[status]}`}>
                 {status.replace("-", " ")}
               </span>
             </div>
-            <button onClick={onUpdateStatus} className="text-on-surface-variant hover:text-primary transition-colors cursor-pointer" title="Options">
-              <span className="material-symbols-outlined">more_vert</span>
-            </button>
+
+            {/* THREE DOT QUICK STATUS MENU */}
+            <div className="relative">
+              <button
+                onClick={() => setIsMenuOpen(!isMenuOpen)}
+                className="p-1.5 rounded-lg hover:bg-surface-container-high text-on-surface-variant hover:text-primary transition-colors cursor-pointer"
+                title="Trip Actions & Status"
+              >
+                <span className="material-symbols-outlined">more_vert</span>
+              </button>
+
+              {isMenuOpen && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setIsMenuOpen(false)} />
+                  <div className="absolute right-0 top-10 z-50 w-52 bg-white rounded-2xl shadow-xl border border-slate-200/80 p-2 text-xs font-semibold space-y-1 animate-in fade-in zoom-in-95 duration-150">
+                    <div className="px-3 py-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                      Quick Status Change
+                    </div>
+                    
+                    <button
+                      onClick={() => {
+                        onChangeStatus?.("pending");
+                        setIsMenuOpen(false);
+                      }}
+                      className={`w-full px-3 py-2 rounded-xl text-left flex items-center justify-between hover:bg-slate-100 transition cursor-pointer ${
+                        status === "pending" ? "font-black text-amber-600 bg-amber-50" : "text-slate-700"
+                      }`}
+                    >
+                      <span className="flex items-center gap-2">
+                        <span className="material-symbols-outlined text-sm">schedule</span>
+                        Pending
+                      </span>
+                      {status === "pending" && <span className="material-symbols-outlined text-sm">check</span>}
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        onChangeStatus?.("in-transit");
+                        setIsMenuOpen(false);
+                      }}
+                      className={`w-full px-3 py-2 rounded-xl text-left flex items-center justify-between hover:bg-slate-100 transition cursor-pointer ${
+                        status === "in-transit" ? "font-black text-blue-600 bg-blue-50" : "text-slate-700"
+                      }`}
+                    >
+                      <span className="flex items-center gap-2">
+                        <span className="material-symbols-outlined text-sm">local_shipping</span>
+                        In Transit
+                      </span>
+                      {status === "in-transit" && <span className="material-symbols-outlined text-sm">check</span>}
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        onChangeStatus?.("delivered");
+                        setIsMenuOpen(false);
+                      }}
+                      className={`w-full px-3 py-2 rounded-xl text-left flex items-center justify-between hover:bg-slate-100 transition cursor-pointer ${
+                        status === "delivered" ? "font-black text-emerald-600 bg-emerald-50" : "text-slate-700"
+                      }`}
+                    >
+                      <span className="flex items-center gap-2">
+                        <span className="material-symbols-outlined text-sm">check_circle</span>
+                        Delivered
+                      </span>
+                      {status === "delivered" && <span className="material-symbols-outlined text-sm">check</span>}
+                    </button>
+
+                    <div className="my-1 border-t border-slate-100" />
+
+                    <button
+                      onClick={() => {
+                        onUpdateStatus?.();
+                        setIsMenuOpen(false);
+                      }}
+                      className="w-full px-3 py-2 rounded-xl text-left flex items-center gap-2 text-slate-700 hover:bg-slate-100 transition cursor-pointer font-bold"
+                    >
+                      <span className="material-symbols-outlined text-sm">edit</span>
+                      Edit Full Trip Details
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
 
           {/* Route Timeline */}
@@ -92,10 +179,10 @@ export default function TripCard({
             <div className="text-sm font-semibold text-on-surface">{company}</div>
           </div>
           <div>
-            <div className="text-xs text-on-surface-variant mb-1 uppercase font-bold tracking-wider">Vehicle</div>
-            <div className="text-sm font-semibold text-on-surface flex items-center gap-2">
-              {vehicle}
-              <span className="material-symbols-outlined text-[16px] text-primary">local_shipping</span>
+            {/* TRIP ID IS NOW DISPLAYED IN LOGISTICS AREA */}
+            <div className="text-xs text-on-surface-variant mb-1 uppercase font-bold tracking-wider">Trip ID</div>
+            <div className="text-xs font-mono font-bold text-slate-700 truncate" title={id}>
+              {id.length > 18 ? `${id.slice(0, 16)}...` : id}
             </div>
           </div>
           <div>

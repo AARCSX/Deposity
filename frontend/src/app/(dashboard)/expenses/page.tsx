@@ -250,7 +250,7 @@ export default function ExpensesPage() {
             {/* Filters */}
             <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
               <div className="flex gap-2 flex-wrap">
-                {["All", "Salary", "EMI", "Fuel & Fleet", "Office & Misc"].map((cat) => (
+                {["All", "Salary", "EMI", "FASTag", "Fuel & Fleet", "Office & Misc"].map((cat) => (
                   <button
                     key={cat}
                     onClick={() => setSelectedCategory(cat)}
@@ -320,6 +320,8 @@ export default function ExpensesPage() {
                                   ? "bg-emerald-100 text-emerald-800"
                                   : exp.category === "EMI"
                                   ? "bg-blue-100 text-blue-800"
+                                  : exp.category === "FASTag"
+                                  ? "bg-indigo-100 text-indigo-800"
                                   : exp.category === "Fuel & Fleet"
                                   ? "bg-amber-100 text-amber-800"
                                   : "bg-purple-100 text-purple-800"
