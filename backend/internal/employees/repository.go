@@ -3,6 +3,7 @@ package employees
 import (
 	"context"
 	"errors"
+	"log"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -30,7 +31,7 @@ func (r *Repository) GetAll(ctx context.Context, tenantID string) ([]Employee, e
 			CASE WHEN LOWER(m.role) = 'owner' THEN 0 ELSE 25000 END AS base_salary,
 			0 AS pending_balance,
 			'Active' AS status,
-			COALESCE(p.avatar_url, '') AS avatar
+			COALESCE(p.profile_picture, '') AS avatar
 		FROM public.organization_members m
 		JOIN public.organizations o ON o.id = m.organization_id
 		JOIN public.profiles p ON p.id = m.user_id
@@ -40,7 +41,9 @@ func (r *Repository) GetAll(ctx context.Context, tenantID string) ([]Employee, e
 		    WHERE e.tenant_id = $1 AND (LOWER(e.email) = LOWER(p.email) OR e.name = p.full_name)
 		  )
 	`
-	_, _ = r.pool.Exec(ctx, syncQuery, tenantID)
+	if _, err := r.pool.Exec(ctx, syncQuery, tenantID); err != nil {
+		log.Printf("[employees repo] error syncing organization members for tenant %s: %v", tenantID, err)
+	}
 
 	// 2. Sync roles for existing members
 	roleSyncQuery := `
@@ -54,7 +57,9 @@ func (r *Repository) GetAll(ctx context.Context, tenantID string) ([]Employee, e
 		  AND LOWER(e.email) = LOWER(p.email)
 		  AND e.role <> m.role
 	`
-	_, _ = r.pool.Exec(ctx, roleSyncQuery, tenantID)
+	if _, err := r.pool.Exec(ctx, roleSyncQuery, tenantID); err != nil {
+		log.Printf("[employees repo] error syncing member roles for tenant %s: %v", tenantID, err)
+	}
 
 	query := `
 		SELECT id, tenant_id, name, role, phone, COALESCE(email, ''), joining_date,
