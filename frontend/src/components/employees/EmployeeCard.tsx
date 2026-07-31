@@ -147,7 +147,7 @@ export default function EmployeeCard({
                 onEdit();
               }}
               className="p-2 text-outline hover:text-primary hover:bg-primary/10 rounded-full transition-all cursor-pointer"
-              title="Edit Employee"
+              title="Configure Salary & Status"
             >
               <span className="material-symbols-outlined text-lg">edit</span>
             </button>

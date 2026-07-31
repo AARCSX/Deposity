@@ -104,20 +104,31 @@ export default function EmployeesPage() {
               <h1 className="text-3xl font-black text-on-surface tracking-tight">Employees Portal</h1>
             </div>
             <p className="text-sm font-medium text-on-surface-variant mt-1">
-              Manage non-driver staff, payroll, designations, and track individual salary disbursement histories.
+              Staff members are synced from AARCSX Identity. Configure Monthly Base Salary, Pending Balances, and Status.
             </p>
           </div>
 
-          <button
-            onClick={() => {
-              setEmployeeToEdit(null);
-              setIsModalOpen(true);
-            }}
-            className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-2xl font-bold text-sm shadow-lg shadow-primary/20 hover:opacity-90 active:scale-[0.98] transition cursor-pointer"
-          >
-            <span className="material-symbols-outlined text-xl">person_add</span>
-            Add Employee
-          </button>
+          <div className="flex flex-wrap items-center gap-3">
+            <a
+              href="https://identity.aarcsx.com/organizations"
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-surface-container-high hover:bg-surface-container-highest border border-outline-variant/15 text-on-surface rounded-2xl font-bold text-sm transition cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-lg text-primary">mail</span>
+              Invite Staff via Identity
+            </a>
+            <button
+              onClick={() => {
+                setEmployeeToEdit(null);
+                setIsModalOpen(true);
+              }}
+              className="inline-flex items-center gap-2 px-6 py-2.5 bg-primary text-white rounded-2xl font-bold text-sm shadow-lg shadow-primary/20 hover:opacity-90 active:scale-[0.98] transition cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-lg">tune</span>
+              Configure Staff Salary
+            </button>
+          </div>
         </div>
 
         {/* Metrics Summary */}
