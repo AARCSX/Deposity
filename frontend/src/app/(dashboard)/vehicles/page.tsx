@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import VehicleCard from "@/components/dashboard/VehicleCard";
 import CreateVehicleWizard from "@/components/vehicles/CreateVehicleWizard";
@@ -16,6 +16,11 @@ export default function VehiclesPage() {
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingVehicle, setEditingVehicle] = useState<VehicleRecord | null>(null);
+
+  // Active Filter States
+  const [searchQuery, setSearchQuery] = useState("");
+  const [driverFilter, setDriverFilter] = useState<"ALL" | "ASSIGNED" | "UNASSIGNED">("ALL");
+  const [docsFilter, setDocsFilter] = useState<"ALL" | "EXPIRING_SOON" | "EXPIRED">("ALL");
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -82,6 +87,49 @@ export default function VehiclesPage() {
     }
   };
 
+  const filteredVehicles = useMemo(() => {
+    return vehicles.filter((v) => {
+      // 1. Search Query
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase().trim();
+        const reg = (v.core?.registrationNumber || "").toLowerCase();
+        const make = (v.core?.make || "").toLowerCase();
+        const model = (v.core?.model || "").toLowerCase();
+        const body = (v.core?.bodyType || "").toLowerCase();
+        const driver = (v.ownership?.driverName || "").toLowerCase();
+        const match = reg.includes(q) || make.includes(q) || model.includes(q) || body.includes(q) || driver.includes(q);
+        if (!match) return false;
+      }
+
+      // 2. Driver Filter
+      if (driverFilter === "ASSIGNED" && !v.ownership?.driverId) return false;
+      if (driverFilter === "UNASSIGNED" && v.ownership?.driverId) return false;
+
+      // 3. Docs Compliance Filter
+      if (docsFilter !== "ALL") {
+        const now = new Date();
+        const thirtyDays = new Date();
+        thirtyDays.setDate(now.getDate() + 30);
+
+        const expDates = [
+          v.compliance?.rcExpiry,
+          v.compliance?.insuranceExpiry,
+          v.compliance?.pucExpiry,
+          v.compliance?.fitnessExpiry,
+          v.compliance?.fastagExpiry,
+        ].filter(Boolean).map((d) => new Date(d!));
+
+        let hasExpired = expDates.some((d) => d < now);
+        let hasExpiringSoon = expDates.some((d) => d >= now && d <= thirtyDays);
+
+        if (docsFilter === "EXPIRED" && !hasExpired) return false;
+        if (docsFilter === "EXPIRING_SOON" && !hasExpiringSoon && !hasExpired) return false;
+      }
+
+      return true;
+    });
+  }, [vehicles, searchQuery, driverFilter, docsFilter]);
+
   // Helper to map robust data to the simpler VehicleCard props
   const mapToCardProps = (v: VehicleRecord) => {
     // Real driver data returned by the backend LEFT JOIN
@@ -123,7 +171,7 @@ export default function VehiclesPage() {
                 setEditingVehicle(null);
                 setIsCreateModalOpen(true);
               }}
-              className="flex items-center gap-2 bg-gradient-to-br from-primary to-primary-container text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-primary/20 hover:shadow-xl transition-all active:scale-[0.98]"
+              className="flex items-center gap-2 bg-gradient-to-br from-primary to-primary-container text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-primary/20 hover:shadow-xl transition-all active:scale-[0.98] cursor-pointer"
             >
               <span className="material-symbols-outlined text-[1.25rem]">add</span>
               Add Vehicle
@@ -133,28 +181,46 @@ export default function VehiclesPage() {
 
         {/* Filters Bar */}
         <div className="bg-surface-container-lowest rounded-xl p-4 border border-outline-variant/15 flex flex-wrap gap-4 items-center justify-between shadow-[0px_20px_40px_rgba(23,28,31,0.06)]">
-          <div className="flex flex-wrap gap-2 items-center">
-            <button className="flex items-center gap-2 bg-surface-container-high hover:bg-primary/10 text-on-surface-variant hover:text-primary px-4 py-2 rounded-xl text-sm font-medium transition-colors border border-transparent">
-              Status: All
-              <span className="material-symbols-outlined text-[1.1rem]">expand_more</span>
-            </button>
-            <button className="flex items-center gap-2 bg-surface-container-high hover:bg-primary/10 text-on-surface-variant hover:text-primary px-4 py-2 rounded-xl text-sm font-medium transition-colors border border-transparent">
-              Docs: Expiring Soon
-              <span className="material-symbols-outlined text-[1.1rem]">expand_more</span>
-            </button>
-            <button className="flex items-center gap-2 bg-surface-container-high hover:bg-primary/10 text-on-surface-variant hover:text-primary px-4 py-2 rounded-xl text-sm font-medium transition-colors border border-transparent">
-              Driver: Any
-              <span className="material-symbols-outlined text-[1.1rem]">expand_more</span>
-            </button>
+          <div className="flex flex-wrap gap-3 items-center">
+            {/* Driver Filter */}
+            <div className="flex items-center gap-1.5 bg-surface-container-high px-3.5 py-2 rounded-xl text-xs font-bold text-on-surface-variant border border-outline-variant/10">
+              <span className="material-symbols-outlined text-[16px] text-primary">badge</span>
+              <select
+                value={driverFilter}
+                onChange={(e: any) => setDriverFilter(e.target.value)}
+                className="bg-transparent outline-none font-bold cursor-pointer text-on-surface"
+              >
+                <option value="ALL">Driver: All</option>
+                <option value="ASSIGNED">Driver: Assigned</option>
+                <option value="UNASSIGNED">Driver: Unassigned</option>
+              </select>
+            </div>
+
+            {/* Docs Compliance Filter */}
+            <div className="flex items-center gap-1.5 bg-surface-container-high px-3.5 py-2 rounded-xl text-xs font-bold text-on-surface-variant border border-outline-variant/10">
+              <span className="material-symbols-outlined text-[16px] text-amber-600">verified</span>
+              <select
+                value={docsFilter}
+                onChange={(e: any) => setDocsFilter(e.target.value)}
+                className="bg-transparent outline-none font-bold cursor-pointer text-on-surface"
+              >
+                <option value="ALL">Docs: All Statuses</option>
+                <option value="EXPIRING_SOON">Docs: Expiring Soon (30 Days)</option>
+                <option value="EXPIRED">Docs: Expired</option>
+              </select>
+            </div>
           </div>
-          <div className="relative w-full md:w-64">
+
+          <div className="relative w-full md:w-72">
             <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant/50 text-[1.25rem]">
               search
             </span>
             <input
-              className="w-full bg-surface border border-outline-variant/15 text-on-surface text-sm rounded-xl pl-10 pr-4 py-2 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all placeholder:text-on-surface-variant/50"
-              placeholder="Find vehicle..."
+              className="w-full bg-surface border border-outline-variant/15 text-on-surface text-sm rounded-xl pl-10 pr-4 py-2 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all placeholder:text-on-surface-variant/50 font-medium"
+              placeholder="Search registration, make, model..."
               type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
         </div>
@@ -177,13 +243,13 @@ export default function VehiclesPage() {
                 Retry
               </button>
             </div>
-          ) : vehicles.length === 0 ? (
+          ) : filteredVehicles.length === 0 ? (
             <div className="col-span-full py-16 flex flex-col items-center justify-center text-center rounded-2xl border border-dashed border-outline-variant/20 bg-surface-container-lowest">
               <span className="material-symbols-outlined text-4xl text-outline mb-3">local_shipping</span>
-              <p className="text-sm font-semibold text-on-surface">No vehicles registered</p>
-              <p className="text-xs text-on-surface-variant mt-1 max-w-xs">Add your first vehicle to start tracking compliance, drivers, and GPS tracking.</p>
+              <p className="text-sm font-semibold text-on-surface">No vehicles match filter criteria</p>
+              <p className="text-xs text-on-surface-variant mt-1 max-w-xs">Try adjusting your search query or filter options above.</p>
             </div>
-          ) : vehicles.map((vehicle, index) => (
+          ) : filteredVehicles.map((vehicle, index) => (
             <VehicleCard key={vehicle.id || vehicle.core.registrationNumber || index} {...mapToCardProps(vehicle)} />
           ))}
         </div>

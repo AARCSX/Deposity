@@ -128,13 +128,9 @@ export default function DriversPage() {
             </p>
           </div>
           <div className="flex gap-3">
-            <button className="flex items-center gap-2 px-5 py-2.5 bg-surface-container-high hover:bg-surface-container-highest transition-all rounded-full font-bold text-sm text-on-surface-variant active:scale-95">
-              <span className="material-symbols-outlined text-lg">filter_list</span>
-              Filters
-            </button>
             <button 
               onClick={() => setIsCreateModalOpen(true)}
-              className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-br from-primary to-primary-container text-white rounded-full font-bold text-sm shadow-lg shadow-primary/20 active:scale-95 duration-150 transition-all"
+              className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-br from-primary to-primary-container text-white rounded-full font-bold text-sm shadow-lg shadow-primary/20 active:scale-95 duration-150 transition-all cursor-pointer"
             >
               <span className="material-symbols-outlined text-lg">add</span>
               Register Driver

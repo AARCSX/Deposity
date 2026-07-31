@@ -113,17 +113,17 @@ export default function ExpensesPage() {
     .filter((e) => e.category === "Fuel & Fleet")
     .reduce((acc, curr) => acc + (curr.amount || 0), 0);
 
-  const handleExportExpensesCSV = (month: number | "ALL", year: number | "ALL") => {
+  const handleExportExpensesCSV = (month: number | "ALL", year: number | "ALL", category?: string) => {
     const filtered = expenses.filter((e) => {
       const d = new Date(e.expenseDate || e.createdAt || "");
-      if (isNaN(d.getTime())) return true;
-      const matchYear = year === "ALL" || d.getFullYear() === Number(year);
-      const matchMonth = month === "ALL" || d.getMonth() + 1 === Number(month);
-      return matchYear && matchMonth;
+      const matchYear = year === "ALL" || (!isNaN(d.getTime()) && d.getFullYear() === Number(year));
+      const matchMonth = month === "ALL" || (!isNaN(d.getTime()) && d.getMonth() + 1 === Number(month));
+      const matchCategory = !category || category === "All" || e.category === category;
+      return matchYear && matchMonth && matchCategory;
     });
 
     if (filtered.length === 0) {
-      alert("No expense records found for the selected month and year.");
+      alert("No expense records found matching the selected filters.");
       return;
     }
 
@@ -143,7 +143,8 @@ export default function ExpensesPage() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    const fileName = `Deposity_Expenses_${month !== "ALL" ? `Month_${month}` : "FullYear"}_${year !== "ALL" ? year : "AllTime"}.csv`;
+    const catSuffix = category && category !== "All" ? `_${category.replace(/[^a-zA-Z0-9]/g, "")}` : "";
+    const fileName = `Deposity_Expenses${catSuffix}_${month !== "ALL" ? `Month_${month}` : "FullYear"}_${year !== "ALL" ? year : "AllTime"}.csv`;
     link.setAttribute("download", fileName);
     document.body.appendChild(link);
     link.click();
@@ -469,9 +470,15 @@ export default function ExpensesPage() {
                         </div>
                       </div>
 
-                      <div className="text-[11px] font-bold text-slate-500 flex justify-between pt-2 border-t border-slate-100">
+                      <div className="text-[11px] font-bold text-slate-500 flex justify-between items-center pt-2 border-t border-slate-100">
                         <span>Installments: {emi.paidInstallments} / {emi.totalInstallments}</span>
-                        <span>Next Due: {emi.nextDueDate ? new Date(emi.nextDueDate).toLocaleDateString("en-IN") : "—"}</span>
+                        {emi.paidInstallments >= emi.totalInstallments || emi.remainingAmount <= 0 ? (
+                          <span className="text-emerald-600 font-extrabold flex items-center gap-1">
+                            <span className="material-symbols-outlined text-sm">verified</span> Paid Off
+                          </span>
+                        ) : (
+                          <span>Next Due: {emi.nextDueDate ? new Date(emi.nextDueDate).toLocaleDateString("en-IN") : "—"}</span>
+                        )}
                       </div>
                     </div>
                   );
@@ -500,8 +507,9 @@ export default function ExpensesPage() {
           isOpen={isExportModalOpen}
           onClose={() => setIsExportModalOpen(false)}
           onExport={handleExportExpensesCSV}
+          categories={["All", "Salary", "EMI", "FASTag", "Fuel & Fleet", "Office & Misc"]}
           title="Export Expense Ledger (CSV)"
-          description="Filter expenses by target month and year for CSV file generation."
+          description="Filter expenses by category, month, and year for CSV file generation."
         />
       </div>
     </>

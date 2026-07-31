@@ -5,9 +5,10 @@ import React, { useState } from "react";
 interface ExportCsvModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onExport: (month: number | "ALL", year: number | "ALL") => void;
+  onExport: (month: number | "ALL", year: number | "ALL", category?: string) => void;
   title?: string;
   description?: string;
+  categories?: string[];
 }
 
 const MONTHS = [
@@ -34,16 +35,18 @@ export default function ExportCsvModal({
   onClose,
   onExport,
   title = "Export Data to CSV",
-  description = "Select the target Month and Year to generate your CSV download.",
+  description = "Select the target Month, Year, and Category to generate your CSV download.",
+  categories,
 }: ExportCsvModalProps) {
   const [selectedMonth, setSelectedMonth] = useState<number | "ALL">("ALL");
   const [selectedYear, setSelectedYear] = useState<number | "ALL">(currentYear);
+  const [selectedCategory, setSelectedCategory] = useState<string>("All");
 
   if (!isOpen) return null;
 
   const handleDownload = (e: React.FormEvent) => {
     e.preventDefault();
-    onExport(selectedMonth, selectedYear);
+    onExport(selectedMonth, selectedYear, selectedCategory);
     onClose();
   };
 
@@ -71,6 +74,23 @@ export default function ExportCsvModal({
 
         {/* Form */}
         <form onSubmit={handleDownload} className="p-6 space-y-4">
+          {categories && categories.length > 0 && (
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-outline">Select Category / Filter</label>
+              <select
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                className="w-full bg-surface-container-highest border border-outline-variant/20 rounded-xl px-4 py-2.5 text-sm text-on-surface outline-none focus:border-primary font-semibold"
+              >
+                {categories.map((c) => (
+                  <option key={c} value={c}>
+                    {c === "All" ? "All Expense Categories" : c}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
           <div className="space-y-1.5">
             <label className="text-xs font-bold text-outline">Select Month</label>
             <select
