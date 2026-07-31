@@ -38,6 +38,7 @@ export default function EmployeesPage() {
 
       // Fetch organization members from AARCSX Identity via Supabase REST API
       const token = typeof window !== "undefined" ? localStorage.getItem("deposity_token") : null;
+      const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpyeGRsYW5zcGpxZXd5cXVydnZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMwMDc1ODcsImV4cCI6MjA5ODU4MzU4N30.IiDDORIdoN74WqlJAt4ni4OJyKq2S50Jh24rxBwcW5I";
       let identityMembers: any[] = [];
       if (token) {
         try {
@@ -46,6 +47,7 @@ export default function EmployeesPage() {
             {
               headers: {
                 Authorization: `Bearer ${token}`,
+                apikey: anonKey,
               },
             }
           );
@@ -202,16 +204,6 @@ export default function EmployeesPage() {
               <span className="material-symbols-outlined text-lg text-primary">mail</span>
               Invite Staff via Identity
             </a>
-            <button
-              onClick={() => {
-                setEmployeeToEdit(null);
-                setIsModalOpen(true);
-              }}
-              className="inline-flex items-center gap-2 px-6 py-2.5 bg-primary text-white rounded-2xl font-bold text-sm shadow-lg shadow-primary/20 hover:opacity-90 active:scale-[0.98] transition cursor-pointer"
-            >
-              <span className="material-symbols-outlined text-lg">tune</span>
-              Configure Staff Salary
-            </button>
           </div>
         </div>
 
