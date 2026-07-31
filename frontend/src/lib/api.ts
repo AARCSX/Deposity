@@ -137,6 +137,15 @@ export async function authenticatedFetch(path: string, options: RequestInit = {}
       }
     }
 
+    const contentType = response.headers.get("content-type") || "";
+    if (contentType.includes("text/html")) {
+      console.warn(`API path '${path}' returned HTML page instead of JSON. Returning empty JSON fallback.`);
+      return new Response(JSON.stringify([]), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
     return response;
   } catch (networkError) {
     console.warn("Network error during API fetch, returning fallback response:", networkError);
