@@ -1,6 +1,22 @@
-// src/lib/api.ts
+const DEFAULT_PROD_API_URL = "https://deposity-backend-117863432508.asia-south1.run.app";
 
-export const apiBase = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
+export function getApiBaseUrl(): string {
+  const envUrl = process.env.NEXT_PUBLIC_API_URL;
+  if (envUrl && envUrl.startsWith("http") && !envUrl.includes("localhost")) {
+    return envUrl.replace(/\/$/, "");
+  }
+
+  if (typeof window !== "undefined") {
+    const hostname = window.location.hostname;
+    if (hostname !== "localhost" && hostname !== "127.0.0.1" && !hostname.startsWith("192.168.")) {
+      return DEFAULT_PROD_API_URL;
+    }
+  }
+
+  return envUrl ? envUrl.replace(/\/$/, "") : "http://localhost:8080";
+}
+
+export const apiBase = getApiBaseUrl();
 
 // ─── Token Management ───────────────────────────────────────────
 export function getAuthToken(): string | null {
@@ -59,7 +75,7 @@ async function attemptTokenRefresh(): Promise<boolean> {
     if (!refreshToken) return false;
 
     try {
-      const response = await fetch(`${apiBase}/auth/refresh`, {
+      const response = await fetch(`${getApiBaseUrl()}/auth/refresh`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ refresh_token: refreshToken }),
@@ -111,7 +127,8 @@ export async function authenticatedFetch(path: string, options: RequestInit = {}
     }
   }
 
-  let url = path.startsWith("http") ? path : `${apiBase}${path.startsWith("/") ? "" : "/"}${path}`;
+  const baseUrl = getApiBaseUrl();
+  let url = path.startsWith("http") ? path : `${baseUrl}${path.startsWith("/") ? "" : "/"}${path}`;
   if (activeTenantId && !url.includes("tenant_id=")) {
     const separator = url.includes("?") ? "&" : "?";
     url = `${url}${separator}tenant_id=${encodeURIComponent(activeTenantId)}`;
