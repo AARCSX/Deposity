@@ -1,6 +1,6 @@
 // src/lib/api.ts
 
-const apiBase = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
+export const apiBase = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 
 // ─── Token Management ───────────────────────────────────────────
 export function getAuthToken(): string | null {

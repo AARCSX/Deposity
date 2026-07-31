@@ -3,7 +3,7 @@
 import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2, ShieldAlert } from "lucide-react";
-import { setAuthToken, setRefreshToken } from "@/lib/api";
+import { setAuthToken, setRefreshToken, apiBase } from "@/lib/api";
 
 function CallbackHandler() {
   const router = useRouter();
@@ -35,7 +35,7 @@ function CallbackHandler() {
       }
 
       const redirectUri = window.location.origin + "/callback";
-      const apiBase = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
+
 
       try {
         const response = await fetch(`${apiBase}/auth/callback`, {
