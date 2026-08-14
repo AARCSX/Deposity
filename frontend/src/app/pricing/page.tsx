@@ -1266,120 +1266,164 @@ export default function PublicPricingPage() {
                 </p>
               </div>
             ) : (
-              <form onSubmit={handleFormSubmit} className="space-y-4">
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1">
-                      Full Name
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="Rajesh Kumar"
-                      value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-primary"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1">
-                      Company Name
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="OnWay Logistics"
-                      value={formData.company}
-                      onChange={(e) => setFormData({ ...formData, company: e.target.value })}
-                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-primary"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1">
-                      Work Email
-                    </label>
-                    <input
-                      type="email"
-                      required
-                      placeholder="rajesh@onway.com"
-                      value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-primary"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1">
-                      Phone Number
-                    </label>
-                    <input
-                      type="tel"
-                      required
-                      placeholder="+91 98765 43210"
-                      value={formData.phone}
-                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-primary"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1">
-                    Fleet Size (Vehicles)
-                  </label>
-                  <select
-                    value={formData.fleetSize}
-                    onChange={(e) => setFormData({ ...formData, fleetSize: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-primary"
-                  >
-                    <option value="1-10">1 - 10 Vehicles (Starter)</option>
-                    <option value="11-25">11 - 25 Vehicles (Growth)</option>
-                    <option value="26-50">26 - 50 Vehicles (Business)</option>
-                    <option value="50+">50+ Vehicles (Enterprise)</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1">
-                    Operational Requirements / Notes
-                  </label>
-                  <textarea
-                    rows={3}
-                    placeholder="Tell us about your fleet setup, branches, or key operational challenges..."
-                    value={formData.message}
-                    onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-primary"
-                  />
-                </div>
-
-                <div className="flex justify-end gap-3 pt-3 border-t border-slate-800">
-                  <button
-                    type="button"
+              <div className="space-y-6">
+                {/* Direct Contact Options (WhatsApp / Email) */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <a
+                    href="https://wa.me/918982600775?text=I%20want%20to%20know%20about%20AARCSX%20Deposity"
+                    target="_blank"
+                    rel="noopener noreferrer"
                     onClick={() => setModalType(null)}
-                    className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:bg-slate-800 transition-colors cursor-pointer"
+                    className="p-3.5 rounded-xl bg-emerald-950/60 border border-emerald-800/80 hover:bg-emerald-900/60 transition-all flex items-center gap-3 cursor-pointer group"
                   >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={formSubmitting}
-                    className="px-5 py-2 rounded-xl text-xs font-bold bg-primary text-white shadow-md hover:opacity-90 transition-opacity active:scale-[0.98] disabled:opacity-50 flex items-center gap-2 cursor-pointer"
+                    <div className="w-10 h-10 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-bold shrink-0 shadow-md group-hover:scale-105 transition-transform">
+                      <span className="material-symbols-outlined text-xl">chat</span>
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold text-white flex items-center gap-1">
+                        <span>WhatsApp Chat</span>
+                        <span className="text-[9px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.2 rounded uppercase">Fastest</span>
+                      </div>
+                      <p className="text-[11px] text-slate-300 mt-0.5">Pre-fills text in keyboard</p>
+                    </div>
+                  </a>
+
+                  <a
+                    href="mailto:contact@aarcsx.com?subject=Inquiry%20about%20AARCSX%20Deposity&body=I%20want%20to%20know%20about%20AARCSX%20Deposity"
+                    onClick={() => setModalType(null)}
+                    className="p-3.5 rounded-xl bg-slate-800/80 border border-slate-700 hover:bg-slate-800 transition-all flex items-center gap-3 cursor-pointer group"
                   >
-                    {formSubmitting ? (
-                      <>
-                        <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                        <span>Submitting...</span>
-                      </>
-                    ) : (
-                      "Submit Request"
-                    )}
-                  </button>
+                    <div className="w-10 h-10 rounded-lg bg-primary text-white flex items-center justify-center font-bold shrink-0 shadow-md group-hover:scale-105 transition-transform">
+                      <span className="material-symbols-outlined text-xl">mail</span>
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold text-white">Email Us</div>
+                      <p className="text-[11px] text-slate-300 mt-0.5">contact@aarcsx.com</p>
+                    </div>
+                  </a>
                 </div>
-              </form>
+
+                <div className="relative flex py-1 items-center">
+                  <div className="flex-grow border-t border-slate-800"></div>
+                  <span className="flex-shrink mx-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Or Submit Web Request</span>
+                  <div className="flex-grow border-t border-slate-800"></div>
+                </div>
+
+                <form onSubmit={handleFormSubmit} className="space-y-4">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1">
+                        Full Name
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="Rajesh Kumar"
+                        value={formData.name}
+                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-primary"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1">
+                        Company Name
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="OnWay Logistics"
+                        value={formData.company}
+                        onChange={(e) => setFormData({ ...formData, company: e.target.value })}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-primary"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1">
+                        Work Email
+                      </label>
+                      <input
+                        type="email"
+                        required
+                        placeholder="rajesh@onway.com"
+                        value={formData.email}
+                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-primary"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1">
+                        Phone Number
+                      </label>
+                      <input
+                        type="tel"
+                        required
+                        placeholder="+91 98765 43210"
+                        value={formData.phone}
+                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-primary"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1">
+                      Fleet Size (Vehicles)
+                    </label>
+                    <select
+                      value={formData.fleetSize}
+                      onChange={(e) => setFormData({ ...formData, fleetSize: e.target.value })}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-primary"
+                    >
+                      <option value="1-10">1 - 10 Vehicles (Starter)</option>
+                      <option value="11-25">11 - 25 Vehicles (Growth)</option>
+                      <option value="26-50">26 - 50 Vehicles (Business)</option>
+                      <option value="50+">50+ Vehicles (Enterprise)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1">
+                      Operational Requirements / Notes
+                    </label>
+                    <textarea
+                      rows={3}
+                      placeholder="Tell us about your fleet setup, branches, or key operational challenges..."
+                      value={formData.message}
+                      onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-primary"
+                    />
+                  </div>
+
+                  <div className="flex justify-end gap-3 pt-3 border-t border-slate-800">
+                    <button
+                      type="button"
+                      onClick={() => setModalType(null)}
+                      className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:bg-slate-800 transition-colors cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={formSubmitting}
+                      className="px-5 py-2 rounded-xl text-xs font-bold bg-primary text-white shadow-md hover:opacity-90 transition-opacity active:scale-[0.98] disabled:opacity-50 flex items-center gap-2 cursor-pointer"
+                    >
+                      {formSubmitting ? (
+                        <>
+                          <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                          <span>Submitting...</span>
+                        </>
+                      ) : (
+                        "Submit Request"
+                      )}
+                    </button>
+                  </div>
+                </form>
+              </div>
             )}
           </div>
         </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, type Variants } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { generatePKCE } from '@/lib/pkce';
@@ -40,6 +40,7 @@ const itemVariants: Variants = {
 
 export default function DeposityLanding() {
   const router = useRouter();
+  const [isSalesModalOpen, setIsSalesModalOpen] = useState(false);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -137,8 +138,8 @@ export default function DeposityLanding() {
                   Start Your Free Trial
                   <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                 </button>
-                <button className="w-full sm:w-auto flex items-center justify-center gap-2 bg-white border border-[#9DB4C0]/40 hover:border-[#7180B9] text-[#0B132B] hover:text-[#7180B9] px-8 py-4 rounded-md text-base font-medium transition-all shadow-sm hover:shadow-md active:scale-95">
-                  Book a Demo
+                <button onClick={() => setIsSalesModalOpen(true)} className="w-full sm:w-auto flex items-center justify-center gap-2 bg-white border border-[#9DB4C0]/40 hover:border-[#7180B9] text-[#0B132B] hover:text-[#7180B9] px-8 py-4 rounded-md text-base font-medium transition-all shadow-sm hover:shadow-md active:scale-95 cursor-pointer">
+                  Talk to Sales
                 </button>
               </motion.div>
             </motion.div>
@@ -408,7 +409,7 @@ export default function DeposityLanding() {
               <button onClick={handleSignIn} className="w-full sm:w-auto bg-[#7180B9] hover:bg-[#5a6797] text-white px-8 py-4 rounded-md text-base font-medium transition-all shadow-lg hover:shadow-xl active:scale-95">
                 Start Your Free Trial
               </button>
-              <button className="w-full sm:w-auto bg-white border border-[#9DB4C0]/40 hover:border-[#7180B9] text-[#0B132B] hover:text-[#7180B9] px-8 py-4 rounded-md text-base font-medium transition-all">
+              <button onClick={() => setIsSalesModalOpen(true)} className="w-full sm:w-auto bg-white border border-[#9DB4C0]/40 hover:border-[#7180B9] text-[#0B132B] hover:text-[#7180B9] px-8 py-4 rounded-md text-base font-medium transition-all cursor-pointer">
                 Talk to Sales
               </button>
             </div>
@@ -461,7 +462,7 @@ export default function DeposityLanding() {
               <ul className="space-y-3 text-sm text-[#0B132B]/60">
                 <li><a href="#" className="hover:text-[#7180B9] transition-colors">About Us</a></li>
                 <li><a href="#" className="hover:text-[#7180B9] transition-colors">Careers</a></li>
-                <li><a href="#" className="hover:text-[#7180B9] transition-colors">Contact</a></li>
+                <li><button onClick={() => setIsSalesModalOpen(true)} className="hover:text-[#7180B9] transition-colors cursor-pointer">Contact</button></li>
                 <li><a href="#" className="hover:text-[#7180B9] transition-colors">Partners</a></li>
               </ul>
             </div>
@@ -476,6 +477,77 @@ export default function DeposityLanding() {
           </div>
         </div>
       </footer>
+
+      {/* Talk to Sales Modal */}
+      {isSalesModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 w-full max-w-md shadow-2xl border border-slate-200 text-slate-900 relative">
+            <button
+              onClick={() => setIsSalesModalOpen(false)}
+              className="absolute top-5 right-5 p-2 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-xl">close</span>
+            </button>
+
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-12 h-12 rounded-2xl bg-[#7180B9]/10 text-[#7180B9] flex items-center justify-center">
+                <span className="material-symbols-outlined text-2xl">headset_mic</span>
+              </div>
+              <div>
+                <h3 className="font-bold text-xl text-slate-900">Talk to Sales</h3>
+                <p className="text-xs text-slate-500 font-medium">Choose your preferred contact method</p>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              {/* WhatsApp Option */}
+              <a
+                href="https://wa.me/918982600775?text=I%20want%20to%20know%20about%20AARCSX%20Deposity"
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => setIsSalesModalOpen(false)}
+                className="group flex items-center gap-4 p-4 rounded-2xl bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 transition-all shadow-sm hover:shadow-md cursor-pointer"
+              >
+                <div className="w-12 h-12 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-md group-hover:scale-105 transition-transform">
+                  <span className="material-symbols-outlined text-2xl">chat</span>
+                </div>
+                <div className="flex-1">
+                  <div className="font-bold text-slate-900 text-sm flex items-center justify-between">
+                    <span>Chat on WhatsApp</span>
+                    <span className="text-emerald-700 text-xs font-semibold">Fastest</span>
+                  </div>
+                  <p className="text-xs text-slate-600 mt-0.5">
+                    Opens WhatsApp with pre-filled text: <span className="font-semibold text-emerald-800">"I want to know about AARCSX Deposity"</span>
+                  </p>
+                </div>
+              </a>
+
+              {/* Email Option */}
+              <a
+                href="mailto:contact@aarcsx.com?subject=Inquiry%20about%20AARCSX%20Deposity&body=I%20want%20to%20know%20about%20AARCSX%20Deposity"
+                onClick={() => setIsSalesModalOpen(false)}
+                className="group flex items-center gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-200 hover:bg-slate-100 transition-all shadow-sm hover:shadow-md cursor-pointer"
+              >
+                <div className="w-12 h-12 rounded-xl bg-[#7180B9] text-white flex items-center justify-center shadow-md group-hover:scale-105 transition-transform">
+                  <span className="material-symbols-outlined text-2xl">mail</span>
+                </div>
+                <div className="flex-1">
+                  <div className="font-bold text-slate-900 text-sm">Send an Email</div>
+                  <p className="text-xs text-slate-600 mt-0.5">
+                    Write to <span className="font-semibold text-slate-800">contact@aarcsx.com</span> with pre-filled subject &amp; body
+                  </p>
+                </div>
+              </a>
+            </div>
+
+            <div className="mt-6 pt-4 border-t border-slate-100 text-center">
+              <p className="text-xs text-slate-400 font-medium">
+                Our sales team usually responds within minutes.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
