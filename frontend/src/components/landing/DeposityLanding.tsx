@@ -96,9 +96,6 @@ export default function DeposityLanding() {
             <a href="#solutions" className="hover:text-[#7180B9] transition-colors">
               Solutions
             </a>
-            <a href="#metrics" className="hover:text-[#7180B9] transition-colors">
-              Metrics
-            </a>
             <a href="/pricing" className="hover:text-[#7180B9] transition-colors">
               Pricing
             </a>
@@ -210,20 +207,6 @@ export default function DeposityLanding() {
                 </div>
               </motion.div>
             </motion.div>
-          </div>
-        </section>
-
-        <section className="py-10 border-y border-[#9DB4C0]/20 bg-[#E0FBFC]/10">
-          <div className="max-w-7xl mx-auto px-6">
-            <p className="text-center text-sm font-medium text-[#0B132B]/50 mb-6">TRUSTED BY MODERN LOGISTICS TEAMS</p>
-            <div className="flex flex-wrap justify-center gap-12 opacity-60 grayscale">
-              {['Nexus Freight', 'Apex Logistics', 'Global Transit', 'Swift Routes', 'Velocity Line'].map((name) => (
-                <div key={name} className="font-display text-xl font-bold tracking-tight text-[#0B132B] flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-sm bg-[#9DB4C0]" />
-                  {name}
-                </div>
-              ))}
-            </div>
           </div>
         </section>
 
@@ -413,62 +396,13 @@ export default function DeposityLanding() {
           </div>
         </section>
 
-        <section id="metrics" className="py-24 bg-[#0B132B] text-white relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-[#7180B9]/20 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/3 pointer-events-none" />
-          <div className="max-w-7xl mx-auto px-6 relative z-10">
-            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-12">
-              {[
-                { label: 'Vehicles Managed', value: '15,000+', suffix: '' },
-                { label: 'Trips Tracked', value: '2.5M', suffix: '+' },
-                { label: 'System Uptime', value: '99.99', suffix: '%' },
-                { label: 'Admin Hours Saved', value: '40', suffix: 'hrs/mo' },
-              ].map((stat, i) => (
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: i * 0.1 }}
-                  key={stat.label}
-                  className="text-center md:text-left"
-                >
-                  <div className="font-display text-5xl md:text-6xl font-bold text-white mb-2 tracking-tight">
-                    {stat.value}
-                    <span className="text-[#7180B9] text-3xl md:text-4xl ml-1">{stat.suffix}</span>
-                  </div>
-                  <div className="text-[#9DB4C0] font-medium tracking-wide uppercase text-sm">{stat.label}</div>
-                </motion.div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section className="py-24 bg-white">
-          <div className="max-w-4xl mx-auto px-6 text-center">
-            <div className="mb-8 inline-flex items-center justify-center w-16 h-16 rounded-full bg-[#E0FBFC] text-[#0B132B]">
-              <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h3.983v10h-9.983z" />
-              </svg>
-            </div>
-            <h2 className="font-display text-2xl md:text-4xl font-medium leading-relaxed text-[#0B132B] mb-8">
-              "Before Deposity, we ran a 50-truck operation on Google Sheets and group texts. Now, we have total visibility into our margins and asset locations. It feels like we finally have a real operating system for our business."
-            </h2>
-            <div className="flex items-center justify-center gap-4">
-              <div className="w-12 h-12 bg-[#9DB4C0]/30 rounded-full" />
-              <div className="text-left">
-                <div className="font-bold text-[#0B132B]">Marcus Vance</div>
-                <div className="text-sm text-[#0B132B]/60">VP of Operations, Nexus Freight</div>
-              </div>
-            </div>
-          </div>
-        </section>
-
         <section className="py-24 relative overflow-hidden">
           <div className="absolute inset-0 bg-[#E0FBFC] -z-20" />
           <div className="absolute inset-0 bg-gradient-to-tr from-[#7180B9]/10 to-transparent -z-10" />
           <div className="max-w-4xl mx-auto px-6 text-center">
             <h2 className="font-display text-4xl md:text-5xl font-bold mb-6 text-[#0B132B]">Ready to take control?</h2>
             <p className="text-xl text-[#0B132B]/70 mb-10 max-w-2xl mx-auto">
-              Join hundreds of logistics companies running smarter, more profitable operations with Deposity.
+              Power your logistics operations with Deposity and run a smarter, more efficient fleet.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <button onClick={handleSignIn} className="w-full sm:w-auto bg-[#7180B9] hover:bg-[#5a6797] text-white px-8 py-4 rounded-md text-base font-medium transition-all shadow-lg hover:shadow-xl active:scale-95">
